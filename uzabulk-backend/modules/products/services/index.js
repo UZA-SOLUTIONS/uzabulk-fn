@@ -9,7 +9,6 @@ let list = (query, { limit, skip, order, orderBy, search }) => {
         .sort({ [orderBy]: order })
         .select(projection)
         .populate({ path: "featured_image", select: "link -_id" })
-        .populate({ path: "variations", select: "-meta_data", options: { lean: true } })
         .lean()
 };
 
@@ -23,7 +22,6 @@ let getTopRankingProducts = (query, { limit, skip, search }) => {
         .sort({ average_rating: -1 })
         .select(projection)
         .populate({ path: "featured_image", select: "link -_id" })
-        .populate({ path: "variations", select: "-meta_data", options: { lean: true } })
         .lean()
 };
 let getNewArrivalsProducts = (query, { limit, skip, search }) => {
@@ -36,7 +34,6 @@ let getNewArrivalsProducts = (query, { limit, skip, search }) => {
         .sort({ _id: -1 })
         .select(projection)
         .populate({ path: "featured_image", select: "link -_id" })
-        .populate({ path: "variations", select: "-meta_data", options: { lean: true } })
         .lean()
 };
 let getSavingsSpotlight = (query, { limit, skip, search }) => {
@@ -49,7 +46,6 @@ let getSavingsSpotlight = (query, { limit, skip, search }) => {
         .sort({ price: 1 })
         .select(projection)
         .populate({ path: "featured_image", select: "link -_id" })
-        .populate({ path: "variations", select: "-meta_data", options: { lean: true } })
         .lean()
 };
 let view = (query) => {

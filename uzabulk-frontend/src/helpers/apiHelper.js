@@ -7,7 +7,6 @@ import { getDeviceId, logger } from "./commonHelper";
 import { getCurrencySymbol } from "./currencyHelper";
 
 const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:1302").replace(/\/+$/, "");
-let lastNetworkToastAt = 0;
 
 /** Max wait for each API response. Override with REACT_APP_API_TIMEOUT_MS (e.g. 180000). Clamped 10s–10m. */
 const resolveApiTimeoutMs = () => {
@@ -43,20 +42,14 @@ apiClient.interceptors.response.use(
     }
 
     const isNetworkError = !error?.response;
-    const now = Date.now();
-    const canShowNetworkToast = now - lastNetworkToastAt > 5000;
 
     const message = error?.response?.data?.message
-      || (isNetworkError
-        ? "Network issue: please check internet connection or backend server."
-        : error?.message)
+      || error?.message
       || "Something went wrong, please try again later.";
 
-    if (!suppressGlobalErrorToast && (!isNetworkError || canShowNetworkToast)) {
+    // Do not show a global toast for network/timeout/offline failures — callers can handle UX; avoids noisy "check backend" toasts.
+    if (!suppressGlobalErrorToast && !isNetworkError) {
       toast.error(message);
-      if (isNetworkError) {
-        lastNetworkToastAt = now;
-      }
     }
 
     logger("ERROR RESPONSE ::: ", error);
@@ -110,7 +103,12 @@ updateAuthToken();
 
 // Basic functions for making API calls
 export const apiGet = async (url, params = {}) => {
-  return apiClient.get(url, { params });
+  const { suppressGlobalErrorToast, signal, ...query } = params || {};
+  return apiClient.get(url, {
+    params: query,
+    ...(signal ? { signal } : {}),
+    ...(suppressGlobalErrorToast ? { suppressGlobalErrorToast: true } : {}),
+  });
 };
 
 export const apiPost = async (url, data = {}) => {

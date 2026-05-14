@@ -188,7 +188,7 @@ const Cartpage = () => {
                     </div>
                   </Col>
                   <Col lg={12}>
-                    <div className="catpage_preview text-start pe-4 lg-pe-0">
+                    <div className="catpage_preview text-start pe-0 pe-lg-4">
                       {cart?.items?.map((item, idx) => {
                         return (
                           <>

@@ -321,7 +321,7 @@ const Singleview = () => {
 
   const productImages = getProductImages(detail);
   return (
-    <section className="single_view my-5" style={{ backgroundColor: "white" }}>
+    <section className="single_view single_view--pdp my-4 my-lg-5" style={{ backgroundColor: "white" }}>
       <Helmet>
         <title>{APP_NAME} | Product details</title>
       </Helmet>
@@ -338,7 +338,7 @@ const Singleview = () => {
           />
         ) : detail ? (
           <>
-            <Row>
+            <Row className="g-4 align-items-start">
               <Helmet>
                 <title>{APP_NAME} | {outOfStock ? "Out of stock" : `${detail?.name}`}</title>
               </Helmet>
@@ -349,7 +349,7 @@ const Singleview = () => {
               ) : (
                 <>
                   <Col lg={6} sm={12}>
-                    <div className="product_preview text-start pe-4 lg-pe-0">
+                    <div className="product_preview text-start pe-0 pe-lg-4">
                       <h4 className="fs-5">{detail?.name || ""}</h4>
                       <div className="d-flex gap-3">
                         <p>
@@ -393,7 +393,7 @@ const Singleview = () => {
                   </Col>
 
                   <Col lg={6} sm={12}>
-                    <div className="product_right_vcariant text-start py-4 px-3">
+                    <div className="product_right_vcariant text-start py-3 py-lg-4 px-3 px-lg-4">
                       <ul className="p-0 d-flex align-items-center gap-5 flex-wrap">
                         <li>
                           <div className="same_content_single">
@@ -476,7 +476,7 @@ const Singleview = () => {
             <FeatureAttributes details={detail?.featureAttribute} />
 
             {detail?.description ?
-              <div className="product_description mx-auto" style={{ maxWidth: 900 }}>
+              <div className="product_description mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
                 <Row className="text-start mt-5 ">
                   <Col lg="12">
                     <h3 className="pb-3">Product description</h3>

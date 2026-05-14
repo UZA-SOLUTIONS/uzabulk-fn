@@ -28,6 +28,7 @@ export const CATEGORIES = {
 export const PRODUCTS = {
   SEARCH_AUTOCOMPLETE: "products/searchAutocomplete", // search
   LIST: "products/list", // search
+  RECOMMENDED: "products/recommended",
   TOP_RANKING: "products/top-ranking",
   NEW_ARRIVAL: "products/new-arrivals", // search
   SAVING_SPOTLIGHT: "products/savings-spotlight",

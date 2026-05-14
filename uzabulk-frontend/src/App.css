@@ -1,5 +1,7 @@
+/* Avoid centering the entire app (breaks forms, product grids, and copy). */
 .App {
-  text-align: center;
+  text-align: initial;
+  min-height: 100%;
 }
 
 .App-logo {

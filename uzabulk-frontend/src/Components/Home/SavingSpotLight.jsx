@@ -21,7 +21,7 @@ export default function SavingSpotLight() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if ((items?.length || 0) < limit)
+    if (!items?.length)
       dispatch(
         apiGetHomeSavingSpotlightProducts({
           limit: limit,

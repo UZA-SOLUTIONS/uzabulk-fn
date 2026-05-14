@@ -69,6 +69,10 @@ export const apiGetHomeProducts = createAsyncThunk(
   "apiGetHomeProducts",
   getProducts(PRODUCTS.LIST)
 );
+export const apiGetRecommendedProducts = createAsyncThunk(
+  "apiGetRecommendedProducts",
+  getProducts(PRODUCTS.RECOMMENDED)
+);
 export const apiGetHomeTopRankingProducts = createAsyncThunk(
   "apiGetHomeTopRankingProducts",
   getProducts(PRODUCTS.TOP_RANKING)

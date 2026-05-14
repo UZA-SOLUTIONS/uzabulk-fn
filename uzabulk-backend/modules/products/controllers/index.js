@@ -8,6 +8,10 @@ const { getProductDetail, searchImageQuery } = require('../services/alibaba');
 const { searchGoogleImageKeywords } = require('../services/googleImageSearch');
 const { searchLocalImage, searchLocalImageLive } = require('../services/localImageSearch');
 const { updateProductDetails } = require('../helper/migration');
+const {
+    getRecommendedProducts,
+    trackProductBehavior,
+} = require('../services/recommendationService');
 
 const looksLikeObjectId = (value) => /^[a-fA-F0-9]{24}$/.test(String(value || "").trim());
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -34,6 +38,38 @@ const filterItemsBySearchTokens = (items = [], search = "") => {
         );
         return tokens.every((token) => haystack.includes(token));
     });
+};
+
+const shouldRefreshSupplierProduct = (product) => {
+    if (!product?.offerId) return false;
+    if (!product.last_updated) return true;
+
+    const lastUpdated = new Date(product.last_updated);
+    if (Number.isNaN(lastUpdated.getTime())) return true;
+
+    const ageHours = (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60);
+    return ageHours >= 24;
+};
+
+const syncSupplierProductInBackground = (product) => {
+    const productId = product?._id;
+    const offerId = product?.offerId;
+    if (!productId || !offerId) return;
+
+    getProductDetail(offerId)
+        .then(async (productDetails) => {
+            if (productDetails && productDetails?.status && productDetails?.status !== "published") {
+                await module.exports.productArchived(productId);
+                return;
+            }
+
+            if (productDetails?.status === "published") {
+                await updateProductDetails(product, productDetails);
+            }
+        })
+        .catch((error) => {
+            console.warn(`Background product sync failed for offerId=${offerId}:`, error.message);
+        });
 };
 
 /** ES `productIndex.search` returns `{ items, total }`; older paths may still return a bare array. */
@@ -77,6 +113,14 @@ const normalizeFeaturedImageLink = (items = []) => items.map((item) => {
     }
     return item;
 });
+
+const trimPaginationItems = (items = [], limit = 10) => {
+    const safeLimit = Math.max(1, Number(limit) || 10);
+    return {
+        items: items.slice(0, safeLimit),
+        hasMore: items.length > safeLimit,
+    };
+};
 
 const resolveActiveCatalogItems = async (items = []) => {
     if (!Array.isArray(items) || !items.length) return [];
@@ -275,6 +319,15 @@ module.exports = {
                 items = filterItemsBySearchTokens(items, search);
             }
 
+            if (search && items.length) {
+                trackProductBehavior(req, {
+                    eventType: "search",
+                    search,
+                    score: 1,
+                    metadata: { category, resultCount: items.length },
+                });
+            }
+
             return res.success("RECORD_FOUND", items);
 
         } catch (error) {
@@ -288,6 +341,7 @@ module.exports = {
             const { skip, limit } = req.paginationOptions;
             let items = [];
             let total = 0;
+            let hasMore;
 
             try {
                 const { items: rawItems, total: esTotal } = unwrapEsSearchResult(
@@ -305,13 +359,18 @@ module.exports = {
                 total = esTotal;
             } catch (error) {
                 const mongoQuery = { status: "active" };
-                items = await Product.getTopRankingProducts(mongoQuery, req.paginationOptions);
-                total = await Product.countData(mongoQuery);
+                const page = trimPaginationItems(
+                    await Product.getTopRankingProducts(mongoQuery, { ...req.paginationOptions, limit: limit + 1 }),
+                    limit
+                );
+                items = page.items;
+                hasMore = page.hasMore;
+                total = skip + items.length + (hasMore ? 1 : 0);
                 items = normalizeFeaturedImageLink(items);
             }
 
             await priceExchange(items, req.exchangeRate);
-            return res.success(req.nextPageOptions(items, total));
+            return res.success(req.nextPageOptions(items, total, { hasMore }));
 
         } catch (error) {
             console.error(error)
@@ -325,6 +384,7 @@ module.exports = {
             const { search, category } = req.query;
             let items = [];
             let total = 0;
+            let hasMore;
 
             try {
                 const { items: rawItems, total: esTotal } = unwrapEsSearchResult(
@@ -344,13 +404,18 @@ module.exports = {
                 total = esTotal;
             } catch (error) {
                 const mongoQuery = getMongoListQuery({ category, search });
-                items = await Product.getNewArrivalsProducts(mongoQuery, req.paginationOptions);
-                total = await Product.countData(mongoQuery);
+                const page = trimPaginationItems(
+                    await Product.getNewArrivalsProducts(mongoQuery, { ...req.paginationOptions, limit: limit + 1 }),
+                    limit
+                );
+                items = page.items;
+                hasMore = page.hasMore;
+                total = skip + items.length + (hasMore ? 1 : 0);
                 items = normalizeFeaturedImageLink(items);
             }
 
             await priceExchange(items, req.exchangeRate);
-            return res.success(req.nextPageOptions(items, total));
+            return res.success(req.nextPageOptions(items, total, { hasMore }));
 
         } catch (error) {
             res.error(error)
@@ -362,6 +427,7 @@ module.exports = {
             const { search, category } = req.query;
             let items = [];
             let total = 0;
+            let hasMore;
 
             try {
                 const { items: rawItems, total: esTotal } = unwrapEsSearchResult(
@@ -381,13 +447,18 @@ module.exports = {
                 total = esTotal;
             } catch (error) {
                 const mongoQuery = getMongoListQuery({ category, search });
-                items = await Product.getSavingsSpotlight(mongoQuery, req.paginationOptions);
-                total = await Product.countData(mongoQuery);
+                const page = trimPaginationItems(
+                    await Product.getSavingsSpotlight(mongoQuery, { ...req.paginationOptions, limit: limit + 1 }),
+                    limit
+                );
+                items = page.items;
+                hasMore = page.hasMore;
+                total = skip + items.length + (hasMore ? 1 : 0);
                 items = normalizeFeaturedImageLink(items);
             }
 
             await priceExchange(items, req.exchangeRate);
-            return res.success(req.nextPageOptions(items, total));
+            return res.success(req.nextPageOptions(items, total, { hasMore }));
 
         } catch (error) {
             res.error(error)
@@ -445,31 +516,9 @@ module.exports = {
             let { _id } = req.params;
             let query = { _id, status: "active" };
 
-            if (req.product?.offerId) {
-
-                const currentDate = new Date()
-                const parsed_updated_date = new Date(req.product.last_updated || new Date())
-                const time_difference = (currentDate - parsed_updated_date) / (1000 * 60 * 60)
-
-                if (!req.product.last_updated || time_difference >= 24) {
-
-                    const productDetails = await getProductDetail(req.product.offerId);
-
-                    // If live sync fails (ACL/token/network), keep serving cached DB detail.
-                    // Only mark out of stock when supplier explicitly returns non-published status.
-                    if (productDetails && productDetails?.status && productDetails?.status !== "published") {
-                        module.exports.productArchived(_id);
-                        return res.success("PRODUCT_OUT_OF_STOCK", null, { outOfStock: true });
-                    };
-
-                    if (!productDetails) {
-                        console.warn(`Alibaba product sync unavailable for offerId=${req.product.offerId}. Serving cached product detail.`);
-                    } else if (productDetails?.status == "published") {
-                        await updateProductDetails(req.product, productDetails);
-                    }
-
-                }
-            };
+            if (shouldRefreshSupplierProduct(req.product)) {
+                syncSupplierProductInBackground(req.product);
+            }
 
             let item = await Product.view(query);
 
@@ -480,6 +529,11 @@ module.exports = {
             item = processVariations(item);
 
             await priceExchange(item, req.exchangeRate);
+            await trackProductBehavior(req, {
+                product: item,
+                eventType: "view",
+                score: 1,
+            });
             return res.success(item);
 
         } catch (error) {
@@ -690,6 +744,7 @@ module.exports = {
             let rawEsItems = [];
             let esTotalHits = 0;
             let usedElasticsearch = false;
+            let mongoHasMore;
 
             try {
                 const esPayload = unwrapEsSearchResult(
@@ -705,8 +760,13 @@ module.exports = {
                 usedElasticsearch = true;
             } catch (error) {
                 const mongoQuery = getMongoListQuery({ category, fieldName, fieldValue, search });
-                items = await Product.list(mongoQuery, req.paginationOptions);
-                total = await Product.countData(mongoQuery);
+                const page = trimPaginationItems(
+                    await Product.list(mongoQuery, { ...req.paginationOptions, limit: limit + 1 }),
+                    limit
+                );
+                items = page.items;
+                mongoHasMore = page.hasMore;
+                total = skip + items.length + (mongoHasMore ? 1 : 0);
                 items = normalizeFeaturedImageLink(items);
             }
             items = filterItemsBySearchTokens(items, search);
@@ -718,12 +778,39 @@ module.exports = {
             if (usedElasticsearch) {
                 listExtras.hasMore =
                     rawEsItems.length === limit && skip + rawEsItems.length < esTotalHits;
+            } else if (typeof mongoHasMore === "boolean") {
+                listExtras.hasMore = mongoHasMore;
             }
+            if (search && items.length) {
+                trackProductBehavior(req, {
+                    eventType: "search",
+                    search,
+                    score: 1,
+                    metadata: { category, fieldName, fieldValue, resultCount: items.length },
+                });
+            }
+
             return res.success(req.nextPageOptions(items, total, listExtras));
 
         } catch (error) {
             console.error(error)
             res.error(error)
+        }
+    },
+    recommended: async (req, res) => {
+        try {
+            const { limit } = req.paginationOptions;
+            const { category, refresh } = req.query;
+            const items = await getRecommendedProducts(req, { limit, category, refresh });
+
+            await priceExchange(items, req.exchangeRate);
+            return res.success(req.nextPageOptions(items, items.length, {
+                hasMore: items.length >= limit,
+                personalized: Boolean(req.user?._id || req.deviceId),
+            }));
+        } catch (error) {
+            console.error(error);
+            res.error(error);
         }
     },
     productArchived: async (productId) => {

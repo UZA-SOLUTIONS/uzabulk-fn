@@ -162,22 +162,19 @@ const Productlist = () => {
       if (cancelToken?.current) {
         cancelToken.current.abort();
       }
-      setTimeout(() => {
-        cancelToken.current = new AbortController();
-        dispatch(apiGetProducts({
-          query: {
-            limit: limit,
-            skip: init ? 1 : skip + 1,
-            category: searchParams.get("category"),
-            search: searchParams.get("search"),
-            image: searchParams.get("image"),
-            country: searchParams.get("country") || "en",
-            ...getSortQuery(selectedSort),
-          },
-          signal: cancelToken.current.signal,
-        })).then(({ payload }) => {
-        })
-      }, 500);
+      cancelToken.current = new AbortController();
+      dispatch(apiGetProducts({
+        query: {
+          limit: limit,
+          skip: init ? 1 : skip + 1,
+          category: searchParams.get("category"),
+          search: searchParams.get("search"),
+          image: searchParams.get("image"),
+          country: searchParams.get("country") || "en",
+          ...getSortQuery(selectedSort),
+        },
+        signal: cancelToken.current.signal,
+      }));
     }
   };
 
@@ -234,18 +231,21 @@ const Productlist = () => {
                       objectFit: "cover"
                     }
                   } />
-                  <h3 style={{
+                  <h3
+                    className="products_list_category_title"
+                    style={{
                     position: "absolute",
                     top: "50%",
                     left: "50%",
                     transform: "translate(-50%, -50%)",
                     color: "white",
-                    "-webkit-text-stroke-color": "#929292",
-                    "-webkit-text-stroke-width": "thin",
+                    WebkitTextStrokeColor: "#929292",
+                    WebkitTextStrokeWidth: "thin",
                     fontWeight: 900,
-                    fontSize: "45px",
-                    textWrap: "auto",
-                  }}>{others?.category?.catName}</h3>
+                    fontSize: "clamp(22px, 6vw, 45px)",
+                    textWrap: "balance",
+                  }}
+                  >{others?.category?.catName}</h3>
                 </div>
               </Col>
             </>

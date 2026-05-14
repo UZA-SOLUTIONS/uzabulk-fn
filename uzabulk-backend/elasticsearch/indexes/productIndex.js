@@ -4,6 +4,8 @@ const _ = require('lodash');
 
 const INDEX_NAME = 'products';
 
+const isElasticSearchConfigured = () => Boolean(String(env?.ELASTIC_SEARCH?.BASE_URL || "").trim());
+
 const indexMapping = {
     mappings: {
         properties: {
@@ -59,6 +61,8 @@ module.exports = {
     },
 
     set: async (document) => {
+        if (!isElasticSearchConfigured()) return;
+
         await esClient.index({
             index: 'products',
             id: document._id.toString(),
@@ -108,6 +112,9 @@ module.exports = {
 
     bulkInsert: async (data) => {
         try {
+            if (!isElasticSearchConfigured()) return;
+            if (!data?.length) return;
+
             const bulkOps = [];
             data.forEach(doc => {
                 bulkOps.push(

@@ -55,6 +55,44 @@ const runWithConcurrency = async (items, worker, concurrency) => {
     await Promise.all(workers);
 };
 
+const restoreSingleProduct = async (product, currentIndex, totalLabel, stats) => {
+    try {
+        const offerId = String(product.offerId || "").trim();
+        if (!offerId) {
+            stats.skipped += 1;
+            return;
+        }
+
+        console.log(`[${currentIndex + 1}/${totalLabel}] Fetching offerId=${offerId}`);
+        const details = await getProductDetail(offerId);
+        if (!details) {
+            stats.failed += 1;
+            console.warn(`[${currentIndex + 1}/${totalLabel}] API returned empty for offerId=${offerId}`);
+            return;
+        }
+
+        let sourceProduct = product;
+        if (!product._id) {
+            sourceProduct = await _model.Product.create({
+                storeType: DEFAULT_STORE_TYPE_ID,
+                vendor: DEFAULT_VENDOR_ID,
+                name: details.subjectTrans || `Imported ${offerId}`,
+                type: "simple",
+                status: "inactive",
+                offerId,
+                adminSold: true,
+                external: true,
+            });
+        }
+
+        await updateProductDetails(sourceProduct, details);
+        stats.success += 1;
+    } catch (error) {
+        stats.failed += 1;
+        console.error(`Restore failed for product=${product._id} offerId=${product.offerId}:`, error.message);
+    }
+};
+
 const restoreProducts = async () => {
     const limit = parseIntegerArg("--limit", 0);
     const skip = parseIntegerArg("--skip", 0);
@@ -64,8 +102,14 @@ const restoreProducts = async () => {
     await waitForDbAndModels();
 
     let products = [];
+    const stats = {
+        success: 0,
+        failed: 0,
+        skipped: 0,
+    };
 
     if (offerIdsArg.length) {
+        console.log(`Loading ${offerIdsArg.length} requested offer IDs from database...`);
         const foundProducts = await _model.Product.find({
             offerId: { $in: [...new Set(offerIdsArg)] },
         })
@@ -88,16 +132,61 @@ const restoreProducts = async () => {
         });
     } else {
         const query = { offerId: { $exists: true, $ne: "" } };
-        const cursor = _model.Product.find(query)
+        console.log("Streaming products with offerId from database...");
+        if (limit <= 0) {
+            console.log("No --limit provided, so this run will sync every product with an offerId.");
+        } else {
+            console.log(`Limit: ${limit}`);
+        }
+
+        const cursorQuery = _model.Product.find(query)
             .select("_id offerId vendor")
             .skip(skip)
-            .sort({ _id: 1 });
+            .sort({ _id: 1 })
+            .lean();
 
         if (limit > 0) {
-            cursor.limit(limit);
+            cursorQuery.limit(limit);
         }
-        products = await cursor.lean();
+
+        const cursor = cursorQuery.cursor({ batchSize: 100 });
+        const activeJobs = [];
+        let queuedCount = 0;
+
+        for await (const product of cursor) {
+            const currentIndex = queuedCount;
+            queuedCount += 1;
+            const totalLabel = limit > 0 ? limit : "?";
+
+            const job = restoreSingleProduct(product, currentIndex, totalLabel, stats)
+                .finally(() => {
+                    const jobIndex = activeJobs.indexOf(job);
+                    if (jobIndex >= 0) activeJobs.splice(jobIndex, 1);
+                });
+
+            activeJobs.push(job);
+
+            if (activeJobs.length >= concurrency) {
+                await Promise.race(activeJobs);
+            }
+        }
+
+        await Promise.all(activeJobs);
+
+        if (!queuedCount) {
+            console.log("No products found with offerId (and none passed in --offerIds). Nothing to restore.");
+            return;
+        }
+
+        console.log(`Processed ${queuedCount} products from database stream.`);
+        console.log("Restore complete.");
+        console.log(`Success: ${stats.success}`);
+        console.log(`Failed: ${stats.failed}`);
+        console.log(`Skipped: ${stats.skipped}`);
+        return;
     }
+
+    console.log(`Loaded ${products.length} products for API sync.`);
 
     if (!products.length) {
         console.log("No products found with offerId (and none passed in --offerIds). Nothing to restore.");
@@ -106,51 +195,9 @@ const restoreProducts = async () => {
 
     console.log(`Restoring ${products.length} products from API to current database...`);
 
-    const stats = {
-        success: 0,
-        failed: 0,
-        skipped: 0,
-    };
-
     await runWithConcurrency(
         products,
-        async (product, currentIndex) => {
-            try {
-                const offerId = String(product.offerId || "").trim();
-                if (!offerId) {
-                    stats.skipped += 1;
-                    return;
-                }
-
-                console.log(`[${currentIndex + 1}/${products.length}] Fetching offerId=${offerId}`);
-                const details = await getProductDetail(offerId);
-                if (!details) {
-                    stats.failed += 1;
-                    console.warn(`[${currentIndex + 1}/${products.length}] API returned empty for offerId=${offerId}`);
-                    return;
-                }
-
-                let sourceProduct = product;
-                if (!product._id) {
-                    sourceProduct = await _model.Product.create({
-                        storeType: DEFAULT_STORE_TYPE_ID,
-                        vendor: DEFAULT_VENDOR_ID,
-                        name: details.subjectTrans || `Imported ${offerId}`,
-                        type: "simple",
-                        status: "inactive",
-                        offerId,
-                        adminSold: true,
-                        external: true,
-                    });
-                }
-
-                await updateProductDetails(sourceProduct, details);
-                stats.success += 1;
-            } catch (error) {
-                stats.failed += 1;
-                console.error(`Restore failed for product=${product._id} offerId=${product.offerId}:`, error.message);
-            }
-        },
+        (product, currentIndex) => restoreSingleProduct(product, currentIndex, products.length, stats),
         concurrency
     );
 

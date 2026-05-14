@@ -6,17 +6,10 @@ const ALIBABA_APP_KEY = env?.alibaba?.APP_KEY || "";
 const ALIBABA_APP_SECRET = env?.alibaba?.APP_SECRET || "";
 const ALIBABA_AUTH_TOKEN = env?.alibaba?.AUTH_TOKEN || "";
 
-const logGatewayAclHint = (body) => {
+const isGatewayAclDecline = (body) => {
     const code = String(body?.error_code || body?.code || body?.result?.code || "");
     const msg = String(body?.error_message || body?.message || body?.result?.message || "");
-    if (code.includes("APIACL") || /AppKey is not allowed/i.test(msg)) {
-        console.warn(
-            "[1688 Open API] ACL declined (gw.APIACLDecline): this AppKey cannot call this interface. " +
-            "Use the numeric App Key from https://open.1688.com for an application that has the required APIs subscribed " +
-            "(e.g. com.alibaba.fenxiao.crossborder / product.search.*). " +
-            "An Alibaba Cloud application display name (e.g. official-api-mcp-server) is not the same as ALIBABA_APP_KEY unless that product explicitly gives you the 1688 app credentials."
-        );
-    }
+    return code.includes("APIACL") || /AppKey is not allowed/i.test(msg);
 };
 
 const generateHmacSha1Signature = (data, secretKey) => {
@@ -54,6 +47,96 @@ const extractAlibabaProductGet = (response) => {
     return null;
 };
 
+const asArray = (value) => {
+    if (Array.isArray(value)) return value;
+    if (value == null) return [];
+    return [value];
+};
+
+const normalizeSkuInfos = (skuInfos = []) => asArray(skuInfos).map((skuInfo) => {
+    const rawAttributes = skuInfo?.skuAttributes || skuInfo?.attributes || skuInfo?.skuAttributesList || [];
+    const skuAttributes = asArray(rawAttributes).map((attr) => ({
+        attributeId: attr?.attributeId || attr?.attributeID || attr?.fid || attr?.name || attr?.attributeName,
+        attributeNameTrans: attr?.attributeNameTrans || attr?.attributeName || attr?.name || "",
+        valueTrans: attr?.valueTrans || attr?.value || attr?.valueName || "",
+        skuImageUrl: attr?.skuImageUrl || attr?.imageUrl || attr?.image || "",
+    }));
+
+    return {
+        specId: skuInfo?.specId || skuInfo?.specID || skuInfo?.skuId || skuInfo?.skuID,
+        skuId: skuInfo?.skuId || skuInfo?.skuID || skuInfo?.specId || skuInfo?.specID,
+        description: skuInfo?.description || "",
+        image: skuInfo?.image || skuInfo?.skuImageUrl || "",
+        sku: skuInfo?.sku || skuInfo?.skuCode || "",
+        consignPrice: skuInfo?.consignPrice || skuInfo?.price || skuInfo?.salePrice,
+        amountOnSale: skuInfo?.amountOnSale || skuInfo?.stock || skuInfo?.quantity || 0,
+        skuAttributes,
+    };
+});
+
+const normalizeAlibabaProductInfo = (productInfo, productId) => {
+    if (!productInfo || typeof productInfo !== "object") return null;
+
+    const rawImagePayload = productInfo.productImage || productInfo.image || {};
+    const imagePayload = rawImagePayload && typeof rawImagePayload === "object" ? rawImagePayload : {};
+    const images = asArray(
+        imagePayload.images ||
+        imagePayload.imageList ||
+        productInfo.images ||
+        productInfo.imageList ||
+        productInfo.productImageList
+    ).filter(Boolean);
+    const mainImage = productInfo.mainImage || productInfo.pictureAuthUrl || productInfo.imageUrl;
+    if (!images.length && mainImage) {
+        images.push(mainImage);
+    }
+
+    const rawProductSaleInfo = productInfo.productSaleInfo || productInfo.saleInfo || {};
+    const productSaleInfo = rawProductSaleInfo && typeof rawProductSaleInfo === "object" ? rawProductSaleInfo : {};
+
+    return {
+        ...productInfo,
+        status: productInfo.status || "published",
+        topCategoryId: productInfo.topCategoryId || productInfo.categoryID || productInfo.categoryId || "",
+        secondCategoryId: productInfo.secondCategoryId || "",
+        thirdCategoryId: productInfo.thirdCategoryId || "",
+        productSkuInfos: normalizeSkuInfos(productInfo.productSkuInfos || productInfo.skuInfos || productInfo.skuInfoList),
+        subjectTrans: productInfo.subjectTrans || productInfo.subject || productInfo.title || productInfo.name || "",
+        offerId: productInfo.offerId || productInfo.productID || productInfo.productId || productId,
+        description: productInfo.description || productInfo.detail || productInfo.productDescription || "",
+        productSaleInfo: {
+            ...productSaleInfo,
+            priceRangeList: productSaleInfo.priceRangeList || productInfo.priceRangeList || [],
+            amountOnSale: productSaleInfo.amountOnSale || productInfo.amountOnSale || productInfo.stock || 0,
+            unitInfo: productSaleInfo.unitInfo || productInfo.unitInfo || {},
+        },
+        productImage: {
+            ...imagePayload,
+            images,
+        },
+        tradeScore: productInfo.tradeScore ||
+            productInfo.score ||
+            productInfo.rating ||
+            productInfo.averageRating ||
+            productInfo.productRating ||
+            productInfo?.reviewInfo?.averageRating ||
+            0,
+        ratingCount: productInfo.ratingCount ||
+            productInfo.reviewCount ||
+            productInfo.evaluationCount ||
+            productInfo.productReviewCount ||
+            productInfo?.reviewInfo?.ratingCount ||
+            productInfo?.reviewInfo?.reviewCount ||
+            0,
+        soldOut: productInfo.soldOut || productInfo.soldQuantity || 0,
+        productAttribute: productInfo.productAttribute || productInfo.attributes || [],
+        mainVideo: productInfo.mainVideo || "",
+        detailVideo: productInfo.detailVideo || "",
+        sellerOpenId: productInfo.sellerOpenId || productInfo.sellerUserId || "",
+        productShippingInfo: productInfo.productShippingInfo || productInfo.shippingInfo || {},
+    };
+};
+
 /**
  * POST to signed URL (same param signing as GET). Many 1688 param2 APIs accept POST with query string.
  */
@@ -66,18 +149,22 @@ const makePostApiCall = async (urlPath, params, secretKey, extractFn) => {
             timeout: 60000,
         });
         const body = response?.data;
-        logGatewayAclHint(body);
+        if (isGatewayAclDecline(body)) return null;
+
         const extracted = extractFn ? extractFn(response) : null;
         if (extracted) return extracted;
         const top = body?.result;
+        if (is1688Success(top)) {
+            return top.result !== undefined ? top.result : top;
+        }
         if (top && !is1688Success(top)) {
+            if (isGatewayAclDecline(top)) return null;
             console.warn("1688 POST API unsuccessful:", top.code, top.message, top.errMsg);
-            logGatewayAclHint(top);
         }
         return null;
     } catch (error) {
+        if (isGatewayAclDecline(error?.response?.data)) return null;
         console.error("Alibaba POST API error", error?.response?.data || error.message);
-        logGatewayAclHint(error?.response?.data);
     }
     return null;
 };
@@ -87,21 +174,22 @@ const makeApiCall = async (urlPath, params, secretKey) => {
         const signedUrl = generateApiSignature(urlPath, params, secretKey);
         const url = new URL(signedUrl, ALIBABA_BASE_APP_URL);
         const headers = { "Content-Type": "application/json" };
-        const response = await axios.get(url.toString(), { headers });
+        const response = await axios.get(url.toString(), { headers, timeout: 60000 });
         const body = response?.data;
-        logGatewayAclHint(body);
+        if (isGatewayAclDecline(body)) return null;
+
         const top = body?.result;
         if (is1688Success(top)) {
             return top.result !== undefined ? top.result : top;
         }
         if (top && !is1688Success(top)) {
+            if (isGatewayAclDecline(top)) return null;
             console.warn("1688 API returned unsuccessful:", top.code, top.message);
-            logGatewayAclHint(top);
         }
         return null;
     } catch (error) {
+        if (isGatewayAclDecline(error?.response?.data)) return null;
         console.error("API Call Error: Unsuccessful response", error?.response?.data || error);
-        logGatewayAclHint(error?.response?.data);
     }
 };
 
@@ -116,7 +204,11 @@ const getProductDetail = async (productId) => {
     const params = { "offerDetailParam": JSON.stringify({ "offerId": productId, "country": "en" }), "access_token": ALIBABA_AUTH_TOKEN };
     const secretKey = ALIBABA_APP_SECRET;
 
-    return await makeApiCall(urlPath, params, secretKey);
+    const crossborderDetail = await makeApiCall(urlPath, params, secretKey);
+    if (crossborderDetail) return crossborderDetail;
+
+    const productInfo = await getAlibabaProduct(productId, { scene: "1688" });
+    return normalizeAlibabaProductInfo(productInfo, productId);
 };
 
 /**

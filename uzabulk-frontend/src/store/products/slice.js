@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit'
-import { apiGetBestSalerProducts, apiGetGuaranteedProducts, apiGetHomeBestSalerProducts, apiGetHomeGuaranteedProducts, apiGetHomeNewArrivalProducts, apiGetHomeProducts, apiGetHomeSavingSpotlightProducts, apiGetHomeTopRankingProducts, apiGetNewArrivalProducts, apiGetProductDetail, apiGetProducts, apiGetSavingSpotlightProducts, apiGetTopRankingProducts } from './actions'
+import { apiGetBestSalerProducts, apiGetGuaranteedProducts, apiGetHomeBestSalerProducts, apiGetHomeGuaranteedProducts, apiGetHomeNewArrivalProducts, apiGetHomeProducts, apiGetHomeSavingSpotlightProducts, apiGetHomeTopRankingProducts, apiGetNewArrivalProducts, apiGetProductDetail, apiGetProducts, apiGetRecommendedProducts, apiGetSavingSpotlightProducts, apiGetTopRankingProducts } from './actions'
 import { paginateFulfilled, paginateInfiniteFulfilled, paginatePending, paginateRejected, paginationInfiniteInitialState, paginationInitialState } from '../../helpers/reduxHelper';
 
 const initialState = {
@@ -11,6 +11,7 @@ const initialState = {
     bestSalerProducts: paginationInitialState,
 
     homeProducts: paginationInitialState,
+    homeRecommendedProducts: paginationInitialState,
     homeTopRankingProducts: paginationInitialState,
     homeNewArrivalProducts: paginationInitialState,
     homeSavingSpotlightProducts: paginationInitialState,
@@ -92,6 +93,11 @@ export const slice = createSlice({
             .addCase(apiGetHomeProducts.fulfilled, paginateFulfilled('homeProducts'))
             .addCase(apiGetHomeProducts.pending, paginatePending('homeProducts'))
             .addCase(apiGetHomeProducts.rejected, paginateRejected('homeProducts'));
+
+        builder
+            .addCase(apiGetRecommendedProducts.fulfilled, paginateFulfilled('homeRecommendedProducts'))
+            .addCase(apiGetRecommendedProducts.pending, paginatePending('homeRecommendedProducts'))
+            .addCase(apiGetRecommendedProducts.rejected, paginateRejected('homeRecommendedProducts'));
 
 
         // Top ranking products

@@ -5,7 +5,7 @@ import { Row, Col } from "react-bootstrap";
 
 import ROUTES from "../../helpers/routesHelper";
 import { amountConversion, getProductImageUrl, smoothScrollToTop, logger } from "../../helpers/commonHelper";
-import { apiGetHomeBestSalerProducts, apiGetHomeTopRankingProducts } from "../../store/products/actions";
+import { apiGetHomeBestSalerProducts, apiGetHomeTopRankingProducts, apiGetRecommendedProducts } from "../../store/products/actions";
 
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
@@ -17,6 +17,9 @@ export default function BestDealsDiscover() {
   );
   const { items: topRankedItems, isLoading: isTopRankedLoading } = useSelector(
     (s) => s.products.homeTopRankingProducts
+  );
+  const { items: recommendedItems, isLoading: isRecommendedLoading } = useSelector(
+    (s) => s.products.homeRecommendedProducts
   );
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
@@ -31,17 +34,21 @@ export default function BestDealsDiscover() {
     const name = (item?.name || "").toLowerCase().trim();
     return name && !name.includes("test");
   });
+  const filteredRecommended = (recommendedItems || []).filter((item) => {
+    const name = (item?.name || "").toLowerCase().trim();
+    return name && !name.includes("test");
+  });
   const combinedItems = useMemo(() => {
     const seen = new Set();
     const merged = [];
-    [...filteredBestDeals, ...filteredTopRanked].forEach((item) => {
+    [...filteredRecommended, ...filteredBestDeals, ...filteredTopRanked].forEach((item) => {
       const key = item?._id || item?.id || item?.productId || item?.offerId;
       if (!key || seen.has(key)) return;
       seen.add(key);
       merged.push(item);
     });
     return merged;
-  }, [filteredBestDeals, filteredTopRanked]);
+  }, [filteredRecommended, filteredBestDeals, filteredTopRanked]);
   const resolveTrustText = (item) => {
     const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;
     const sold = item?.sold || item?.totalSold || item?.orderCount;
@@ -60,7 +67,16 @@ export default function BestDealsDiscover() {
   };
 
   useEffect(() => {
-    if ((items?.length || 0) < limit) {
+    if (recommendedItems?.length) return;
+    dispatch(
+      apiGetRecommendedProducts({
+        limit,
+        refresh: Date.now(),
+      })
+    );
+  }, [dispatch, recommendedItems?.length, limit]);
+  useEffect(() => {
+    if (!items?.length) {
       dispatch(
         apiGetHomeBestSalerProducts({
           limit,
@@ -71,7 +87,7 @@ export default function BestDealsDiscover() {
     }
   }, [dispatch, items?.length]);
   useEffect(() => {
-    if ((topRankedItems?.length || 0) < limit) {
+    if (!topRankedItems?.length) {
       dispatch(
         apiGetHomeTopRankingProducts({
           limit,
@@ -93,7 +109,7 @@ export default function BestDealsDiscover() {
 
   return (
     <>
-      {isLoading || isTopRankedLoading ? (
+      {isLoading || isTopRankedLoading || isRecommendedLoading ? (
         <Suspense fallback={<LoadingFallback />}>
           <LoadingFallback />
         </Suspense>

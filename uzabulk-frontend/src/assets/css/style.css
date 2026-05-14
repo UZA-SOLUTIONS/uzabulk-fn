@@ -1279,6 +1279,14 @@ ul.homeMenu_list li button.categories-nav-trigger:focus-visible::before {
   pointer-events: none;
 }
 
+.modal.logout-confirmation-modal {
+  z-index: 100100;
+}
+
+.logout-confirmation-backdrop.modal-backdrop {
+  z-index: 100090;
+}
+
 /* Motion lives on the dialog only (smoother + works with hover) */
 .modal.categories-modal-anchor.fade {
   transition: none;
@@ -2242,6 +2250,8 @@ span.Popular_bagde {
 
 .react-tel-input .country-list {
   text-align: start;
+  /* ~5 country rows (lib default row ~32–36px); was overridden taller but modal clip was the real issue */
+  max-height: min(200px, 42vh) !important;
 }
 
 .signupinput_phone .react-tel-input input {
@@ -2267,6 +2277,59 @@ span.Popular_bagde {
 
 .signupinput_phone .react-tel-input .selected-flag .arrow {
   border-top: 4px solid #fff;
+}
+
+/* Signup modal: phone row matches password field (theme bar + lock icon) */
+/* Let country dropdown extend past the pill; overflow:hidden clipped list to ~1 row */
+.login_auth .signupinput_phone {
+  position: relative;
+  z-index: 30;
+}
+
+.login_auth .signupinput_phone .react-tel-input {
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  background: var(--theme-color);
+  border-radius: 15px;
+  border: none;
+  overflow: visible;
+  min-height: 40px;
+  padding-left: 42px;
+}
+
+.login_auth .signupinput_phone .react-tel-input .flag-dropdown,
+.login_auth .signupinput_phone .react-tel-input .selected-flag {
+  background: transparent !important;
+  border: none !important;
+}
+
+.login_auth .signupinput_phone .react-tel-input .form-control.login-auth-phone-input,
+.login_auth .signupinput_phone .react-tel-input .form-control {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 40px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #fff !important;
+  font-size: 16px;
+  padding-left: 8px !important;
+  padding-right: 12px !important;
+}
+
+.login_auth .signupinput_phone .react-tel-input .form-control::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.login_auth .signupinput_phone .react-tel-input .selected-flag:hover,
+.login_auth .signupinput_phone .react-tel-input .selected-flag:focus {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.login_auth .signupinput_phone .auth_icon {
+  z-index: 2;
+  pointer-events: none;
 }
 
 .inner_welcome {
@@ -4389,6 +4452,151 @@ table.order-table tr td {
 .wrap_conatainer li.breadcrumb-item a {
   color: var(--theme-yellow);
   text-decoration: none;
+}
+
+.privacy_policy_page {
+  background: #fff;
+  min-height: 70vh;
+  padding-bottom: 40px;
+}
+
+.privacy_policy_container .breadcrumb {
+  font-size: 14px;
+}
+
+.privacy_policy_card {
+  background: #fff;
+  border: 1px solid #eeeeee;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.privacy_policy_hero {
+  background: #fff;
+  border-bottom: 1px solid #eeeeee;
+  padding: clamp(28px, 5vw, 56px);
+  text-align: left;
+}
+
+.privacy_policy_eyebrow {
+  color: var(--theme-yellow);
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.privacy_policy_hero h1 {
+  color: #1f2937;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  line-height: 1.05;
+  margin-bottom: 16px;
+}
+
+.privacy_policy_hero p {
+  color: #5f6876;
+  font-size: 15px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+  max-width: 760px;
+}
+
+.privacy_policy_hero small {
+  color: #7a8492;
+  font-weight: 600;
+}
+
+.privacy_policy_content {
+  color: #3c4654;
+  font-size: 14px;
+  line-height: 1.75;
+  padding: clamp(24px, 4vw, 48px);
+  text-align: left;
+}
+
+.privacy_policy_content * {
+  text-align: left !important;
+}
+
+.privacy_policy_content h1,
+.privacy_policy_content h2,
+.privacy_policy_content h3,
+.privacy_policy_content h4 {
+  color: #1f2937;
+  font-weight: 750;
+  line-height: 1.25;
+  margin: 28px 0 12px;
+}
+
+.privacy_policy_content h1:first-child,
+.privacy_policy_content h2:first-child,
+.privacy_policy_content h3:first-child {
+  margin-top: 0;
+}
+
+.privacy_policy_content h2 {
+  font-size: 21px;
+}
+
+.privacy_policy_content h3 {
+  font-size: 18px;
+}
+
+.privacy_policy_content p {
+  margin-bottom: 16px;
+}
+
+.privacy_policy_content ul,
+.privacy_policy_content ol {
+  margin: 0 0 20px;
+  padding-left: 22px;
+}
+
+.privacy_policy_content li {
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.privacy_policy_content a {
+  color: var(--theme-yellow);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.privacy_policy_content a:hover {
+  text-decoration: underline;
+}
+
+.privacy_policy_content table {
+  border: 1px solid #e5e7eb;
+  border-collapse: collapse;
+  margin: 24px 0;
+  width: 100%;
+}
+
+.privacy_policy_content th,
+.privacy_policy_content td {
+  border: 1px solid #e5e7eb;
+  padding: 12px 14px;
+  vertical-align: top;
+}
+
+.privacy_policy_content th {
+  background: #fff8ef;
+  color: #1f2937;
+}
+
+.privacy_policy_loading {
+  background: #fff8ef;
+  border: 1px dashed #f0c98f;
+  border-radius: 16px;
+  color: #7a4c0f;
+  font-weight: 700;
+  padding: 18px;
+  text-align: center;
 }
 
 .wrap_conatainer .card a {
@@ -6686,14 +6894,6 @@ table.order-table tr td {
 
   .top_ranking_grid_compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .often_category_products {
-    grid-template-columns: 1fr;
-  }
-
-  .often_category_col {
-    width: 100%;
   }
 
   .home_category_circle_item {

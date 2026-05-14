@@ -11,7 +11,7 @@ const normalizeElasticNodeUrl = (rawUrl) => {
         return "";
     }
 };
-11
+
 const baseUrl = normalizeElasticNodeUrl(env?.ELASTIC_SEARCH?.BASE_URL);
 const isElasticConfigured = Boolean(baseUrl);
 

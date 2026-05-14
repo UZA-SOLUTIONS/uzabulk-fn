@@ -6,6 +6,25 @@ const Coupon = require('../../../models/couponTable');
 const helper = require("../helper");
 const { getDate, paymentSlipUploadLink, verifyToken } = require('../../../utils');
 const { v4: uuidv4 } = require('uuid');
+const { trackProductBehavior } = require('../../products/services/recommendationService');
+
+const trackCheckoutLineItems = (req, lineItems = [], eventType = "checkout") => {
+    lineItems.forEach((lineItem) => {
+        (lineItem.items || []).forEach((item) => {
+            trackProductBehavior(req, {
+                productId: item.product,
+                eventType,
+                score: eventType === "order" ? 10 : 7,
+                metadata: {
+                    quantity: item.quantity,
+                    cartId: lineItem.cart_id,
+                    orderGroupId: lineItem.orderGroupId,
+                },
+            });
+        });
+    });
+};
+
 module.exports = {
 
     checkoutCalculationMiddleware: async (req, isOrder = false) => {
@@ -134,6 +153,7 @@ module.exports = {
     checkout: async (req, res) => {
         try {
             const checkout = await module.exports.checkoutCalculationMiddleware(req);
+            trackCheckoutLineItems(req, checkout.line_items, "checkout");
             return res.success(checkout);
 
         } catch (error) {
@@ -185,6 +205,7 @@ module.exports = {
 
             if (orders.length) {
                 await Order.createMany(orders);
+                trackCheckoutLineItems(req, checkout.line_items, "order");
                 // Clear the cart for the processed order
                 await Cart.clearCartByIds(cart_ids);
 

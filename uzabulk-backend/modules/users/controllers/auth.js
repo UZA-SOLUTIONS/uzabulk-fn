@@ -106,11 +106,7 @@ exports.verifyMobileNumber = async (req, res) => {
 };
 
 /**
- * Sign up via Email/Mobile number
- *
- * emailId, mobileNumber, countryCode, password, confirmPassword
- *
- * Customers will receive an OTP on their mobile number and have to enter/add the OTP to verify their mobile number.
+ * Customer signup: email + email OTP, password, phone (no mobile OTP on signup).
  */
 exports.register = async (req, res) => {
   try {

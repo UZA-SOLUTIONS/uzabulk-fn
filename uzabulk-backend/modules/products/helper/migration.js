@@ -3,6 +3,101 @@ const { getProductDetail } = require('../services/alibaba');
 const { bulkInsert } = require("../../../elasticsearch/indexes/productIndex");
 const STORE_TYPE_ID = "660e3c271095513081ed2223";
 
+const firstFiniteNumber = (values = []) => {
+    for (const value of values) {
+        if (value === undefined || value === null || value === "") continue;
+        const numericText = typeof value === "string" ? value.match(/-?\d+(\.\d+)?/)?.[0] : value;
+        const numberValue = Number(numericText);
+        if (Number.isFinite(numberValue)) return numberValue;
+    }
+    return null;
+};
+
+const normalizeRatingValue = (value) => {
+    const rating = firstFiniteNumber([value]);
+    if (rating === null || rating <= 0) return null;
+    if (rating > 10 && rating <= 100) return Number((rating / 20).toFixed(1));
+    if (rating > 5 && rating <= 10) return Number((rating / 2).toFixed(1));
+    return Number(Math.min(rating, 5).toFixed(1));
+};
+
+const getSupplierRatingStats = (productDetails = {}) => {
+    const rating = normalizeRatingValue(firstFiniteNumber([
+        productDetails.tradeScore,
+        productDetails.score,
+        productDetails.rating,
+        productDetails.averageRating,
+        productDetails.average_rating,
+        productDetails.productRating,
+        productDetails.productScore,
+        productDetails?.statistics?.rating,
+        productDetails?.statistics?.averageRating,
+        productDetails?.reviewInfo?.averageRating,
+        productDetails?.reviewInfo?.rating,
+        productDetails?.sellerData?.score,
+    ]));
+
+    const count = firstFiniteNumber([
+        productDetails.ratingCount,
+        productDetails.rating_count,
+        productDetails.reviewCount,
+        productDetails.reviewsCount,
+        productDetails.evaluationCount,
+        productDetails.productReviewCount,
+        productDetails?.statistics?.ratingCount,
+        productDetails?.statistics?.reviewCount,
+        productDetails?.reviewInfo?.ratingCount,
+        productDetails?.reviewInfo?.reviewCount,
+    ]);
+
+    return {
+        average_rating: rating,
+        rating_count: count !== null && count > 0 ? Math.floor(count) : 0,
+    };
+};
+
+const getLocalReviewRatingStats = async (productId) => {
+    if (!productId || !_model?.productReview?.aggregate) {
+        return { average_rating: null, rating_count: 0 };
+    }
+
+    const [stats] = await _model.productReview.aggregate([
+        {
+            $match: {
+                product_id: String(productId),
+                status: "approved",
+                rating: { $gt: 0 },
+            },
+        },
+        {
+            $group: {
+                _id: "$product_id",
+                average_rating: { $avg: "$rating" },
+                rating_count: { $sum: 1 },
+            },
+        },
+    ]);
+
+    return {
+        average_rating: normalizeRatingValue(stats?.average_rating),
+        rating_count: Number(stats?.rating_count) || 0,
+    };
+};
+
+const resolveProductRatingStats = (supplierStats, localStats) => {
+    if (supplierStats?.average_rating !== null && supplierStats?.average_rating !== undefined) {
+        return {
+            average_rating: supplierStats.average_rating,
+            rating_count: supplierStats.rating_count || 0,
+        };
+    }
+
+    return {
+        average_rating: localStats?.average_rating || 0,
+        rating_count: localStats?.rating_count || 0,
+    };
+};
+
 const updateProductDetails = async (product, productDetails) => {
     try {
         let productObject = {};
@@ -10,13 +105,18 @@ const updateProductDetails = async (product, productDetails) => {
 
         if (productDetails && productDetails.status == "published") {
 
-            const { topCategoryId = "", secondCategoryId, thirdCategoryId, status, productSkuInfos, subjectTrans, offerId, description, productSaleInfo, productImage, tradeScore, soldOut, productAttribute, mainVideo, detailVideo, sellerOpenId, productShippingInfo } = productDetails;
+            const { topCategoryId = "", secondCategoryId, thirdCategoryId, status, productSkuInfos, subjectTrans, offerId, description, productSaleInfo, productImage, soldOut, productAttribute, mainVideo, detailVideo, sellerOpenId, productShippingInfo } = productDetails;
             const price_tiers = transformPriceRange(productSaleInfo?.priceRangeList || [])
 
-            const [categories, variations] = await Promise.all([
+            const [categories, variations, localRatingStats] = await Promise.all([
                 _model.Category.getExternalCategory([topCategoryId, secondCategoryId, thirdCategoryId]),
-                transformAndInsertProductSKUs(product.vendor, productSkuInfos)
+                transformAndInsertProductSKUs(product.vendor, productSkuInfos),
+                getLocalReviewRatingStats(product._id)
             ]);
+            const ratingStats = resolveProductRatingStats(
+                getSupplierRatingStats(productDetails),
+                localRatingStats
+            );
 
             productObject = {
                 status: status === "published" ? "active" : "inactive",
@@ -47,8 +147,8 @@ const updateProductDetails = async (product, productDetails) => {
                 stock_status: "instock",
                 featured_image: productImage?.images[0],
                 images: productImage?.images,
-                average_rating: isNaN(tradeScore) ? 0 : parseInt(tradeScore),
-                rating_count: 0,
+                average_rating: ratingStats.average_rating,
+                rating_count: ratingStats.rating_count,
                 sold_count: soldOut,
                 shippingCharge: 0,
                 price_tiers,

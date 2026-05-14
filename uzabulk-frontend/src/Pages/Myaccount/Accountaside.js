@@ -9,12 +9,18 @@ import { apiLogout } from "../../store/auth/actions";
 import { setCouponCode } from "../../store/cart/slice";
 
 const Accountaside = () => {
-  const { user } = useSelector((s) => s.auth);
+  const { user, isLoading } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
   const { pathname } = useLocation();
   const { id = "" } = useParams();
 
   const [showLogoutPopup, setShowLogoutPopup] = useState(false);
+
+  const handleLogout = () => {
+    setShowLogoutPopup(false);
+    dispatch(setCouponCode());
+    dispatch(apiLogout());
+  };
 
   return (
     <div className="sider_sidebar">
@@ -66,8 +72,9 @@ const Accountaside = () => {
         <li>
           <Link
             to="#"
-            onClick={() => {
-              setShowLogoutPopup(true)
+            onClick={(event) => {
+              event.preventDefault();
+              setShowLogoutPopup(true);
             }}
           >
             Logout
@@ -75,10 +82,9 @@ const Accountaside = () => {
           <LogoutPopup
             show={showLogoutPopup}
             onhide={() => setShowLogoutPopup(false)}
-            onLogout={() => {
-              dispatch(setCouponCode());
-              dispatch(apiLogout());
-            }} />
+            onLogout={handleLogout}
+            isLoggingOut={isLoading}
+          />
         </li>
       </ul>
     </div>

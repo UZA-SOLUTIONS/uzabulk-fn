@@ -110,7 +110,7 @@ const Cartpage = () => {
                   const checkoutMessage = getCheckoutErrorMessage({ cart, orderDetails, index });
                   return (
                     <Col key={index} lg={12} className="my-2">
-                      <div className="catpage_preview text-start pe-4 lg-pe-0 position-relative">
+                      <div className="catpage_preview text-start pe-0 pe-lg-4 position-relative">
 
                         {(cart?.isLoading || cart._id === delId) && <BlockContent className="rounded rounded-4" />}
 

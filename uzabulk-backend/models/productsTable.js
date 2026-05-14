@@ -106,6 +106,7 @@ productSchema.index({ status: 1, price: 1, date_created_utc: -1 }, { name: "pric
 productSchema.index({ status: 1, bestSeller: 1, categories: 1, date_created_utc: -1 }, { name: "best_seller_filter" });
 productSchema.index({ status: 1, adminSold: 1, categories: 1, isFeatured: 1, date_created_utc: -1 }, { name: "admin_featured_filter" });
 productSchema.index({ status: 1, elasticSearchIndexed: -1 }, { name: "elastic_search_indexing_filter" });
+productSchema.index({ offerId: 1, status: 1 }, { name: "offer_status_lookup" });
 
 
 let Product = module.exports = mongoose.model("Product", productSchema);

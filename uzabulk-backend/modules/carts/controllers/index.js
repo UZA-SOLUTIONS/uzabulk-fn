@@ -3,6 +3,7 @@ const helper = require("../helper");
 const validation = require("../input-validation");
 const { default: mongoose } = require('mongoose');
 const { priceExchange, calculatePrice } = require('../../../helpers/helper');
+const { trackProductBehavior } = require('../../products/services/recommendationService');
 const cartList = async (req) => {
 
     const { exchangeRate } = req.exchangeRate;
@@ -99,6 +100,13 @@ module.exports = {
                 result = await Cart.addToCart(data);
             };
 
+            trackProductBehavior(req, {
+                product: getProduct,
+                eventType: "add_to_cart",
+                score: 5,
+                metadata: { quantity: data.items?.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) || 0 },
+            });
+
             res.success(result);
 
         } catch (error) {
@@ -128,6 +136,12 @@ module.exports = {
             if (items.length) {
                 let updated = await Cart.updateCart(query, { items, subTotal: itemTotal });
                 let cartItems = await cartList(req);
+                trackProductBehavior(req, {
+                    product: getCart.product,
+                    eventType: "update_cart",
+                    score: 2,
+                    metadata: { operateType: data.operateType },
+                });
                 // return res.success("CART_UPDATED_SUCCESS", cartItems.map((c) => {
                 //     if (c._id.toString() === updated._id.toString()) {
                 //         return { ...c, items };

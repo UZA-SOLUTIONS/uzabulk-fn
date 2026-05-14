@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -14,7 +14,14 @@ const MAX_CATEGORIES = 12;
 const PRODUCTS_PER_CATEGORY = 4;
 /** Cap parallel /api/v1/products/list calls so a remote MongoDB pool is not hammered at once. */
 const CATEGORY_FETCH_CONCURRENCY = 3;
-const VISIBLE_GROUPS = 4;
+
+function resolveVisibleCategoryColumns() {
+  if (typeof window === "undefined") return 4;
+  const w = window.innerWidth;
+  if (w < 768) return 1;
+  if (w < 992) return 2;
+  return 4;
+}
 const FILTER_OPTIONS = [
   { id: "recommended", label: "Recommended" },
   { id: "popular", label: "Most Popular" },
@@ -45,6 +52,17 @@ export default function OftenPurchasedCategories() {
   const [startIndex, setStartIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState("");
   const [activeFilter, setActiveFilter] = useState("recommended");
+  const [visibleCategoryColumns, setVisibleCategoryColumns] = useState(() =>
+    typeof window !== "undefined" ? resolveVisibleCategoryColumns() : 4
+  );
+  const swipeTouchRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const sync = () => setVisibleCategoryColumns(resolveVisibleCategoryColumns());
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, []);
   const resolveTrustText = (item) => {
     const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;
     const sold = item?.sold || item?.totalSold || item?.orderCount;
@@ -210,8 +228,8 @@ export default function OftenPurchasedCategories() {
     ];
   }, [sortedCategories, startIndex]);
   const slidingCategories = useMemo(
-    () => orderedCategories.slice(0, VISIBLE_GROUPS),
-    [orderedCategories]
+    () => orderedCategories.slice(0, visibleCategoryColumns),
+    [orderedCategories, visibleCategoryColumns]
   );
 
   const categoryProductsRef = useRef(categoryProducts);
@@ -303,6 +321,29 @@ export default function OftenPurchasedCategories() {
     setSlideDirection(direction);
     setStartIndex((prev) => prev + (direction === "next" ? 1 : -1));
   };
+
+  const handleSwipeTouchStart = (event) => {
+    if (visibleCategoryColumns !== 1) return;
+    const t = event.touches[0];
+    swipeTouchRef.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleSwipeTouchEnd = (event) => {
+    if (visibleCategoryColumns !== 1 || !swipeTouchRef.current) return;
+    const t = event.changedTouches[0];
+    const dx = t.clientX - swipeTouchRef.current.x;
+    const dy = t.clientY - swipeTouchRef.current.y;
+    swipeTouchRef.current = null;
+    const minTravel = 48;
+    if (Math.abs(dx) < minTravel) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
+    if (dx < 0) handleSlide("next");
+    else handleSlide("prev");
+  };
+
+  const handleSwipeTouchCancel = () => {
+    swipeTouchRef.current = null;
+  };
   const hasLoadedAnyProducts = useMemo(
     () => Object.values(categoryProducts || {}).some((items) => (items || []).length > 0),
     [categoryProducts]
@@ -310,31 +351,33 @@ export default function OftenPurchasedCategories() {
 
   return (
     <div className="often_purchased_section mt-3">
-      <div className="often_category_controls d-flex align-items-center justify-content-between mb-2">
-        <div className="often_filter_nav d-flex flex-wrap align-items-center gap-4">
-          {FILTER_OPTIONS.map((option) => (
-            <span
-              key={option.id}
-              role="button"
-              tabIndex={0}
-              className={`often_filter_text ${activeFilter === option.id ? "is-active" : ""}`}
-              onClick={() => {
-                setActiveFilter(option.id);
-                setStartIndex(0);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
+      <div className="often_category_controls d-flex align-items-center gap-2 mb-2">
+        <div className="often_filter_scroll_outer flex-grow-1 min-w-0">
+          <div className="often_filter_nav d-flex flex-nowrap flex-md-wrap align-items-center gap-3 gap-md-4">
+            {FILTER_OPTIONS.map((option) => (
+              <span
+                key={option.id}
+                role="button"
+                tabIndex={0}
+                className={`often_filter_text ${activeFilter === option.id ? "is-active" : ""}`}
+                onClick={() => {
                   setActiveFilter(option.id);
                   setStartIndex(0);
-                }
-              }}
-            >
-              {option.label}
-            </span>
-          ))}
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setActiveFilter(option.id);
+                    setStartIndex(0);
+                  }
+                }}
+              >
+                {option.label}
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="d-flex align-items-center gap-2">
+        <div className="d-flex align-items-center gap-2 flex-shrink-0">
           <button
             type="button"
             className="often_category_chevron"
@@ -360,14 +403,27 @@ export default function OftenPurchasedCategories() {
           <UXSkeleton type="product-grid" count={8} />
         </div>
       ) : (
-        <div className="often_category_slider">
+        <div
+          className={`often_category_slider${
+            visibleCategoryColumns === 1 ? " often_category_slider--one-col" : ""
+          }`}
+          role={visibleCategoryColumns === 1 ? "region" : undefined}
+          aria-label={
+            visibleCategoryColumns === 1
+              ? "Category products. Swipe left or right to change category."
+              : undefined
+          }
+          onTouchStart={handleSwipeTouchStart}
+          onTouchEnd={handleSwipeTouchEnd}
+          onTouchCancel={handleSwipeTouchCancel}
+        >
           <div className={`often_category_track ${slideDirection ? `is-sliding-${slideDirection}` : ""}`}>
             {slidingCategories.map((category, idx) => {
               const items = sortProducts(categoryProducts[category?._id] || []);
               return (
                 <div className="often_category_col" key={`${category?._id || "cat"}-${idx}`}>
                   <div className="often_category_box h-100">
-                    <div className="often_category_box_head d-flex justify-content-between align-items-center">
+                    <div className="often_category_box_head d-flex justify-content-between align-items-center flex-wrap gap-2">
                       <h6 className="mb-0">{category?.catName || "Category"}</h6>
                       <Link
                         to={`${ROUTES.PRODUCT_LISTING}?skip=1&category=${category?._id}&name=${encodeURIComponent(

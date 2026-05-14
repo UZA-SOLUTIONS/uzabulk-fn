@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense } from "react";
+import React, { useEffect, Suspense, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Row, Col } from "react-bootstrap";
@@ -15,6 +15,9 @@ export default function NewArrivalProducts() {
   const { isLoading, items, total } = useSelector(
     (s) => s.products.homeNewArrivalProducts
   );
+  const { items: recommendedItems } = useSelector(
+    (s) => s.products.homeRecommendedProducts
+  );
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
   logger("NEW ARRIVAL PRODUCT SLIDER", items);
@@ -24,6 +27,21 @@ export default function NewArrivalProducts() {
     const name = (item?.name || "").toLowerCase().trim();
     return name && !name.includes("test");
   });
+  const filteredRecommended = (recommendedItems || []).filter((item) => {
+    const name = (item?.name || "").toLowerCase().trim();
+    return name && !name.includes("test");
+  });
+  const displayItems = useMemo(() => {
+    const seen = new Set();
+    const merged = [];
+    [...filteredRecommended, ...filteredItems].forEach((item) => {
+      const key = item?._id || item?.id || item?.productId || item?.offerId;
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      merged.push(item);
+    });
+    return merged;
+  }, [filteredRecommended, filteredItems]);
   const resolveTrustText = (item) => {
     const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;
     const sold = item?.sold || item?.totalSold || item?.orderCount;
@@ -42,7 +60,7 @@ export default function NewArrivalProducts() {
   };
 
   useEffect(() => {
-    if ((items?.length || 0) < limit)
+    if (!items?.length)
       dispatch(
         apiGetHomeNewArrivalProducts({
           limit: limit,
@@ -80,7 +98,7 @@ export default function NewArrivalProducts() {
             <Row className="g-3 align-items-start">
               <Col md={12}>
                 <div className="new_Arrivals new_Arrivals_many product_square_grid mt-3">
-                  {filteredItems.slice(0, 100).map((item, idx) => (
+                  {displayItems.slice(0, 100).map((item, idx) => (
                     <div
                       className="new_arrival_img new_arrival_product_card cursor-pointer text-start"
                       key={item?._id || idx}
