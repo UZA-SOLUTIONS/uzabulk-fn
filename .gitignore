@@ -1,8 +1,8 @@
-# Monorepo root — secrets & machine-local files
+# UZABULK frontend — secrets & machine-local files
 .DS_Store
 Thumbs.db
 
-# Environment & credentials (any subfolder)
+# Environment & credentials
 **/.env
 **/.env.*
 !**/.env.example
@@ -17,3 +17,7 @@ Thumbs.db
 **/credentials.json
 **/google.json
 **/.npmrc
+
+# Build output
+**/build/
+**/node_modules/
