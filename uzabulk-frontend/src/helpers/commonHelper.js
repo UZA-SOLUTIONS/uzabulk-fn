@@ -1,5 +1,8 @@
 import moment from "moment";
 import DOMPurify from 'dompurify';
+import ROUTES from "./routesHelper";
+import { apiGet } from "./apiHelper";
+import { PRODUCTS } from "./urlHelper";
 
 export const ENVIRONMENT = process.env.REACT_APP_ENVIORNMENT || "production";
 
@@ -68,6 +71,75 @@ export const getDeviceId = () => {
   return deviceId;
 }
 
+const HOME_FEED_REFRESH_KEY = "uza-home-feed-refresh";
+
+/** New token each home visit so rotated product pools change. */
+export const bumpHomeFeedRefreshToken = () => {
+  const token = String(Date.now());
+  if (typeof sessionStorage !== "undefined") {
+    sessionStorage.setItem(HOME_FEED_REFRESH_KEY, token);
+  }
+  return token;
+};
+
+export const getHomeFeedRefreshToken = () => {
+  if (typeof sessionStorage === "undefined") {
+    return String(Date.now());
+  }
+  return sessionStorage.getItem(HOME_FEED_REFRESH_KEY) || bumpHomeFeedRefreshToken();
+};
+
+/** Stable key for deduplicating catalog rows (_id, id, productId, offerId). */
+export const getProductDedupeKey = (item) => {
+  const id = String(item?._id || item?.id || item?.productId || "").trim();
+  if (id) return `id:${id}`;
+  const offer = String(item?.offerId || item?.topIds || "").trim();
+  if (offer) return `offer:${offer}`;
+  return "";
+};
+
+export const isValidHomeCatalogProduct = (item) => {
+  if (!item) return false;
+  if (!getProductDedupeKey(item)) return false;
+  const name = (item?.name || "").trim();
+  if (!name || name.toLowerCase().includes("test")) return false;
+  return true;
+};
+
+export const dedupeProducts = (items = []) => {
+  const seen = new Set();
+  const unique = [];
+  (items || []).forEach((item) => {
+    const key = getProductDedupeKey(item);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    unique.push(item);
+  });
+  return unique;
+};
+
+export const mergeUniqueProducts = (existing = [], incoming = []) => {
+  const seen = new Set((existing || []).map(getProductDedupeKey).filter(Boolean));
+  const merged = [...(existing || [])];
+  (incoming || []).forEach((item) => {
+    const key = getProductDedupeKey(item);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push(item);
+  });
+  return merged;
+};
+
+export const normalizeHomeCatalogProducts = (items = [], { excludeKeys = null } = {}) => {
+  const exclude = excludeKeys instanceof Set ? excludeKeys : null;
+  return dedupeProducts(items).filter((item) => {
+    if (!isValidHomeCatalogProduct(item)) return false;
+    if (!exclude?.size) return true;
+    const key = getProductDedupeKey(item);
+    return key && !exclude.has(key);
+  });
+};
+
 
 export const setCoupon = (coupon = "") => {
   localStorage.setItem(COUPON_CODE, coupon);
@@ -126,6 +198,118 @@ export const resolveMediaUrl = (value) => {
   if (!origin) return unquoted.startsWith("/") ? unquoted : "";
   if (unquoted.startsWith("/")) return `${origin}${unquoted}`;
   return `${origin}/${unquoted.replace(/^\/+/, "")}`;
+};
+
+export const getUserAvatarUrl = (user) => {
+  if (!user) return "";
+  return resolveMediaUrl(user.profileImage);
+};
+
+export const getUserInitials = (user) => {
+  const name = String(user?.name || user?.hintName || user?.email || "U").trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
+/** MongoDB ObjectId string (24 hex). */
+export const looksLikeMongoProductId = (value) =>
+  /^[a-fA-F0-9]{24}$/.test(String(value || "").trim());
+
+/** 1688 numeric offer id (not a Mongo ObjectId). */
+export const looksLike1688OfferId = (value) => {
+  const s = String(value || "").trim();
+  if (!/^\d+$/.test(s) || s.length < 4 || s.length > 30) return false;
+  if (s.length === 24 && /^[a-fA-F0-9]{24}$/.test(s)) return false;
+  return true;
+};
+
+export const extractMongoProductId = (item) => {
+  const raw = item?._id ?? item?.id ?? item?.productId;
+  if (raw && typeof raw === "object" && raw.$oid) {
+    return String(raw.$oid).trim();
+  }
+  return String(raw || "").trim();
+};
+
+/** Resolve canonical Mongo _id (via by-offer when needed). */
+export const resolveCatalogProductId = async (item) => {
+  const offerId = String(item?.offerId || item?.topIds || "").trim();
+  const mongoId = extractMongoProductId(item);
+
+  if (looksLike1688OfferId(offerId)) {
+    try {
+      const res = await apiGet(`${PRODUCTS.BY_OFFER}/${encodeURIComponent(offerId)}`, {
+        suppressGlobalErrorToast: true,
+      });
+      const resolved = String(res?.data?._id || "").trim();
+      if (looksLikeMongoProductId(resolved)) {
+        return { mongoId: resolved, offerId };
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  if (looksLikeMongoProductId(mongoId)) {
+    return { mongoId, offerId: offerId || undefined };
+  }
+
+  if (looksLike1688OfferId(mongoId)) {
+    try {
+      const res = await apiGet(`${PRODUCTS.BY_OFFER}/${encodeURIComponent(mongoId)}`, {
+        suppressGlobalErrorToast: true,
+      });
+      const resolved = String(res?.data?._id || "").trim();
+      if (looksLikeMongoProductId(resolved)) {
+        return { mongoId: resolved, offerId: mongoId };
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  return null;
+};
+
+/** Product detail URL: prefers catalog _id; always passes offerId when known. */
+export const buildProductDetailUrl = (item, options = {}) => {
+  const offerId = String(item?.offerId || item?.topIds || "").trim();
+  const mongoId = extractMongoProductId(item);
+  let pathId = "";
+
+  if (looksLikeMongoProductId(mongoId)) {
+    pathId = mongoId;
+  } else if (looksLike1688OfferId(offerId)) {
+    pathId = offerId;
+  } else if (looksLike1688OfferId(mongoId)) {
+    pathId = mongoId;
+  } else {
+    pathId = mongoId || offerId;
+  }
+
+  if (!pathId) return null;
+
+  const params = new URLSearchParams();
+  if (offerId) {
+    params.set("offerId", offerId);
+  }
+  if (options.redirectUrl) {
+    params.set("redirectUrl", options.redirectUrl);
+  }
+  const qs = params.toString();
+  return `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(pathId)}${qs ? `?${qs}` : ""}`;
+};
+
+export const buildProductDetailUrlFromResolved = ({ mongoId, offerId } = {}, options = {}) => {
+  if (!looksLikeMongoProductId(mongoId)) return null;
+  const params = new URLSearchParams();
+  if (offerId) params.set("offerId", String(offerId));
+  if (options.redirectUrl) params.set("redirectUrl", options.redirectUrl);
+  const qs = params.toString();
+  return `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(mongoId)}${qs ? `?${qs}` : ""}`;
 };
 
 export const getProductImageUrl = (product, fallback = "") => {

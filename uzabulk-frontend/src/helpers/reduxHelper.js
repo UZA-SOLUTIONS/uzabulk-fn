@@ -33,16 +33,32 @@ export const paginatePending = (field) => (state, action) => {
 };
 
 export const paginateRejected = (field) => (state, action) => {
+  if (action.payload?.aborted) return;
   state[field].isLoading = false;
-  state[field].message = action.payload;
+  state[field].message =
+    typeof action.payload === "string"
+      ? action.payload
+      : action.payload?.message || "Something went wrong.";
+  if (Object.prototype.hasOwnProperty.call(state[field], "hasMore")) {
+    state[field].hasMore = false;
+  }
 };
 
 export const paginateInfiniteFulfilled = (field) => (state, action) => {
   state[field].isLoading = false;
   const { items, skip, limit, others = null, hasMore: payloadHasMore } = action.payload;
-  state[field].items = skip === 1 ? items : [...state[field].items, ...items];
-  state[field].hasMore =
-    typeof payloadHasMore === "boolean" ? payloadHasMore : items?.length === limit;
+  const pageItems = Array.isArray(items) ? items : [];
+  state[field].items = skip === 1 ? pageItems : [...state[field].items, ...pageItems];
+  const limitNum = Math.max(1, Number(limit) || pageItems.length || 1);
+  const inferredHasMore =
+    typeof payloadHasMore === "boolean"
+      ? payloadHasMore
+      : pageItems.length >= limitNum;
+  if (skip === 1 && pageItems.length === 0) {
+    state[field].hasMore = false;
+  } else {
+    state[field].hasMore = inferredHasMore;
+  }
   state[field].skip = skip;
   state[field].others = others;
 };

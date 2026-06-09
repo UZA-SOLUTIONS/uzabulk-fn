@@ -5,13 +5,27 @@
   "main": "server.js",
   "scripts": {
     "start": "nodemon server.js",
+    "start:prod": "NODE_ENV=production node server.js",
     "postinstall": "node scripts/patch-buffer-equal.js",
     "restore:products": "node scripts/restoreProductsFromApi.js",
     "bootstrap:products": "node scripts/bootstrapProductsFromApi.js",
     "seed:products": "node scripts/seedProducts.js",
     "image-index:build": "node scripts/buildLocalImageIndex.js",
+    "search:audit": "node scripts/searchAuditQueries.js",
+    "es:up": "docker compose -f docker-compose.elasticsearch.yml up -d",
+    "es:down": "docker compose -f docker-compose.elasticsearch.yml down",
+    "es:check": "node scripts/checkElasticsearch.js",
+    "es:reindex:products": "node scripts/reindexProductsEs.js",
+    "suppliers:verify": "node scripts/refreshSupplierVerification.js",
+    "suppliers:verify:catalog": "node scripts/refreshSupplierVerification.js --catalog",
+    "dashscope:test": "node scripts/testDashscope.js",
+    "dashscope:probe": "node scripts/probeDashscopeModels.js",
+    "dashscope:vl-text": "node scripts/testVlTextOnly.js",
+    "smart-listing:test": "node scripts/testSmartListing.js",
+    "smart-listing:backfill": "node scripts/backfillAutoSmartListing.js",
+    "embeddings:backfill": "node scripts/backfillProductEmbeddings.js",
     "dev": "pm2 start ecosystem.config.js --env=development",
-    "prod": "pm2 start ecosystem.config.js --env=production"
+    "prod": "NODE_ENV=production node server.js"
   },
   "keywords": [
     "logs"
@@ -50,6 +64,7 @@
     "mysql2": "^3.6.5",
     "nodemailer": "^8.0.7",
     "objectid": "^2.3.0",
+    "openai": "^4.104.0",
     "transliterate": "^1.0.1",
     "transliteration": "^2.3.5",
     "uuid": "^11.0.5",

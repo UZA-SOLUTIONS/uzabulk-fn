@@ -9,7 +9,7 @@ import MobileNumberField, { MobileError } from "../Common/MobileNumberField";
 import PasswordField from "../Common/PasswordField";
 import { apiRegister, apiVerifyEmail, apiVerifyOtp } from "../../store/auth/actions";
 
-import { ICON_EMAIL_OTP, ICON_LOCK, ICON_RELOAD, ICON_USER } from "../../assets/svg";
+import { ICON_EMAIL_OTP, ICON_RELOAD, ICON_USER } from "../../assets/svg";
 import ResendOtp from "../Common/ResendOtp";
 import ButtonLoader from "../Common/ButtonLoader";
 
@@ -279,20 +279,15 @@ const Signup = ({ handleClose }) => {
                 ) : null}
               </FormGroup>
 
-              <FormGroup className="mb-3 signupinput_phone">
-                <div className="position-relative w-100">
-                  <MobileNumberField
-                    inputClass="form-control login-auth-phone-input"
-                    placeholder="Phone number"
-                    callback={(code, number) => {
-                      form.setFieldValue("mobileNumber", number);
-                      form.setFieldValue("countryCode", code);
-                    }}
-                  />
-                  <div className="auth_icon" aria-hidden>
-                    {ICON_LOCK}
-                  </div>
-                </div>
+              <FormGroup className="mb-3 signupinput_phone auth-phone-field">
+                <MobileNumberField
+                  inputClass="form-control login-auth-phone-input"
+                  placeholder="Phone number"
+                  callback={(code, number) => {
+                    form.setFieldValue("mobileNumber", number);
+                    form.setFieldValue("countryCode", code);
+                  }}
+                />
                 <MobileError value={form.values?.mobileNumber} />
               </FormGroup>
 

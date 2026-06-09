@@ -6,7 +6,12 @@ import ROUTES from "../../helpers/routesHelper";
 import { apiGetCategories } from "../../store/categories/actions";
 import { apiGet } from "../../helpers/apiHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
-import { amountConversion, getProductImageUrl, smoothScrollToTop } from "../../helpers/commonHelper";
+import {
+  amountConversion,
+  buildProductDetailUrl,
+  getProductImageUrl,
+  smoothScrollToTop,
+} from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
 
@@ -71,13 +76,14 @@ export default function OftenPurchasedCategories() {
     if (sold) return `${sold} sold`;
     return "";
   };
-  const handleOpenProduct = (item) => {
-    const fallbackOfferId = item?.offerId || item?.topIds || "";
-    const resolvedId = item?._id || item?.id || item?.productId || fallbackOfferId;
-    if (!resolvedId) return;
+  const handleOpenProduct = async (item) => {
     smoothScrollToTop();
-    const offerQuery = fallbackOfferId ? `?offerId=${encodeURIComponent(fallbackOfferId)}` : "";
-    navigate(`${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(resolvedId)}${offerQuery}`);
+    const resolved = await resolveCatalogProductId(item);
+    const path = resolved
+      ? buildProductDetailUrlFromResolved(resolved)
+      : buildProductDetailUrl(item);
+    if (!path) return;
+    navigate(path);
   };
 
   const selectedCategories = useMemo(

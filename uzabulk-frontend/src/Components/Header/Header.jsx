@@ -1,23 +1,19 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
 import { Container } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import UserAuthCard from "./UserAuthCard";
 import ROUTES from "../../helpers/routesHelper";
 import { BRAND_LOGO_PNG } from "../../config/constants";
 import logoFallback from "../../assets/images/dark_logo.svg";
 import Homemenustrip from "./Homemenustrip";
 import ProductSearch from "../Common/ProductSearch";
+import { uploadImageSearch } from "../../helpers/imageSearchHelper";
 
 const ICON_IMAGE_SEARCH = (
   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
     <rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke="currentColor" strokeWidth="1.5" />
-    <path
-      d="M7 15l2.5-2.5 2 2L16 10l2.5 2.5"
-      stroke="currentColor"
-      strokeWidth="1.35"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+    <path d="M7 15l2.5-2.5 2 2L16 10l2.5 2.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
     <circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" />
     <path d="M15.5 6.5v4M13.5 8.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
   </svg>
@@ -33,6 +29,7 @@ const ICON_MAGNIFIER = (
 export default function Header() {
   const [searchText, setSearchText] = useState("");
   const [scrollY, setScrollY] = useState(0);
+  const [imageSearchLoading, setImageSearchLoading] = useState(false);
   const navigate = useNavigate();
   const imageSearchInputRef = useRef(null);
 
@@ -49,6 +46,34 @@ export default function Header() {
     const trimmed = (searchText || "").trim();
     if (!trimmed) return;
     navigate(`${ROUTES.PRODUCT_LISTING}?search=${encodeURIComponent(trimmed)}&skip=1`);
+  };
+
+  const handleImageSearch = async (event) => {
+    const file = event?.target?.files?.[0];
+    if (!file) return;
+    if (!file.type?.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    setImageSearchLoading(true);
+    try {
+      const data = await uploadImageSearch(file, { limit: 32 });
+      const imageUrl = data?.others?.imageUrl || "";
+      const keyword = data?.others?.imageSearchKeyword || data?.others?.imageSearchPhrase || "";
+      const params = new URLSearchParams();
+      params.set("skip", "1");
+      if (imageUrl) params.set("image", imageUrl);
+      if (keyword) params.set("search", keyword);
+      navigate(`${ROUTES.PRODUCT_LISTING}?${params.toString()}`);
+    } catch (error) {
+      toast.error(error?.message || "Could not search by image. Try again.");
+      console.error("Image search failed:", error);
+    } finally {
+      setImageSearchLoading(false);
+      if (imageSearchInputRef.current) imageSearchInputRef.current.value = "";
+    }
   };
 
   return (
@@ -75,14 +100,15 @@ export default function Header() {
                 <ProductSearch
                   wrapperClassName="header-mockup-autocomplete"
                   defaultValue={searchText}
-                  placeholder="Search products or categories..."
+                  placeholder="Search products or upload an image..."
                   callback={({ search }) => setSearchText(search || "")}
                 />
                 <div className="header-mockup-search-tray">
                   <label
-                    className="header-mockup-img-search"
+                    className={`header-mockup-img-search${imageSearchLoading ? " is-loading" : ""}`}
                     htmlFor="header-mockup-image-search-input"
-                    title="Search by image"
+                    title={imageSearchLoading ? "Analyzing image…" : "Search by image"}
+                    aria-busy={imageSearchLoading}
                   >
                     <input
                       id="header-mockup-image-search-input"
@@ -91,9 +117,8 @@ export default function Header() {
                       accept="image/*"
                       className="visually-hidden"
                       tabIndex={-1}
-                      onChange={() => {
-                        if (imageSearchInputRef.current) imageSearchInputRef.current.value = "";
-                      }}
+                      disabled={imageSearchLoading}
+                      onChange={handleImageSearch}
                     />
                     <span className="header-mockup-img-search__icon">{ICON_IMAGE_SEARCH}</span>
                   </label>

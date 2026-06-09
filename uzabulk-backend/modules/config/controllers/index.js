@@ -1,5 +1,6 @@
 "use strict";
 
+const mongoose = require("mongoose");
 const { defaultExchangeRate } = require("../../../config/db/constants");
 
 exports.getStoreConfigurations = async (req, res) => {
@@ -15,10 +16,15 @@ exports.getStoreConfigurations = async (req, res) => {
 // Get currencies for exchange rate.
 exports.getCurrencies = async (req, res) => {
   try {
-    let data = await _model.CurrencyExchangeRate.find({ status: "active" }, "-exchangeRate");
+    const CurrencyExchangeRate = global._model?.CurrencyExchangeRate;
+    let data = [];
+
+    if (CurrencyExchangeRate && mongoose.connection.readyState === 1) {
+      data = await CurrencyExchangeRate.find({ status: "active" }, "-exchangeRate").lean();
+    }
 
     if (!data?.length) {
-      data = [defaultExchangeRate]
+      data = [defaultExchangeRate];
     }
 
     return res.success("SUCCESS", data);

@@ -63,7 +63,12 @@ module.exports.uploadLocalFile = (req, res, next) => {
       console.error('Upload error:', err);
       return res.error(err);
     }
-    req.file.location = env.BASE_URL + "/images/" + req.file.filename;
+    const host = req.get("host");
+    const protocol = req.protocol || "http";
+    const localUrl = host
+        ? `${protocol}://${host}/images/${req.file.filename}`
+        : `${env.BASE_URL}/images/${req.file.filename}`;
+    req.file.location = localUrl;
     console.log(req.file)
     next();
   });

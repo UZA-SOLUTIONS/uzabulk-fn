@@ -1,5 +1,7 @@
 const { Client } = require('@elastic/elasticsearch');
 
+const getEnv = () => global.env || {};
+
 const normalizeElasticNodeUrl = (rawUrl) => {
     const input = String(rawUrl || "").trim();
     if (!input) return "";
@@ -12,7 +14,7 @@ const normalizeElasticNodeUrl = (rawUrl) => {
     }
 };
 
-const baseUrl = normalizeElasticNodeUrl(env?.ELASTIC_SEARCH?.BASE_URL);
+const baseUrl = normalizeElasticNodeUrl(getEnv()?.ELASTIC_SEARCH?.BASE_URL);
 const isElasticConfigured = Boolean(baseUrl);
 
 const noElasticClient = {
@@ -25,6 +27,8 @@ const noElasticClient = {
         exists: async () => false,
         create: async () => { throw new Error('Elasticsearch is not configured. Set ELASTIC_SEARCH.BASE_URL'); },
         putMapping: async () => { throw new Error('Elasticsearch is not configured. Set ELASTIC_SEARCH.BASE_URL'); },
+        getAlias: async () => { throw new Error('Elasticsearch is not configured. Set ELASTIC_SEARCH.BASE_URL'); },
+        updateAliases: async () => { throw new Error('Elasticsearch is not configured. Set ELASTIC_SEARCH.BASE_URL'); },
     }
 };
 
@@ -37,11 +41,11 @@ const esClient = isElasticConfigured ? new Client({
             password: env.ELASTIC_SEARCH.PASSWORD
         }
     } : {}),
-    requestTimeout: 60000,
-    maxRetries: 5,
+    requestTimeout: Number(process.env.ELASTIC_SEARCH_REQUEST_TIMEOUT_MS) || 10000,
+    maxRetries: Number(process.env.ELASTIC_SEARCH_MAX_RETRIES) || 2,
 }) : noElasticClient;
 
-if (env?.ELASTIC_SEARCH?.BASE_URL && !isElasticConfigured) {
+if (getEnv()?.ELASTIC_SEARCH?.BASE_URL && !isElasticConfigured) {
     console.warn('Invalid ELASTIC_SEARCH.BASE_URL. Elasticsearch disabled for this run.');
 }
 

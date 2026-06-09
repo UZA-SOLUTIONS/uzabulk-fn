@@ -1,8 +1,18 @@
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose");
 const { spawn } = require("child_process");
 const Product = require("../../../models/productsTable");
 const ProductBehavior = require("../../../models/productBehaviorTable");
+const { isMongoConnected } = require("../../../config/db");
+const {
+    expandCategoryFilterIds,
+    buildMongoCategoryMatch,
+} = require("./categoryFilterHelper");
+const {
+    applyEmbeddingBoost,
+    getEmbeddingDiscoveryProducts,
+} = require("./aiRecommendationService");
 
 const DEFAULT_LIMIT = 24;
 /** Python subprocess budget; override with RECOMMENDER_PYTHON_TIMEOUT_MS (ms), clamped 1.2s–20s. */
@@ -45,7 +55,6 @@ const productProjection = {
     average_rating: 1,
     rating_count: 1,
     short_description: 1,
-    description: 1,
     manage_stock: 1,
     stock_quantity: 1,
     stock_status: 1,
@@ -110,6 +119,8 @@ const trackProductBehavior = async (req, {
     metadata = {},
 }) => {
     try {
+        if (!isMongoConnected()) return;
+
         const resolvedProductId = product?._id || productId;
         if (!eventType) return;
         if (!resolvedProductId && eventType !== "search") return;
@@ -132,9 +143,37 @@ const trackProductBehavior = async (req, {
     }
 };
 
-const getRotatedProducts = async ({ limit = DEFAULT_LIMIT, category = null, seedKey = "" } = {}) => {
+const dedupeProductList = (products = []) => {
+    const seen = new Set();
+    const unique = [];
+    products.forEach((product) => {
+        const key = String(product?._id || product?.id || product?.offerId || "").trim();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        unique.push(product);
+    });
+    return unique;
+};
+
+const getRotatedProducts = async ({
+    limit = DEFAULT_LIMIT,
+    category = null,
+    seedKey = "",
+    mixedCategoriesOnly = false,
+    excludeMixedCategories = false,
+    allowFill = true,
+} = {}) => {
     const match = { status: "active" };
-    if (category) match.categories = category;
+    if (category) {
+        const categoryIds = await expandCategoryFilterIds(category);
+        const categoryMatch = buildMongoCategoryMatch(categoryIds);
+        if (categoryMatch) Object.assign(match, categoryMatch);
+    }
+    if (mixedCategoriesOnly) {
+        match.$expr = { $gte: [{ $size: "$categories" }, 2] };
+    } else if (excludeMixedCategories) {
+        match.$expr = { $eq: [{ $size: "$categories" }, 1] };
+    }
     const safeLimit = Math.max(Number(limit) || DEFAULT_LIMIT, DEFAULT_LIMIT);
     const dayKey = new Date().toISOString().slice(0, 10);
     const offset = getSeedNumber(`${dayKey}:${seedKey}:${category || "all"}`) % 300;
@@ -146,7 +185,7 @@ const getRotatedProducts = async ({ limit = DEFAULT_LIMIT, category = null, seed
             .limit(safeLimit)
     );
 
-    if (products.length < safeLimit && offset > 0) {
+    if (allowFill && products.length < safeLimit && offset > 0) {
         const fillProducts = await populateProductCards(
             Product.find(match)
                 .sort({ date_created_utc: -1, _id: -1 })
@@ -159,7 +198,73 @@ const getRotatedProducts = async ({ limit = DEFAULT_LIMIT, category = null, seed
         ];
     }
 
-    return products;
+    return dedupeProductList(products);
+};
+
+const buildCatalogSeedKey = (req, refresh = "") => {
+    const rawDevice = req?.deviceId ?? req?.headers?.deviceid;
+    const deviceId = rawDevice != null && String(rawDevice).trim() ? String(rawDevice).trim() : "";
+    return [
+        req?.user?._id || "",
+        deviceId,
+        refresh || "",
+    ].filter(Boolean).join(":");
+};
+
+/** 1-based page index from API `?skip=` query (never Mongo `.skip()` offset). */
+const resolveCatalogPage = (page, legacySkip) => {
+    const fromPage = Number(page);
+    if (Number.isFinite(fromPage) && fromPage >= 1) {
+        return Math.floor(fromPage);
+    }
+    const fromSkip = Number(legacySkip);
+    if (Number.isFinite(fromSkip) && fromSkip >= 1 && fromSkip <= 500) {
+        return Math.floor(fromSkip);
+    }
+    return 1;
+};
+
+const getRotatedProductPage = async ({ limit, page = 1, skip, category = null, seedKey = "" } = {}) => {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || DEFAULT_LIMIT, 64));
+    const safePage = resolveCatalogPage(page, skip);
+    const poolSize = Math.min(280, safePage * safeLimit + safeLimit + 32);
+    const pool = await getRotatedProducts({ limit: poolSize, category, seedKey });
+    const start = (safePage - 1) * safeLimit;
+    const items = pool.slice(start, start + safeLimit);
+    const hasMore = start + safeLimit < pool.length;
+    return {
+        items,
+        hasMore,
+        total: hasMore ? start + items.length + 1 : start + items.length,
+    };
+};
+
+/** Home / all-products listing: paginate the full active catalog (no capped pool). */
+const getHomeBrowseProductPage = async ({ limit, page = 1, skip, seedKey = "" } = {}) => {
+    const safeLimit = Math.max(1, Math.min(Number(limit) || DEFAULT_LIMIT, 100));
+    const safePage = resolveCatalogPage(page, skip);
+    const match = { status: "active" };
+    const dayKey = new Date().toISOString().slice(0, 10);
+    const baseOffset = getSeedNumber(`${dayKey}:${seedKey}:all`) % 300;
+    const pageOffset = baseOffset + (safePage - 1) * safeLimit;
+
+    let products = await populateProductCards(
+        Product.find(match)
+            .sort({ date_created_utc: -1, _id: -1 })
+            .skip(pageOffset)
+            .limit(safeLimit + 1)
+    );
+
+    const fetchedCount = products.length;
+    products = dedupeProductList(products);
+    const hasMore = fetchedCount > safeLimit;
+    const items = products.slice(0, safeLimit);
+
+    return {
+        items,
+        hasMore,
+        total: hasMore ? pageOffset + items.length + 1 : pageOffset + items.length,
+    };
 };
 
 const populateProductCards = (query) => query
@@ -379,15 +484,30 @@ const mergeOrderedWithPool = (orderedIds, rotatedProducts, limit) => {
     return ordered.slice(0, limit);
 };
 
+const usePythonRecommender = () =>
+    process.env.RECOMMENDER_USE_PYTHON === "1"
+    || process.env.RECOMMENDER_USE_PYTHON === "true";
+
 const getRecommendedProducts = async (req, options = {}) => {
     const limit = Math.max(1, Math.min(Number(options.limit) || DEFAULT_LIMIT, 100));
     const category = options.category || null;
+
+    if (!isMongoConnected()) {
+        return getRotatedProducts({
+            limit,
+            category,
+            seedKey: String(options.refresh || req?.user?._id || req?.deviceId || "guest"),
+        });
+    }
+
     const identityQuery = getIdentityQuery(req);
+    const behaviorLimit = Math.min(120, Math.max(24, limit * 3));
+    const candidateLimit = Math.min(80, Math.max(limit * 2, limit + 16));
 
     const behaviors = identityQuery
         ? await ProductBehavior.find(identityQuery)
             .sort({ created_at: -1 })
-            .limit(300)
+            .limit(behaviorLimit)
             .populate({ path: "product", select: "name categories average_rating sold_count" })
             .lean()
         : [];
@@ -402,9 +522,19 @@ const getRecommendedProducts = async (req, options = {}) => {
         options.refresh || "",
     ].filter(Boolean).join(":");
 
-    const rotatedProducts = await getCandidateProducts({ behaviors, limit: 250, category, seedKey });
+    const rotatedProducts = await getCandidateProducts({ behaviors, limit: candidateLimit, category, seedKey });
     if (!behaviors.length) {
+        const discovered = await getEmbeddingDiscoveryProducts({ limit, seedKey });
+        if (discovered.length) {
+            return discovered.slice(0, limit);
+        }
         return rotatedProducts.slice(0, limit);
+    }
+
+    if (!usePythonRecommender()) {
+        const ranked = scoreInNode(behaviors, rotatedProducts);
+        const boosted = await applyEmbeddingBoost(ranked, behaviors);
+        return boosted.slice(0, limit);
     }
 
     const payload = {
@@ -433,14 +563,22 @@ const getRecommendedProducts = async (req, options = {}) => {
         if (!rawIds.length) {
             throw new Error("Python recommender returned empty orderedIds");
         }
-        return mergeOrderedWithPool(rawIds, rotatedProducts, limit);
+        const merged = mergeOrderedWithPool(rawIds, rotatedProducts, limit);
+        const boosted = await applyEmbeddingBoost(merged, behaviors);
+        return boosted.slice(0, limit);
     } catch (error) {
         console.warn("Python recommender unavailable, using Node fallback:", error.message);
-        return scoreInNode(behaviors, rotatedProducts).slice(0, limit);
+        const ranked = scoreInNode(behaviors, rotatedProducts);
+        const boosted = await applyEmbeddingBoost(ranked, behaviors);
+        return boosted.slice(0, limit);
     }
 };
 
 module.exports = {
     trackProductBehavior,
     getRecommendedProducts,
+    getRotatedProducts,
+    getRotatedProductPage,
+    getHomeBrowseProductPage,
+    buildCatalogSeedKey,
 };

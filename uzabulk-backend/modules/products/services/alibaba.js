@@ -1,5 +1,7 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const { extractMinOrderQty } = require('../helper/moq');
+const { extractSupplierIds } = require('../helper/supplier');
 
 const ALIBABA_BASE_APP_URL = env?.alibaba?.BASE_APP_URL || "http://gw.open.1688.com/openapi/";
 const ALIBABA_APP_KEY = env?.alibaba?.APP_KEY || "";
@@ -93,9 +95,20 @@ const normalizeAlibabaProductInfo = (productInfo, productId) => {
 
     const rawProductSaleInfo = productInfo.productSaleInfo || productInfo.saleInfo || {};
     const productSaleInfo = rawProductSaleInfo && typeof rawProductSaleInfo === "object" ? rawProductSaleInfo : {};
+    const min_order_qty = extractMinOrderQty({
+        ...productInfo,
+        productSaleInfo,
+    });
+    const minOrderQuantity = productSaleInfo.minOrderQuantity || min_order_qty;
+    const supplierIds = extractSupplierIds(productInfo);
 
     return {
         ...productInfo,
+        ...(min_order_qty != null ? { min_order_qty } : {}),
+        ...(minOrderQuantity != null ? { minOrderQuantity } : {}),
+        ...(supplierIds.sellerOpenId ? { sellerOpenId: supplierIds.sellerOpenId } : {}),
+        ...(supplierIds.seller_id ? { seller_id: supplierIds.seller_id } : {}),
+        ...(supplierIds.supplier_id ? { supplier_id: supplierIds.supplier_id } : {}),
         status: productInfo.status || "published",
         topCategoryId: productInfo.topCategoryId || productInfo.categoryID || productInfo.categoryId || "",
         secondCategoryId: productInfo.secondCategoryId || "",
@@ -106,6 +119,7 @@ const normalizeAlibabaProductInfo = (productInfo, productId) => {
         description: productInfo.description || productInfo.detail || productInfo.productDescription || "",
         productSaleInfo: {
             ...productSaleInfo,
+            ...(minOrderQuantity != null ? { minOrderQuantity } : {}),
             priceRangeList: productSaleInfo.priceRangeList || productInfo.priceRangeList || [],
             amountOnSale: productSaleInfo.amountOnSale || productInfo.amountOnSale || productInfo.stock || 0,
             unitInfo: productSaleInfo.unitInfo || productInfo.unitInfo || {},
@@ -132,7 +146,9 @@ const normalizeAlibabaProductInfo = (productInfo, productId) => {
         productAttribute: productInfo.productAttribute || productInfo.attributes || [],
         mainVideo: productInfo.mainVideo || "",
         detailVideo: productInfo.detailVideo || "",
-        sellerOpenId: productInfo.sellerOpenId || productInfo.sellerUserId || "",
+        sellerOpenId: supplierIds.sellerOpenId,
+        seller_id: supplierIds.seller_id,
+        supplier_id: supplierIds.supplier_id,
         productShippingInfo: productInfo.productShippingInfo || productInfo.shippingInfo || {},
     };
 };
@@ -205,7 +221,21 @@ const getProductDetail = async (productId) => {
     const secretKey = ALIBABA_APP_SECRET;
 
     const crossborderDetail = await makeApiCall(urlPath, params, secretKey);
-    if (crossborderDetail) return crossborderDetail;
+    if (crossborderDetail) {
+        const min_order_qty = extractMinOrderQty(crossborderDetail);
+        const minOrderQuantity = crossborderDetail.minOrderQuantity
+            || crossborderDetail.productSaleInfo?.minOrderQuantity
+            || min_order_qty;
+        const supplierIds = extractSupplierIds(crossborderDetail);
+        return {
+            ...crossborderDetail,
+            ...(min_order_qty != null ? { min_order_qty } : {}),
+            ...(minOrderQuantity != null ? { minOrderQuantity } : {}),
+            ...(supplierIds.sellerOpenId ? { sellerOpenId: supplierIds.sellerOpenId } : {}),
+            ...(supplierIds.seller_id ? { seller_id: supplierIds.seller_id } : {}),
+            ...(supplierIds.supplier_id ? { supplier_id: supplierIds.supplier_id } : {}),
+        };
+    }
 
     const productInfo = await getAlibabaProduct(productId, { scene: "1688" });
     return normalizeAlibabaProductInfo(productInfo, productId);

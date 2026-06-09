@@ -74,24 +74,15 @@ const Signin = ({ handleClose }) => {
           {(form) => {
             return (
               <Form>
-                <FormGroup className="position-relative signupinput_phone mb-3">
-                  <div
-                    className="d-flex align-items-center inputWithBtn iconWithText position-relative ps-5 login-phone"
-                    style={{
-                      background: "var(--theme-color)",
-                      borderRadius: "15px",
-                    }}
-                  >
-                    <span
-                      className="icn position-absolute"
-                      style={{ left: 14 }}
-                    >
+                <FormGroup className="mb-3 auth-field-group">
+                  <div className="auth-field">
+                    <span className="auth-field__icon" aria-hidden>
                       {ICON_USER}
                     </span>
                     <Field
                       type="email"
                       name="email"
-                      className="form-control"
+                      className="form-control auth-field__input"
                       placeholder="Enter your email"
                     />
                   </div>

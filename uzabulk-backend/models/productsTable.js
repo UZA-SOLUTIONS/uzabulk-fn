@@ -51,6 +51,8 @@ let productSchema = new mongoose.Schema(
     reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "productReview" }],
     average_rating: { type: Number, default: 0 },
     rating_count: { type: Number, default: 0 },
+    supplier_rating: { type: Number },
+    supplier_rating_count: { type: Number, default: 0 },
     sold_count: { type: Number, default: 0 },
     shippingCharge: { type: Number },
     seoSettings: {
@@ -73,8 +75,11 @@ let productSchema = new mongoose.Schema(
     date_created_utc: { type: Date, default: new Date() },
     date_modified: { type: Date },
     date_modified_utc: { type: Date },
+    min_order_qty: { type: Number },
     price_tiers: [{
       startQuantity: Number,
+      minQty: Number,
+      maxQty: Number,
       price: Number
     }],
     meta_data: [
@@ -86,6 +91,12 @@ let productSchema = new mongoose.Schema(
     weight: Number,
     adminSold: Boolean,
     offerId: String,
+    sellerOpenId: { type: String, trim: true },
+    seller_id: { type: String, trim: true },
+    supplier_id: { type: String, trim: true },
+    /** DashScope text-embedding-v3 vector for similar-product recommendations */
+    embedding: { type: [Number], default: undefined },
+    embedding_updated_at: { type: Date, default: null },
     elasticSearchIndexed: { type: Boolean, default: false },
     last_updated: { type: Date, default: null },
     deleted_at: { type: Date, default: null }
@@ -107,6 +118,8 @@ productSchema.index({ status: 1, bestSeller: 1, categories: 1, date_created_utc:
 productSchema.index({ status: 1, adminSold: 1, categories: 1, isFeatured: 1, date_created_utc: -1 }, { name: "admin_featured_filter" });
 productSchema.index({ status: 1, elasticSearchIndexed: -1 }, { name: "elastic_search_indexing_filter" });
 productSchema.index({ offerId: 1, status: 1 }, { name: "offer_status_lookup" });
+productSchema.index({ supplier_id: 1, status: 1 }, { name: "supplier_status_lookup" });
+productSchema.index({ sellerOpenId: 1, status: 1 }, { name: "seller_open_id_lookup" });
 
 
 let Product = module.exports = mongoose.model("Product", productSchema);

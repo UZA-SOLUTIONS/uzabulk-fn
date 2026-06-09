@@ -3,49 +3,75 @@ const mongoose = require("mongoose");
 const logger = require('../logger');
 const { setup } = require("../../models");
 
-//****Database connection mongodb using mongoose */
-try {
-    const mongoAtlasUri = env.mongoAtlasUri;
+mongoose.set('bufferCommands', false);
 
-    if (!mongoAtlasUri) {
-        logger.warn({
-            where: 'db connection',
-            message: 'Mongo URI is missing. Skipping DB connection.',
-        });
-        console.warn('Mongo URI is missing. Skipping DB connection.');
-        return;
+let connectPromise = null;
+
+const isMongoConnected = () => mongoose.connection.readyState === 1;
+
+const connectDatabase = () => {
+    if (isMongoConnected()) {
+        return Promise.resolve(mongoose.connection);
     }
 
-    mongoose.connect(mongoAtlasUri);
+    if (connectPromise) {
+        return connectPromise;
+    }
 
-    mongoose.Promise = global.Promise;
+    const mongoUri = process.env.MONGO_URI || process.env.MONGO_ATLAS_URI;
 
-    const db = mongoose.connection;
+    if (!mongoUri) {
+        const error = new Error('Mongo URI is missing. Set MONGO_URI in .env');
+        logger.warn({ where: 'db connection', message: error.message });
+        console.warn(error.message);
+        return Promise.reject(error);
+    }
 
-    db.on('error', (err) => {
-        logger.error({
-            where: 'db connection',
-            message: `DB connection error: ${err.message}`,
+    const safeUriLog = String(mongoUri).replace(/:([^:@/]+)@/, ":***@");
+    console.log(`MongoDB connecting to ${safeUriLog}`);
+
+    connectPromise = new Promise((resolve, reject) => {
+        const db = mongoose.connection;
+
+        const onOpen = () => {
+            db.off('error', onError);
+            logger.info({ where: 'db connection', message: 'Connected to MongoDB' });
+            console.log('DB connected successfully');
+            setup();
+            resolve(db);
+        };
+
+        const onError = (err) => {
+            db.off('open', onOpen);
+            connectPromise = null;
+            logger.error({
+                where: 'db connection',
+                message: `DB connection error: ${err.message}`,
+            });
+            console.error('DB connection error:', err.message);
+            reject(err);
+        };
+
+        db.once('open', onOpen);
+        db.once('error', onError);
+
+        mongoose.connect(mongoUri, {
+            serverSelectionTimeoutMS: 20000,
+        }).catch((err) => {
+            db.off('open', onOpen);
+            connectPromise = null;
+            onError(err);
         });
-        console.error('DB connection error:', err.message);
     });
 
-    db.once("open", () => {
-        logger.info({
-            where: 'db connection',
-            message: `Connected to MongoDB`,
-        });
-        console.log("DB connected successfully");
-        setup();
-    });
+    return connectPromise;
+};
 
-} catch (error) {
-    logger.error({
-        where: 'db connection',
-        message: `Error connecting to MongoDB: ${error.message}`,
-        error
-    });
-    console.error('Error connecting to MongoDB:', error.message);
-}
+connectDatabase().catch((err) => {
+    console.error('Initial MongoDB connection failed:', err.message);
+});
 
-
+module.exports = {
+    connectDatabase,
+    isMongoConnected,
+};

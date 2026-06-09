@@ -16,7 +16,10 @@ const Homemenustrip = ({ inline = false }) => {
           <ul className="homeMenu_list homeMenu_list--mockup m-0 p-0 d-flex align-items-center">
             <ItemCategory catalogTrigger="grid" />
           </ul>
-          <UserAuthCard navbarPlacement="mockupBottom" />
+          <UserAuthCard
+            navbarPlacement="mockupBottom"
+            signupButtonLabel="Merchant Signup"
+          />
         </div>
       </Wrapper>
     </div>

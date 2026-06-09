@@ -8,8 +8,21 @@ function setPagination(req, res, next) {
         if (req.query.sortBy) {
             order = req.query.sortBy === 'asc' ? 1 : -1;
         }
+        if (req.query.order !== undefined && req.query.order !== null && req.query.order !== '') {
+            const parsedOrder = Number(req.query.order);
+            if (Number.isFinite(parsedOrder)) {
+                order = parsedOrder;
+            }
+        }
         if (req.query.orderBy) {
             orderBy = req.query.orderBy;
+        }
+        const hasSearch = Boolean(req.query.search && String(req.query.search).trim());
+        if (hasSearch && (!req.query.orderBy || req.query.orderBy === 'relevance')) {
+            orderBy = 'relevance';
+        } else if (!hasSearch && orderBy === 'relevance') {
+            orderBy = 'date_created_utc';
+            order = -1;
         }
 
         req.paginationOptions = {

@@ -37,11 +37,21 @@ module.exports = {
                 query.level = parseInt(req.query.level);
             }
 
-            const categories = await CategoryModel.find(query, "parent catName")
+            const categories = await CategoryModel.find(query)
+                .select("_id catName catImage level sortOrder parent")
+                .populate({ path: "catImage", select: "link -_id" })
                 .sort({ sortOrder: 1 })
                 .lean();
 
-            return res.success(categories);
+            const normalized = (categories || []).map((row) => {
+                const img = row?.catImage;
+                let catImage = "";
+                if (typeof img === "string" && img.trim()) catImage = img.trim();
+                else if (img?.link) catImage = String(img.link).trim();
+                return { ...row, catImage };
+            });
+
+            return res.success(normalized);
 
         } catch (error) {
             console.error(error)

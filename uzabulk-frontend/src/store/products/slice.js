@@ -43,7 +43,11 @@ export const slice = createSlice({
         },
         clearProductList: (state, action) => {
             state[action.payload] = { ...paginationInfiniteInitialState, isLoading: true };
-        }
+        },
+        clearHomeFeedProducts: (state) => {
+            state.homeNewArrivalProducts = { ...paginationInitialState, isLoading: true };
+            state.homeRecommendedProducts = { ...paginationInitialState, isLoading: true };
+        },
     },
     extraReducers: (builder) => {
         // Get products
@@ -165,6 +169,6 @@ export const slice = createSlice({
     },
 })
 
-export const { manageProductForCart, clearProductList, setAddedInCart } = slice.actions
+export const { manageProductForCart, clearProductList, clearHomeFeedProducts, setAddedInCart } = slice.actions
 
 export default slice.reducer

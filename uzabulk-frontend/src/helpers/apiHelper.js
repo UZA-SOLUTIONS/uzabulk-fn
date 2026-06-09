@@ -8,13 +8,20 @@ import { getCurrencySymbol } from "./currencyHelper";
 
 const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:1302").replace(/\/+$/, "");
 
-/** Max wait for each API response. Override with REACT_APP_API_TIMEOUT_MS (e.g. 180000). Clamped 10s–10m. */
+/**
+ * Axios request timeout (ms). Default 0 = no client timeout (avoids "timeout of 120000ms exceeded").
+ * Set REACT_APP_API_TIMEOUT_MS to cap wait time (min 5s when > 0, max 5m).
+ */
 const resolveApiTimeoutMs = () => {
-  const parsed = parseInt(process.env.REACT_APP_API_TIMEOUT_MS || "", 10);
-  if (Number.isFinite(parsed) && parsed >= 10_000) {
-    return Math.min(parsed, 600_000);
+  const raw = process.env.REACT_APP_API_TIMEOUT_MS;
+  if (raw === "" || raw === undefined || raw === null) {
+    return 0;
   }
-  return 120_000;
+  const parsed = parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+  return Math.min(Math.max(parsed, 5000), 300_000);
 };
 
 // Create an instance of axios with default settings
@@ -91,6 +98,9 @@ export const updateAuthToken = () => {
         delete config.headers.Authorization;
       }
       config.headers["Accept-Currency"] = getCurrencySymbol(); // Set the custom header for currency
+      if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+        delete config.headers["Content-Type"];
+      }
       return config;
     },
     (error) => {

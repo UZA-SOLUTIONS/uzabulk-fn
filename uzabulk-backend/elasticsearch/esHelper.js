@@ -48,4 +48,34 @@ module.exports = {
             console.error('Error updating mapping:', error);
         }
     },
+
+    getAliasTargetIndex: async (aliasName) => {
+        try {
+            const data = await esClient.indices.getAlias({ name: aliasName });
+            const indices = Object.keys(data || {});
+            return indices[0] || "";
+        } catch (error) {
+            if (error?.meta?.statusCode === 404) return "";
+            console.error(`Error resolving alias '${aliasName}':`, error);
+            return "";
+        }
+    },
+
+    pointAliasToIndex: async (aliasName, indexName) => {
+        try {
+            const currentIndex = await module.exports.getAliasTargetIndex(aliasName);
+            const actions = [];
+            if (currentIndex && currentIndex !== indexName) {
+                actions.push({ remove: { index: currentIndex, alias: aliasName } });
+            }
+            if (!currentIndex || currentIndex !== indexName) {
+                actions.push({ add: { index: indexName, alias: aliasName } });
+            }
+            if (!actions.length) return;
+            await esClient.indices.updateAliases({ body: { actions } });
+            console.log(`Alias '${aliasName}' now points to '${indexName}'.`);
+        } catch (error) {
+            console.error(`Error updating alias '${aliasName}' -> '${indexName}':`, error);
+        }
+    },
 };

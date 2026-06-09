@@ -15,7 +15,13 @@ let sendSuccessResponse = (message, res, data, options = {}) => {
 };
 
 let sendErrorResponse = function (err, res, data) {
-    let code = (typeof err === 'object' && typeof err.code === 'number') ? (err.code) ? err.code : 500 : 400;
+    let code = 400;
+    if (typeof err === 'object' && err !== null) {
+        const httpStatus = Number(err.statusCode || err.status);
+        if (httpStatus >= 100 && httpStatus < 600) {
+            code = httpStatus;
+        }
+    }
     let message = (typeof err === 'object') ? (err.message ? err.message : 'Internal Server Error') : err;
     var resData = {
         status: "failure",
@@ -139,8 +145,11 @@ const verifyToken = (token) => {
 const generateHashKey = (length = 30, start_with = "tok") => {
     return start_with + crypto.randomBytes(length).toString('hex');
 };
+const { attachProductMoqFields } = require('../modules/products/helper/moq');
+const { attachProductSupplierFields } = require('../modules/products/helper/supplier');
+
 const processVariations = (item) => {
-    if (item.type === 'variable') {
+    if (item?.type === 'variable' && Array.isArray(item.variations)) {
         _.forEach(item.variations, element => {
             let variation_id = _.map(element.attributes, attribute => attribute._id.toString());
             let variation_title = _.map(element.attributes, attribute => attribute.name.toString());
@@ -148,7 +157,7 @@ const processVariations = (item) => {
             element.variation_title = variation_title.join('/');
         });
     }
-    return item;
+    return attachProductSupplierFields(attachProductMoqFields(item));
 }
 const createToken = (data, expiresIn = '15d') => {
     return jwt.sign(

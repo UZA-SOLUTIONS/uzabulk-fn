@@ -97,5 +97,10 @@
 	"Operation `products.find()` buffering timed out after 10000ms": "Operation `products.find()` buffering timed out after 10000ms",
 	"IMAGE_UPLOAD_SUCCESS": "IMAGE_UPLOAD_SUCCESS",
 	"Operation `categories.find()` buffering timed out after 10000ms": "Operation `categories.find()` buffering timed out after 10000ms",
-	"Connection to 8.211.56.133:27017 interrupted due to server monitor timeout": "Connection to 8.211.56.133:27017 interrupted due to server monitor timeout"
+	"Connection to 8.211.56.133:27017 interrupted due to server monitor timeout": "Connection to 8.211.56.133:27017 interrupted due to server monitor timeout",
+	"Operation `productbehaviors.find()` buffering timed out after 10000ms": "Operation `productbehaviors.find()` buffering timed out after 10000ms",
+	"Command find requires authentication": "Command find requires authentication",
+	"Cannot read properties of undefined (reading 'find')": "Cannot read properties of undefined (reading 'find')",
+	"connect ETIMEDOUT 8.211.56.133:27017": "connect ETIMEDOUT 8.211.56.133:27017",
+	"400 <400> InternalError.Algo.InvalidParameter: Failed to download multimodal content": "400 <400> InternalError.Algo.InvalidParameter: Failed to download multimodal content"
 }

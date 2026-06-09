@@ -1,29 +1,28 @@
-import React, { useEffect, Suspense, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 import ROUTES from "../../helpers/routesHelper";
-import { amountConversion, getProductImageUrl, logger } from "../../helpers/commonHelper";
+import {
+  amountConversion,
+  buildProductDetailUrl,
+  buildProductDetailUrlFromResolved,
+  getProductImageUrl,
+  getHomeFeedRefreshToken,
+  resolveCatalogProductId,
+} from "../../helpers/commonHelper";
 import { apiGetHomeNewArrivalProducts } from "../../store/products/actions";
 
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
+import SupplierVerificationBadge from "../Products/SupplierVerificationBadge";
 
 function newArrivalsSkeletonSlotCount(viewportWidth) {
   const w = viewportWidth || 1200;
-  /* Match CSS clamp(158px, 38vw, 204px) used for cards (same as Source by category) */
   const card = Math.min(204, Math.max(158, w * 0.38));
   const gap = 14;
   const visible = Math.ceil(w / (card + gap));
-  return Math.min(36, Math.max(6, visible + 6));
-}
-
-function productDetailPath(item) {
-  const fallbackOfferId = item?.offerId || item?.topIds || "";
-  const resolvedId = item?._id || item?.id || item?.productId || fallbackOfferId;
-  if (!resolvedId) return ROUTES.PRODUCT_LISTING;
-  const offerQuery = fallbackOfferId ? `?offerId=${encodeURIComponent(fallbackOfferId)}` : "";
-  return `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(resolvedId)}${offerQuery}`;
+  return Math.min(24, Math.max(6, visible + 2));
 }
 
 function resolveTrustLine(item) {
@@ -35,37 +34,31 @@ function resolveTrustLine(item) {
   return "";
 }
 
+const isTestProduct = (item) => {
+  const name = (item?.name || "").toLowerCase().trim();
+  return !name || name.includes("test");
+};
+
 export default function NewArrivalProducts() {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const [skeletonSlots, setSkeletonSlots] = useState(() =>
-    typeof window !== "undefined" ? newArrivalsSkeletonSlotCount(window.innerWidth) : 16
+    typeof window !== "undefined" ? newArrivalsSkeletonSlotCount(window.innerWidth) : 12
   );
+  const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
   const { isLoading, items } = useSelector((s) => s.products.homeNewArrivalProducts);
-  const { items: recommendedItems } = useSelector((s) => s.products.homeRecommendedProducts);
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
-  logger("NEW ARRIVAL PRODUCT SLIDER", items);
-  const limit = 100;
 
-  const filteredItems = (items || []).filter((item) => {
-    const name = (item?.name || "").toLowerCase().trim();
-    return name && !name.includes("test");
-  });
-  const filteredRecommended = (recommendedItems || []).filter((item) => {
-    const name = (item?.name || "").toLowerCase().trim();
-    return name && !name.includes("test");
-  });
-  const displayItems = useMemo(() => {
-    const seen = new Set();
-    const merged = [];
-    [...filteredRecommended, ...filteredItems].forEach((item) => {
-      const key = item?._id || item?.id || item?.productId || item?.offerId;
-      if (!key || seen.has(key)) return;
-      seen.add(key);
-      merged.push(item);
-    });
-    return merged;
-  }, [filteredRecommended, filteredItems]);
+  const fetchLimit = useMemo(
+    () => Math.min(24, Math.max(12, skeletonSlots)),
+    [skeletonSlots]
+  );
+
+  const displayItems = useMemo(
+    () => (items || []).filter((item) => !isTestProduct(item)).slice(0, fetchLimit),
+    [items, fetchLimit]
+  );
 
   useEffect(() => {
     const onResize = () => setSkeletonSlots(newArrivalsSkeletonSlotCount(window.innerWidth));
@@ -75,43 +68,33 @@ export default function NewArrivalProducts() {
   }, []);
 
   useEffect(() => {
-    if (!items?.length)
-      dispatch(
-        apiGetHomeNewArrivalProducts({
-          limit,
-        })
-      );
-  }, [dispatch, items?.length, limit]);
+    setFeedRefresh(getHomeFeedRefreshToken());
+  }, []);
 
-  const LoadingFallback = () => (
-    <div className="home_feed_section_offset px-3 w-100">
-      <section className="home_new_arrivals_panel" aria-busy="true">
-        <div className="home_new_arrivals_panel__head">
-          <h2 className="home_new_arrivals_panel__title">New Arrivals</h2>
-          <span className="home_new_arrivals_panel__view_placeholder" />
-        </div>
-        <div className="home_new_arrivals_panel__skeleton">
-          <UXSkeleton count={skeletonSlots} />
-        </div>
-      </section>
-    </div>
-  );
-
-  if (isLoading) {
-    return (
-      <Suspense fallback={<LoadingFallback />}>
-        <LoadingFallback />
-      </Suspense>
+  useEffect(() => {
+    dispatch(
+      apiGetHomeNewArrivalProducts({
+        limit: fetchLimit,
+        refresh: feedRefresh,
+        suppressGlobalErrorToast: true,
+      })
     );
-  }
+  }, [dispatch, fetchLimit, feedRefresh]);
 
-  if (!displayItems.length) {
+  const showRowSkeleton = isLoading && !displayItems.length;
+  const showEmpty = !isLoading && !displayItems.length;
+
+  if (showEmpty) {
     return null;
   }
 
   return (
     <div className="home_feed_section_offset px-3 w-100">
-      <section className="home_new_arrivals_panel" aria-labelledby="home-new-arrivals-title">
+      <section
+        className="home_new_arrivals_panel"
+        aria-labelledby="home-new-arrivals-title"
+        aria-busy={showRowSkeleton}
+      >
         <div className="home_new_arrivals_panel__head">
           <h2 id="home-new-arrivals-title" className="home_new_arrivals_panel__title">
             New Arrivals
@@ -121,42 +104,55 @@ export default function NewArrivalProducts() {
           </Link>
         </div>
 
-        <div className="home_new_arrivals_row">
-          {displayItems.map((item, idx) => {
-            const trust = resolveTrustLine(item);
-            return (
-              <Link
-                key={item?._id || item?.id || idx}
-                to={productDetailPath(item)}
-                className="new_arrival_img new_arrival_product_card text-start text-decoration-none d-block text-reset"
-              >
-                <div className="new_arrival_media">
-                  <img
-                    src={getProductImageUrl(item, placeholder)}
-                    alt={item?.name || "Product"}
-                    className="img-fluid"
-                  />
-                </div>
-                <div className="home_product_card_body px-1 pt-2">
-                  <p className="home_product_title mb-1">{item?.name}</p>
-                  <p className="home_product_price mb-1">
-                    {currentCurrency?.symbol} {amountConversion(item?.price, appConfig)}
-                  </p>
-                  <div className="home_product_footer">
-                    {trust ? (
-                      <p className="home_product_meta mb-0">{trust}</p>
-                    ) : (
-                      <>
-                        <img src="/verified.avif" alt="Verified" className="home_verified_badge" />
-                        <span className="home_product_cta">View details</span>
-                      </>
-                    )}
+        {showRowSkeleton ? (
+          <div className="home_new_arrivals_panel__skeleton">
+            <UXSkeleton count={skeletonSlots} />
+          </div>
+        ) : (
+          <div className="home_new_arrivals_row">
+            {displayItems.map((item, idx) => {
+              const trust = resolveTrustLine(item);
+              return (
+                <Link
+                  key={item?._id || item?.id || idx}
+                  to={ROUTES.PRODUCT_LISTING}
+                  className="new_arrival_img new_arrival_product_card text-start text-decoration-none d-block text-reset"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const resolved = await resolveCatalogProductId(item);
+                    const path = resolved
+                      ? buildProductDetailUrlFromResolved(resolved)
+                      : buildProductDetailUrl(item);
+                    if (path) navigate(path);
+                  }}
+                >
+                  <div className="new_arrival_media">
+                    <img
+                      src={getProductImageUrl(item, placeholder)}
+                      alt={item?.name || "Product"}
+                      className="img-fluid"
+                      loading="lazy"
+                    />
                   </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                  <div className="home_product_card_body px-1 pt-2">
+                    <p className="home_product_title mb-1">{item?.name}</p>
+                    <p className="home_product_price mb-1">
+                      {currentCurrency?.symbol} {amountConversion(item?.price, appConfig)}
+                    </p>
+                    <div className="home_product_footer">
+                      {trust ? (
+                        <p className="home_product_meta mb-0">{trust}</p>
+                      ) : (
+                        <SupplierVerificationBadge item={item} />
+                      )}
+                      <span className="home_product_cta">View details</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

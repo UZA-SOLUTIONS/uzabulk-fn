@@ -48,6 +48,10 @@ exports.findOne = async (query, select = null) => {
   return await UserModel.findOne(query, select);
 };
 
+exports.findOneWithProfileImage = async (query, select = null) => {
+  return UserModel.findOne(query, select).populate("profileImage").exec();
+};
+
 // Email exists or not
 exports.emailExist = async function (email) {
   const exists = await UserModel.findOne({
@@ -99,6 +103,8 @@ exports.login = async function (data) {
 
   let isValid = await utils.verifyPassword(user.password, password);
   if (!isValid) throw new Error("INCORRECT_PASSWORD");
+
+  await user.populate("profileImage");
 
   const token = utils.generateToken(user);
   await user.save();

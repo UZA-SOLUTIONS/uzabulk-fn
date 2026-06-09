@@ -22,6 +22,22 @@ export default function UXSkeleton({ type = "product-grid", count = 8 }) {
     );
   }
 
+  if (type === "source-by-category") {
+    return (
+      <div className="ux-skeleton ux-skeleton-source-cats" aria-hidden>
+        <div className="ux-skeleton-source-cats__track">
+          {Array.from({ length: count }).map((_, idx) => (
+            <div className="ux-skeleton-source-cat-card" key={`source-cat-${idx}`}>
+              <span className="ux-skeleton-source-cat-card__line shimmer" />
+              <span className="ux-skeleton-source-cat-card__line ux-skeleton-source-cat-card__line--short shimmer" />
+              <span className="ux-skeleton-source-cat-card__media shimmer" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ux-skeleton ux-skeleton-grid">
       {Array.from({ length: count }).map((_, idx) => (

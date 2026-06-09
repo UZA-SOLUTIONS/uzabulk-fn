@@ -9,10 +9,25 @@ import {
 } from "reactstrap";
 
 import { apiGetCartCount } from "../../store/cart/actions";
+import { apiGetProfile } from "../../store/auth/actions";
 import { ICON_CART, ICON_USER_SECONDARY } from "../../assets/svg";
 import { formatNumber } from "../../helpers/commonHelper";
 import LoginPopup from "../LoginPopup";
+import UserAccountAvatar from "./UserAccountAvatar";
 import ROUTES from "../../helpers/routesHelper";
+
+/** `?auth=` values that open the login modal (merchant uses its own path + query). */
+const AUTH_QUERY_SIGNIN = "signin";
+const AUTH_QUERY_SIGNUP = "signup";
+const AUTH_QUERY_MERCHANT_SIGNUP = "merchant-signup";
+
+function authQueryToModalTab(authParam) {
+  if (authParam === AUTH_QUERY_SIGNIN) return "signin";
+  if (authParam === AUTH_QUERY_SIGNUP || authParam === AUTH_QUERY_MERCHANT_SIGNUP) {
+    return "signup";
+  }
+  return null;
+}
 
 const ICON_GLOBE = (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -38,15 +53,17 @@ export default function UserAuthCard({
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isLogin } = useSelector((s) => s.auth);
+  const { isLogin, user, profile } = useSelector((s) => s.auth);
   const cartItems = useSelector((s) => s.cart.count);
+  const accountUser = profile || user;
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState("signin");
 
   const isMockupBottom = navbarPlacement === "mockupBottom";
   const isMockupTop = navbarPlacement === "mockupTop";
   const runAuthQuerySync = !isMockupBottom;
-  const runCartWarmup = isMockupTop || navbarPlacement === "legacy";
+  const runCartWarmup =
+    isMockupTop || isMockupBottom || navbarPlacement === "legacy";
 
   useEffect(() => {
     if (!runCartWarmup || !isLogin) return;
@@ -57,10 +74,16 @@ export default function UserAuthCard({
   }, [dispatch, isLogin, runCartWarmup]);
 
   useEffect(() => {
+    if (!isLogin) return;
+    dispatch(apiGetProfile());
+  }, [dispatch, isLogin]);
+
+  useEffect(() => {
     if (!runAuthQuerySync) return;
     const params = new URLSearchParams(location.search);
     const authParam = params.get("auth");
-    if (authParam !== "signin" && authParam !== "signup") return;
+    const modalTab = authQueryToModalTab(authParam);
+    if (!modalTab) return;
 
     if (isLogin) {
       params.delete("auth");
@@ -72,7 +95,7 @@ export default function UserAuthCard({
       return;
     }
 
-    setAuthModalTab(authParam);
+    setAuthModalTab(modalTab);
     setIsAuthModalOpen(true);
     params.delete("auth");
     const next = params.toString();
@@ -111,11 +134,8 @@ export default function UserAuthCard({
             />
           </>
         ) : (
-          <Link to={ROUTES.MY_ORDERS} className="navbar-mockup-account-link">
-            <span className="navbar-mockup-account-link__icon" aria-hidden>
-              {ICON_USER_SECONDARY}
-            </span>
-            <span>My Account</span>
+          <Link to={ROUTES.MY_ORDERS} className="navbar-mockup-account-link navbar-mockup-account-link--avatar" aria-label="My account">
+            <UserAccountAvatar user={accountUser} size={34} className="navbar-mockup-account-avatar" />
           </Link>
         )}
       </div>
@@ -125,7 +145,19 @@ export default function UserAuthCard({
   if (isMockupBottom) {
     const n = Number(cartItems) || 0;
     return (
-      <div className={`navbar-mockup-bottom-tools ${className}`}>
+      <div
+        className={`navbar-mockup-bottom-tools user_card_below_header ${className}`}
+      >
+        {showMerchantSignup && !isLogin ? (
+          <>
+            <div className="merchant_signup_wrap d-flex align-items-center">
+              <Link to={ROUTES.MERCHANT_SIGNUP} className="merchant-signup-btn">
+                {signupButtonLabel}
+              </Link>
+            </div>
+            <span className="navbar-mockup-vrule" aria-hidden />
+          </>
+        ) : null}
         <Link to={ROUTES.CART} className="navbar-mockup-cart" aria-label="Shopping cart">
           <span className="navbar-mockup-cart-icon" aria-hidden>
             {ICON_CART}
@@ -203,7 +235,7 @@ export default function UserAuthCard({
               <DropdownToggle>
                 <Link to={ROUTES.MY_ORDERS}>
                   <div className="d-flex align-items-center">
-                    <span className="me-2">{ICON_USER_SECONDARY}</span>
+                    <UserAccountAvatar user={accountUser} size={36} className="me-2" />
                     <div className="card_content">
                       <h5>My Account</h5>
                     </div>
@@ -219,13 +251,9 @@ export default function UserAuthCard({
 
       {showMerchantSignup && !isLogin ? (
         <div className="merchant_signup_wrap d-flex align-items-center">
-          <button
-            type="button"
-            className="merchant-signup-btn merchant-signup-btn-trigger"
-            onClick={() => openAuthModal("signup")}
-          >
+          <Link to={ROUTES.MERCHANT_SIGNUP} className="merchant-signup-btn">
             {signupButtonLabel}
-          </button>
+          </Link>
         </div>
       ) : null}
 

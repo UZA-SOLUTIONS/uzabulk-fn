@@ -99,11 +99,26 @@ export const apiGetProductDetail = createAsyncThunk(
   "apiGetProductDetail",
   async (query, Thunk) => {
     try {
-      const { id, ...restQuery } = query || {};
-      const normalizedId = String(id || "").trim();
+      const { id, offerId, ...restQuery } = query || {};
+      let normalizedId = String(id || "").trim();
+      const normalizedOffer = String(offerId || "").trim();
       const isObjectId = /^[a-fA-F0-9]{24}$/.test(normalizedId);
+
+      const resolveMongoIdFromOffer = async (offer) => {
+        const raw = String(offer || "").trim();
+        if (!/^\d+$/.test(raw) || raw.length < 4 || raw.length > 30) return "";
+        if (raw.length === 24 && /^[a-fA-F0-9]{24}$/.test(raw)) return "";
+        const res = await apiGet(`${PRODUCTS.BY_OFFER}/${encodeURIComponent(raw)}`);
+        const mongo = String(res?.data?._id || "").trim();
+        return /^[a-fA-F0-9]{24}$/.test(mongo) ? mongo : "";
+      };
+
       if (!isObjectId) {
-        return Thunk.rejectWithValue("Invalid product id.");
+        const fromOffer = await resolveMongoIdFromOffer(normalizedOffer || normalizedId);
+        if (!fromOffer) {
+          return Thunk.rejectWithValue("Invalid product id.");
+        }
+        normalizedId = fromOffer;
       }
 
       const res = await apiGet(`${PRODUCTS.DETAIL}/${encodeURIComponent(normalizedId)}`, restQuery);
@@ -113,9 +128,12 @@ export const apiGetProductDetail = createAsyncThunk(
         throw new Error(res.message);
       }
     } catch (error) {
-      return Thunk.rejectWithValue(
-        error.message || "Something went wrong, please try again later."
-      );
+      const message =
+        (typeof error === "string" ? error : "")
+        || error?.message
+        || error?.data?.message
+        || "Something went wrong, please try again later.";
+      return Thunk.rejectWithValue(message);
     }
   }
 );

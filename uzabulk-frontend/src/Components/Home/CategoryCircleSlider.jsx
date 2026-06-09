@@ -3,35 +3,46 @@ import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 import ROUTES from "../../helpers/routesHelper";
-import { apiGet } from "../../helpers/apiHelper";
-import { getProductImageUrl } from "../../helpers/commonHelper";
+import { getHomeFeedRefreshToken } from "../../helpers/commonHelper";
+import {
+  fetchCategoryRepresentativeImage,
+  rotateHomeCategories,
+} from "../../helpers/homeCategoryFeedHelper";
 import {
   getHomeCategoryCircleImage,
   setHomeCategoryCircleImage,
 } from "../../helpers/homeCategoryCircleImageCache";
-import { PRODUCTS } from "../../helpers/urlHelper";
 import UXSkeleton from "../Common/UXSkeleton";
 
+const MAX_CATEGORIES = 12;
 const IMAGE_FETCH_CONCURRENCY = 4;
 
 export default function CategoryCircleSlider() {
   const level1Categories = useSelector((s) => s.categories.categories.level1 || []);
   const level2Categories = useSelector((s) => s.categories.categories.level2 || []);
+  const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
   const [imageTick, setImageTick] = useState(0);
   const [isFetchingImages, setIsFetchingImages] = useState(false);
 
+  useEffect(() => {
+    setFeedRefresh(getHomeFeedRefreshToken());
+  }, []);
+
   const categoriesToShow = useMemo(() => {
     const base = (level1Categories?.length ? level1Categories : level2Categories) || [];
-    return base.slice(0, 12);
-  }, [level1Categories, level2Categories]);
+    return rotateHomeCategories(base, feedRefresh, MAX_CATEGORIES);
+  }, [level1Categories, level2Categories, feedRefresh]);
 
   const categoryIdsKey = useMemo(
-    () => categoriesToShow.map((c) => c?._id).filter(Boolean).join(","),
-    [categoriesToShow]
+    () => `${feedRefresh}:${categoriesToShow.map((c) => c?._id).filter(Boolean).join(",")}`,
+    [categoriesToShow, feedRefresh]
   );
 
   const categoriesToShowRef = useRef(categoriesToShow);
   categoriesToShowRef.current = categoriesToShow;
+
+  const feedRefreshRef = useRef(feedRefresh);
+  feedRefreshRef.current = feedRefresh;
 
   useEffect(() => {
     if (!categoryIdsKey) return;
@@ -39,8 +50,9 @@ export default function CategoryCircleSlider() {
 
     const loadCategoryProductImages = async () => {
       const cats = categoriesToShowRef.current;
+      const refresh = feedRefreshRef.current;
       const missing = cats.filter(
-        (c) => c?._id && !c?.catImage?.link && !getHomeCategoryCircleImage(c._id)
+        (c) => c?._id && !getHomeCategoryCircleImage(c._id, refresh)
       );
       if (!missing.length) {
         setIsFetchingImages(false);
@@ -54,23 +66,16 @@ export default function CategoryCircleSlider() {
           const chunk = missing.slice(i, i + IMAGE_FETCH_CONCURRENCY);
           const resolved = await Promise.all(
             chunk.map(async (category) => {
-              try {
-                const res = await apiGet(PRODUCTS.LIST, {
-                  category: category._id,
-                  limit: 1,
-                  skip: 1,
-                });
-                const product = res?.data?.items?.[0];
-                return [category._id, getProductImageUrl(product, "")];
-              } catch {
-                return [category._id, ""];
-              }
+              const imageUrl = await fetchCategoryRepresentativeImage(category, refresh);
+              return [category._id, imageUrl];
             })
           );
 
           if (cancelled) break;
           resolved.forEach(([categoryId, imageUrl]) => {
-            if (categoryId && imageUrl) setHomeCategoryCircleImage(categoryId, imageUrl);
+            if (categoryId && imageUrl) {
+              setHomeCategoryCircleImage(categoryId, imageUrl, refresh);
+            }
           });
         }
       } finally {
@@ -92,12 +97,13 @@ export default function CategoryCircleSlider() {
       categoriesToShow
         .map((category) => {
           const id = category?._id;
+          const fromProduct = id ? getHomeCategoryCircleImage(id, feedRefresh) : "";
           const fromCat = category?.catImage?.link;
-          const resolvedImage = fromCat || (id ? getHomeCategoryCircleImage(id) : "") || "";
+          const resolvedImage = fromProduct || fromCat || "";
           return { ...category, resolvedImage };
         })
         .filter((c) => !!c.resolvedImage),
-    [categoriesToShow, imageTick]
+    [categoriesToShow, feedRefresh, imageTick]
   );
 
   const repeatCount = categoriesWithImages.length

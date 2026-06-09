@@ -4,7 +4,9 @@ const UserServices = require("../services");
 
 exports.profile = async (req, res) => {
   try {
-    return res.success("RECORD_FOUND", req.user);
+    const user = await UserServices.findOneWithProfileImage({ _id: req.user._id });
+    if (!user) return res.error("USER_NOT_FOUND");
+    return res.success("RECORD_FOUND", user);
   } catch (error) {
     console.error(error);
     res.error(error);

@@ -27,6 +27,7 @@ export const CATEGORIES = {
 
 export const PRODUCTS = {
   SEARCH_AUTOCOMPLETE: "products/searchAutocomplete", // search
+  CATEGORY_THUMBNAILS: "products/category-thumbnails",
   LIST: "products/list", // search
   RECOMMENDED: "products/recommended",
   TOP_RANKING: "products/top-ranking",
@@ -36,6 +37,11 @@ export const PRODUCTS = {
   DETAIL: "products/view",
   BY_OFFER: "products/by-offer",
   FREQUENTLY_SEARCH: "products/frequentlySearch", // search
+  SIMILAR: "products/similar",
+  SMART_LISTING: "products/ai/smart-listing",
+  ANALYZE_IMAGE: "products/ai/analyze-image",
+  IMAGE_SEARCH_KEYWORDS: "products/ai/image-search-keywords",
+  IMAGE_SEARCH: "products/ai/image-search",
 };
 
 export const CART = {
@@ -79,4 +85,5 @@ export const CONFIGURATIONS = {
 
 export const FILE = {
   ADD: "file/add",
+  UPLOAD: "file/add",
 };

@@ -11,18 +11,25 @@ export default function PasswordField({
   const [show, setShow] = useState(false);
   return (
     <FormGroup className={className}>
-      <div className="position-relative w-100">
+      <div className="auth-field">
+        <span className="auth-field__icon" aria-hidden>
+          {ICON_LOCK}
+        </span>
         <Field
-          className="form-control password-input"
+          className="form-control auth-field__input auth-field__input--password"
           type={show ? "text" : "password"}
           name={name}
           id={name}
           placeholder={placeholder}
         />
-        <div className="password-eye" onClick={() => setShow((s) => !s)}>
+        <button
+          type="button"
+          className="auth-field__eye"
+          onClick={() => setShow((s) => !s)}
+          aria-label={show ? "Hide password" : "Show password"}
+        >
           {show ? ICON_EYE : ICON_EYE_SLASH}
-        </div>
-        <div className="auth_icon">{ICON_LOCK}</div>
+        </button>
       </div>
       <ErrorMessage name={name} component="p" className="text-danger" />
     </FormGroup>

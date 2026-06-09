@@ -22,7 +22,6 @@ import Blog from "../Pages/Blog";
 import ContactUs from "../Pages/ContactUs";
 import PrivacyPolicy from "../Pages/PrivacyPolicy";
 import TermsAndConditions from "../Pages/TermsAndConditions";
-import Products from "../Pages/Products";
 import ProductsList from "../Pages/ProductsList";
 import TopRankingProducts from "../Pages/ProductsList/TopRankingProducts";
 import NewArrivalProducts from "../Pages/ProductsList/NewArrivalProducts";
@@ -33,6 +32,7 @@ import Myaccount from "../Pages/Myaccount";
 import AboutUs from "../Pages/AboutUs";
 import { apiGetCurrencies } from "../store/config/actions";
 import UploadSlip from "../Pages/UploadSlip";
+import SeoManager from "../Components/Common/SeoManager";
 
 export default function MyRouts() {
   const dispatch = useDispatch();
@@ -45,6 +45,7 @@ export default function MyRouts() {
   return (
     <div>
       <BrowserRouter>
+        <SeoManager />
         <Routes>
           <Route element={<BaseTheme />}>
             {isLogin ? (
@@ -77,13 +78,17 @@ export default function MyRouts() {
               path={ROUTES.SIGNUP}
               element={<Navigate to={`${ROUTES.HOME}?auth=signup`} replace />}
             />
+            <Route
+              path={ROUTES.MERCHANT_SIGNUP}
+              element={<Navigate to={`${ROUTES.HOME}?auth=merchant-signup`} replace />}
+            />
             <Route path={ROUTES.HOME} element={<Homepage />} />
             <Route path={ROUTES.BLOG} element={<Blog />} />
             <Route path={ROUTES.CONTACT_US} element={<ContactUs />} />
             <Route path={ROUTES.ABOUT_US} element={<AboutUs />} />
             <Route path={ROUTES.PRIVACY_POLICY} element={<PrivacyPolicy />} />
             <Route path={ROUTES.T_AND_C} element={<TermsAndConditions />} />
-            <Route path={ROUTES.CATEGORIES} element={<Products />} />
+            <Route path={ROUTES.CATEGORIES} element={<ProductsList />} />
             <Route path={ROUTES.PRODUCT_LISTING} element={<ProductsList />} />
             <Route path={ROUTES.TOP_RANKING_PRODUCT_LISTING} element={<TopRankingProducts />} />
             <Route path={ROUTES.NEW_ARRIVALS_PRODUCT_LISTING} element={<NewArrivalProducts />} />

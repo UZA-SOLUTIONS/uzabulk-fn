@@ -14,6 +14,7 @@ import AddToCart from "../../Components/Common/AddToCart";
 import { APP_NAME } from "../../config/constants";
 import { addToCart, getProductInfo } from "../../helpers/cartHelper";
 import { formatNumber, parseText } from "../../helpers/commonHelper";
+import { openProductSupportChat } from "../../helpers/supportChatHelper";
 import { apiGet } from "../../helpers/apiHelper";
 import ROUTES from "../../helpers/routesHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
@@ -22,6 +23,8 @@ import { manageProductForCart } from "../../store/products/slice";
 
 import placeholder from "../../assets/images/sousix.jpg";
 import SlideImage from "./SlideImage";
+import ProductRating from "../../Components/Common/ProductRating";
+import ProductReviews from "./ProductReviews";
 
 /** 1688-style numeric offer id (length varies; avoid treating 24-hex Mongo ids as offer ids). */
 const looksLike1688OfferId = (value) => {
@@ -182,6 +185,11 @@ const Singleview = () => {
       ? navigate(ROUTES.CART)
       : addToCart({ cartData: cartDataWithQty, dispatch, isLogin });
 
+  const handleProductChat = () => {
+    if (!detail) return;
+    openProductSupportChat({ detail, navigate });
+  };
+
   const getProductImages = () => {
     let images = detail?.images?.length ? detail?.images?.map(img => img) : [detail?.featured_image]
 
@@ -199,9 +207,14 @@ const Singleview = () => {
 
   useEffect(() => {
     if (isValidProductId) {
-      dispatch(apiGetProductDetail({ id: resolvedProductId }));
+      dispatch(
+        apiGetProductDetail({
+          id: resolvedProductId,
+          offerId: fallbackOfferId || undefined,
+        })
+      );
     }
-  }, [resolvedProductId, isValidProductId, dispatch]);
+  }, [resolvedProductId, isValidProductId, fallbackOfferId, dispatch]);
 
   useEffect(() => {
     setOfferLookupFailed(false);
@@ -246,19 +259,27 @@ const Singleview = () => {
   useEffect(() => {
     const tryResolveFallbackOfferAfterDetailFailure = async () => {
       if (!isValidProductId || isLoading || detail) return;
-      if (!fallbackOfferId || !looksLike1688OfferId(fallbackOfferId)) return;
 
-      const failedToLoadProduct =
-        String(message || "").toLowerCase().includes("product not found");
-      if (!failedToLoadProduct) return;
+      const offerCandidate = looksLike1688OfferId(fallbackOfferId)
+        ? fallbackOfferId
+        : looksLike1688OfferId(normalizedId)
+          ? normalizedId
+          : "";
+      if (!offerCandidate) return;
 
       setResolving1688OfferId(true);
       try {
-        const res = await apiGet(`${PRODUCTS.BY_OFFER}/${encodeURIComponent(fallbackOfferId)}`);
+        const res = await apiGet(`${PRODUCTS.BY_OFFER}/${encodeURIComponent(offerCandidate)}`, {
+          suppressGlobalErrorToast: true,
+        });
         if (res?.status === "success" && res?.data?._id && /^[a-fA-F0-9]{24}$/.test(res.data._id)) {
-          const qs = search.toString();
+          const qs = new URLSearchParams(search.toString());
+          if (!qs.get("offerId") && !qs.get("topIds")) {
+            qs.set("offerId", offerCandidate);
+          }
+          const qsText = qs.toString();
           navigate(
-            `${ROUTES.PRODUCT_DETAIL}/${res.data._id}${qs ? `?${qs}` : ""}`,
+            `${ROUTES.PRODUCT_DETAIL}/${res.data._id}${qsText ? `?${qsText}` : ""}`,
             { replace: true }
           );
         } else {
@@ -272,7 +293,7 @@ const Singleview = () => {
     };
 
     tryResolveFallbackOfferAfterDetailFailure();
-  }, [isValidProductId, isLoading, detail, fallbackOfferId, message, search, navigate]);
+  }, [isValidProductId, isLoading, detail, fallbackOfferId, normalizedId, message, search, navigate]);
 
   useEffect(() => {
     const tryResolveInvalidId = async () => {
@@ -351,18 +372,19 @@ const Singleview = () => {
                   <Col lg={6} sm={12}>
                     <div className="product_preview text-start pe-0 pe-lg-4">
                       <h4 className="fs-5">{detail?.name || ""}</h4>
-                      <div className="d-flex gap-3">
-                        <p>
-                          {!detail?.average_rating
-                            ? "No reviews yet"
-                            : "Need to add rating star"}{" "}
+                      <div className="d-flex gap-3 flex-wrap align-items-center">
+                        <p className="mb-0 d-flex flex-wrap align-items-center gap-2">
+                          <ProductRating
+                            rating={detail?.average_rating}
+                            count={detail?.rating_count}
+                            source={detail?.rating_source}
+                          />
                           {detail?.sold_count ? (
                             <>
-                              <span className="dot"></span> {detail?.sold_count} sold
+                              <span className="dot"></span>
+                              <span>{detail.sold_count} sold</span>
                             </>
-                          ) : (
-                            ""
-                          )}{" "}
+                          ) : null}
                         </p>
                         {/* {ENVIRONMENT === "development" && detail?.offerId ? <Link className="btn btn-sm rounded rounded-5" to={`https://detail.1688.com/offer/${detail?.offerId}.html`} target="_blank" style={{
                       height: "25px",
@@ -464,7 +486,16 @@ const Singleview = () => {
                           Start Order
                         </Button> */}
                           </> : <p className="out-of-stock">Out of stock</p>}
-                        <Button className="chatbtn">{chaticon}</Button>
+                        <Button
+                          type="button"
+                          className="chatbtn"
+                          onClick={handleProductChat}
+                          disabled={!detail}
+                          aria-label="Chat with support about this product"
+                          title="Contact support about this product"
+                        >
+                          {chaticon}
+                        </Button>
                       </div>
                     </div>
                   </Col>
@@ -474,6 +505,10 @@ const Singleview = () => {
 
 
             <FeatureAttributes details={detail?.featureAttribute} />
+
+            <div className="mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
+              <ProductReviews reviews={detail?.reviews} />
+            </div>
 
             {detail?.description ?
               <div className="product_description mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
