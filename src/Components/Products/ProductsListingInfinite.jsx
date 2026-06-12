@@ -83,8 +83,12 @@ const ProductsListingInfinite = ({
                 onOpen={handleOpenProduct}
               />
             ))
-          ) : isLoading ? null : (
-            <CommingSoon message={message} />
+          ) : isLoading ? (
+            <div className="px-0 uza-infinite-scroll">
+              <LoadingContent />
+            </div>
+          ) : (
+            <CommingSoon message={message || "No products found"} />
           )}
         </div>
       </InfiniteScroll>

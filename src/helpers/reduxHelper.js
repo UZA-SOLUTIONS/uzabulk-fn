@@ -34,6 +34,8 @@ export const paginatePending = (field) => (state, action) => {
 
 export const paginateRejected = (field) => (state, action) => {
   if (action.payload?.aborted) return;
+  const payloadMessage = typeof action.payload === "string" ? action.payload : action.payload?.message;
+  if (payloadMessage && /^cancell?ed$/i.test(String(payloadMessage).trim())) return;
   state[field].isLoading = false;
   state[field].message =
     typeof action.payload === "string"

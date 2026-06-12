@@ -30,13 +30,23 @@ export const apiGetProducts = createAsyncThunk(
       if (!hasNetworkConnection()) {
         return Thunk.rejectWithValue("No internet connection. Please reconnect and try again.");
       }
-      const res = await apiClient.get(PRODUCTS.LIST, { params: query, signal });
+      const res = await apiClient.get(PRODUCTS.LIST, {
+        params: query,
+        signal,
+        timeout: 20000,
+      });
       if (res.status === "success") {
         return res?.data;
       } else {
         throw new Error(res.message);
       }
     } catch (error) {
+      const isCanceled = error?.code === "ERR_CANCELED"
+        || error?.name === "CanceledError"
+        || error?.name === "AbortError";
+      if (isCanceled) {
+        return Thunk.rejectWithValue({ aborted: true });
+      }
       return Thunk.rejectWithValue(
         error.message || "Something went wrong, please try again later."
       );

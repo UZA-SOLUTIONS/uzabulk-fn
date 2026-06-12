@@ -7,8 +7,6 @@ import AbortController from "abort-controller";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
-import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
-import { extractMongoProductId } from "../../helpers/commonHelper";
 import { APP_NAME } from "../../config/constants";
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 import ROUTES from "../../helpers/routesHelper";
@@ -52,16 +50,25 @@ const Productlist = () => {
     [categoriesAll]
   );
 
+  const searchMeta = others?.searchMeta || {};
+  const effectiveSearchLabel =
+    searchMeta?.searchQuery
+    || searchMeta?.primary
+    || searchMeta?.correctedQuery
+    || searchQuery;
+
   const pageTitle = useMemo(() => {
     if (imageQuery) {
       const kw = others?.imageSearchKeyword || others?.imageSearchPhrase || searchQuery;
       return kw ? `Image search: ${kw}` : "Image search results";
     }
-    if (searchQuery) return `Search: ${searchQuery}`;
+    if (searchQuery) {
+      return `Search: ${effectiveSearchLabel || searchQuery}`;
+    }
     if (others?.category?.catName) return others.category.catName;
     if (searchParams.get("name")) return searchParams.get("name");
     return isCategoriesHub ? "Categories" : "All products";
-  }, [imageQuery, searchQuery, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category?.catName, searchParams, isCategoriesHub]);
+  }, [imageQuery, searchQuery, effectiveSearchLabel, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category?.catName, searchParams, isCategoriesHub]);
 
   const {
     catstripSentinelRef,
@@ -210,14 +217,6 @@ const Productlist = () => {
 
   const showCategoryStrip = categoryTabs.length > 0 && !searchQuery && !imageQuery;
 
-  const similarAnchorId = useMemo(() => {
-    const first = (displayItems || []).find((item) => {
-      const id = extractMongoProductId(item);
-      return id && /^[a-fA-F0-9]{24}$/.test(id);
-    });
-    return first ? extractMongoProductId(first) : "";
-  }, [displayItems]);
-
   return (
     <div className="wrapList products_list_browse">
       <Helmet>
@@ -233,13 +232,6 @@ const Productlist = () => {
 
         <div className="home_discover_browse_outer products_list_browse__outer">
           <h1 className="products_list_browse__page_title">{pageTitle}</h1>
-          {imageQuery ? (
-            <p className="products_list_image_search_hint mb-3">
-              Showing catalog matches for your uploaded photo
-              {others?.imageSearchKeyword ? ` · “${others.imageSearchKeyword}”` : ""}
-            </p>
-          ) : null}
-
           {showCategoryStrip ? (
             <>
               <div ref={catstripSentinelRef} className="home_discover_catstrip_sentinel" aria-hidden="true" />
@@ -271,14 +263,6 @@ const Productlist = () => {
             </div>
           </section>
 
-          {similarAnchorId ? (
-            <SimilarProductsRow
-              productId={similarAnchorId}
-              title="AI picks — similar products"
-              limit={10}
-              className="mt-4"
-            />
-          ) : null}
         </div>
       </Container>
     </div>

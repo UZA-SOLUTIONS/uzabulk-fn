@@ -14,6 +14,7 @@ import {
 } from "../../helpers/commonHelper";
 import ROUTES from "../../helpers/routesHelper";
 import suggestionPlaceholder from "../../assets/images/default_name.webp";
+import ImageSearchIcon from "./ImageSearchIcon";
 
 const DEFAULT_MIN_CHARS = 2;
 const DEFAULT_DEBOUNCE_MS = 220;
@@ -40,15 +41,6 @@ function resolveSuggestionThumb(raw) {
     }
     return resolveMediaUrl(s) || s;
 }
-
-const ICON_IMAGE_SEARCH = (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-        <rect x="3.5" y="3.5" width="17" height="17" rx="2" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M7 15l2.5-2.5 2 2L16 10l2.5 2.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" />
-        <path d="M15.5 6.5v4M13.5 8.5h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    </svg>
-);
 
 export default function ProductSearch({
     category = "",
@@ -170,6 +162,7 @@ export default function ProductSearch({
                     params,
                     signal: cancelToken.current.signal,
                     suppressGlobalErrorToast: true,
+                    timeout: 8000,
                 });
 
                 if (latestQueryKeyRef.current !== inflightKey) {
@@ -199,14 +192,12 @@ export default function ProductSearch({
                     || error?.name === "AbortError";
                 if (isCanceledRequest) {
                     logger("Previous request canceled.");
-                } else {
-                    if (latestQueryKeyRef.current === inflightKey) {
-                        setItems([]);
-                    }
-                    logger("Error during search autocomplete:", error);
+                    return;
                 }
                 if (latestQueryKeyRef.current === inflightKey) {
+                    setItems([]);
                     setIsLoading(false);
+                    logger("Error during search autocomplete:", error);
                 }
             }
         }, delay);
@@ -360,7 +351,9 @@ export default function ProductSearch({
                         disabled={imageSearchLoading}
                         onChange={handleImageSearch}
                     />
-                    <span className="header-mockup-img-search__icon">{ICON_IMAGE_SEARCH}</span>
+                    <span className="header-mockup-img-search__icon">
+                        <ImageSearchIcon />
+                    </span>
                 </label>
             ) : null}
         </>
