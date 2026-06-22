@@ -9,6 +9,7 @@ import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
 import { APP_NAME } from "../../config/constants";
 import { smoothScrollToTop } from "../../helpers/commonHelper";
+import { trackFilterEngagement, trackSearchEngagement } from "../../helpers/browsingBehaviorHelper";
 import ROUTES from "../../helpers/routesHelper";
 import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
 import { apiGetCategories } from "../../store/categories/actions";
@@ -56,6 +57,16 @@ const Productlist = () => {
     || searchMeta?.primary
     || searchMeta?.correctedQuery
     || searchQuery;
+
+  const recommendations = others?.recommendations || [];
+  const moreLikeThis = others?.moreLikeThis || [];
+  const moreLikeThisSource = others?.moreLikeThisSource || null;
+  const isFirstResultsPage = Number(searchParams.get("skip") || 1) <= 1;
+  const showMoreLikeThis = isFirstResultsPage && (searchQuery || imageQuery) && moreLikeThis.length > 0;
+  const showRecommendations = isFirstResultsPage && (searchQuery || imageQuery) && recommendations.length > 0;
+  const moreLikeThisTitle = moreLikeThisSource?.name
+    ? `More like "${moreLikeThisSource.name}"`
+    : "More like this";
 
   const pageTitle = useMemo(() => {
     if (imageQuery) {
@@ -196,6 +207,32 @@ const Productlist = () => {
   }, [searchParams.toString()]);
 
   useEffect(() => {
+    const page = "product_list";
+    if (searchQuery || imageQuery) {
+      trackSearchEngagement({
+        search: searchQuery || imageQuery,
+        page,
+        filters: {
+          sort: selectedSort,
+          category: selectedCategory,
+          imageSearch: Boolean(imageQuery),
+        },
+      });
+      return;
+    }
+    if (selectedCategory || (selectedSort && selectedSort !== "newest")) {
+      trackFilterEngagement({
+        page,
+        category: selectedCategory,
+        filters: {
+          sort: selectedSort,
+          categoryName: searchParams.get("name") || "",
+        },
+      });
+    }
+  }, [searchQuery, imageQuery, selectedCategory, selectedSort, searchParams]);
+
+  useEffect(() => {
     const topIds = searchParams.get("topIds");
     if (topIds) dispatch(apiGetProductDetail({ id: topIds }));
   }, [dispatch, searchParams]);
@@ -262,6 +299,39 @@ const Productlist = () => {
               />
             </div>
           </section>
+
+          {showMoreLikeThis ? (
+            <section className="home_discover_browse home_discover_browse--flat mt-4" aria-label={moreLikeThisTitle}>
+              <h2 className="products_list_browse__page_title h5 mb-1">{moreLikeThisTitle}</h2>
+              <p className="text-muted small mb-3">Similar wholesale items from our catalog</p>
+              <div className="home_discover_browse__body products_list_browse__grid">
+                <ProductsListingInfinite
+                  items={moreLikeThis}
+                  isLoading={false}
+                  message=""
+                  hasMore={false}
+                  fetchRecords={() => {}}
+                  gridClassName="home_discover_browse__product_grid"
+                />
+              </div>
+            </section>
+          ) : null}
+
+          {showRecommendations ? (
+            <section className="home_discover_browse home_discover_browse--flat mt-4" aria-label="Recommended for your search">
+              <h2 className="products_list_browse__page_title h5 mb-3">You may also like</h2>
+              <div className="home_discover_browse__body products_list_browse__grid">
+                <ProductsListingInfinite
+                  items={recommendations}
+                  isLoading={false}
+                  message=""
+                  hasMore={false}
+                  fetchRecords={() => {}}
+                  gridClassName="home_discover_browse__product_grid"
+                />
+              </div>
+            </section>
+          ) : null}
 
         </div>
       </Container>

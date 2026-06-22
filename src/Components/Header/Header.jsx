@@ -9,7 +9,7 @@ import logoFallback from "../../assets/images/dark_logo.svg";
 import Homemenustrip from "./Homemenustrip";
 import ProductSearch from "../Common/ProductSearch";
 import ImageSearchTray from "../Common/ImageSearchTray";
-import { readImageFromClipboard, uploadImageSearch } from "../../helpers/imageSearchHelper";
+import { readImageFromClipboard, uploadImageForSearchBar, buildSearchBarImageListingUrl } from "../../helpers/imageSearchHelper";
 
 const ICON_MAGNIFIER = (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -115,19 +115,9 @@ export default function Header() {
     setImageSearchLoading(true);
 
     try {
-      const data = await uploadImageSearch(file, { limit: 32 });
-      const imageUrl = data?.others?.imageUrl || "";
-      const keyword =
-        data?.others?.imageSearchObjectLabel
-        || data?.others?.imageSearchKeyword
-        || data?.others?.imageSearchPhrase
-        || "";
-      if (keyword) setSearchText(keyword);
-      const params = new URLSearchParams();
-      params.set("skip", "1");
-      if (imageUrl) params.set("image", imageUrl);
-      if (keyword) params.set("search", keyword);
-      navigate(`${ROUTES.PRODUCT_LISTING}?${params.toString()}`);
+      const imageUrl = await uploadImageForSearchBar(file);
+      const params = buildSearchBarImageListingUrl({ imageUrl });
+      navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
     } catch (error) {
       revokeLocalPreview();
       toast.error(error?.message || "Could not search by image. Try again.");

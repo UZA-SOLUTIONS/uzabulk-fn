@@ -33,7 +33,6 @@ export const apiGetProducts = createAsyncThunk(
       const res = await apiClient.get(PRODUCTS.LIST, {
         params: query,
         signal,
-        timeout: 20000,
       });
       if (res.status === "success") {
         return res?.data;

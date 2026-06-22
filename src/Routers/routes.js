@@ -78,10 +78,6 @@ export default function MyRouts() {
               path={ROUTES.SIGNUP}
               element={<Navigate to={`${ROUTES.HOME}?auth=signup`} replace />}
             />
-            <Route
-              path={ROUTES.MERCHANT_SIGNUP}
-              element={<Navigate to={`${ROUTES.HOME}?auth=merchant-signup`} replace />}
-            />
             <Route path={ROUTES.HOME} element={<Homepage />} />
             <Route path={ROUTES.BLOG} element={<Blog />} />
             <Route path={ROUTES.CONTACT_US} element={<ContactUs />} />

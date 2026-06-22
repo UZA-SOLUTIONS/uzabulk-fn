@@ -15,14 +15,22 @@ import UXSkeleton from "../Common/UXSkeleton";
 
 export default function SimilarProductsRow({
   productId,
+  items: presetItems = null,
   title = "Similar products",
   limit = 8,
   className = "",
+  usePersonalized = true,
 }) {
   const navigate = useNavigate();
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(Array.isArray(presetItems) ? presetItems : []);
   const [loading, setLoading] = useState(false);
+
   useEffect(() => {
+    if (Array.isArray(presetItems)) {
+      setItems(presetItems.slice(0, limit));
+      return undefined;
+    }
+
     if (!productId) {
       setItems([]);
       return undefined;
@@ -31,19 +39,30 @@ export default function SimilarProductsRow({
     let cancelled = false;
     setLoading(true);
 
-    apiGet(`${PRODUCTS.SIMILAR}/${productId}`, {
-      limit,
-      suppressGlobalErrorToast: true,
-    })
-      .then((res) => {
-        if (cancelled) return;
-        if (!res || res.status !== "success") {
-          setItems([]);
-          return;
+    const personalizedUrl = `${PRODUCTS.RECOMMENDATIONS.SIMILAR}/${productId}`;
+    const legacyUrl = `${PRODUCTS.SIMILAR}/${productId}`;
+
+    const loadSimilar = async () => {
+      const urls = usePersonalized ? [personalizedUrl, legacyUrl] : [legacyUrl, personalizedUrl];
+      for (const url of urls) {
+        try {
+          const res = await apiGet(url, {
+            limit,
+            suppressGlobalErrorToast: true,
+          });
+          if (cancelled) return;
+          if (res?.status === "success" && Array.isArray(res.data) && res.data.length) {
+            setItems(res.data);
+            return;
+          }
+        } catch {
+          // try next endpoint
         }
-        const list = Array.isArray(res.data) ? res.data : [];
-        setItems(list);
-      })
+      }
+      if (!cancelled) setItems([]);
+    };
+
+    loadSimilar()
       .catch(() => {
         if (!cancelled) setItems([]);
       })
@@ -54,7 +73,7 @@ export default function SimilarProductsRow({
     return () => {
       cancelled = true;
     };
-  }, [productId, limit]);
+  }, [productId, limit, presetItems, usePersonalized]);
 
   const openProduct = async (item) => {
     smoothScrollToTop();
@@ -69,7 +88,7 @@ export default function SimilarProductsRow({
     if (path) navigate(path);
   };
 
-  if (!productId) return null;
+  if (!presetItems && !productId) return null;
   if (!loading && !items.length) return null;
 
   return (

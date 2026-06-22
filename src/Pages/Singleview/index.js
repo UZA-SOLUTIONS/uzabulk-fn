@@ -20,6 +20,8 @@ import ROUTES from "../../helpers/routesHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import { apiGetProductDetail } from "../../store/products/actions";
 import { manageProductForCart } from "../../store/products/slice";
+import useProductViewTracker from "../../hooks/useProductViewTracker";
+import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
 
 import placeholder from "../../assets/images/sousix.jpg";
 import SlideImage from "./SlideImage";
@@ -140,6 +142,13 @@ const Singleview = () => {
     ? normalizedId
     : fallbackQueryId;
   const isValidProductId = /^[a-fA-F0-9]{24}$/.test(resolvedProductId);
+
+  useProductViewTracker(
+    isValidProductId && detail?._id ? resolvedProductId : "",
+    {
+      category: detail?.category?.catName || detail?.category?.name || "",
+    }
+  );
 
 
   const settings = {
@@ -522,6 +531,15 @@ const Singleview = () => {
                 </Row>
               </div>
               : null}
+
+            {detail?._id ? (
+              <SimilarProductsRow
+                productId={detail._id}
+                title="You may also like"
+                limit={6}
+                className="mt-5"
+              />
+            ) : null}
           </>
         ) : (
           <NoRecordFound message={message || "Product not found! Please open a product from the list."} />

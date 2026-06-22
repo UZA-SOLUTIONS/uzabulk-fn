@@ -42,6 +42,14 @@ export const PRODUCTS = {
   ANALYZE_IMAGE: "products/ai/analyze-image",
   IMAGE_SEARCH_KEYWORDS: "products/ai/image-search-keywords",
   IMAGE_SEARCH: "products/ai/image-search",
+  RECOMMENDATIONS: {
+    HOMEPAGE_FEED: "recommendations/homepage-feed",
+    SIMILAR: "recommendations/similar-products",
+    CROSS_SELL: "recommendations/cross-sell",
+    EMAIL_DIGEST: "recommendations/email-digest",
+    SUPPLIER_HIGHLIGHTS: "recommendations/supplier-highlights",
+    EVENTS: "recommendations/events",
+  },
 };
 
 export const CART = {
@@ -81,6 +89,14 @@ export const PAGE = {
 export const CONFIGURATIONS = {
   GET: "config",
   CURRENCIES: "config/currencies",
+};
+
+export const BUYER_ASSISTANT = {
+  STATUS: "buyer-assistant/status",
+  WELCOME: "buyer-assistant/welcome",
+  CHAT: "buyer-assistant/chat",
+  HISTORY: "buyer-assistant/history",
+  ESCALATE: "buyer-assistant/escalate",
 };
 
 export const FILE = {

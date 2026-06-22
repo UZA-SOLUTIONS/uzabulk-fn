@@ -320,6 +320,10 @@ section.header-main .container {
   --nav-mockup-search-target: min(560px, 94vw);
   background: var(--nav-mockup-bg);
   border-bottom: none;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .site-header.site-header--mockup.is-scrolled {
@@ -8211,6 +8215,15 @@ body.products-catstrip-pinned .site-header.site-header--mockup.is-scrolled {
   grid-column: 1 / -1;
   text-align: center;
   padding: 24px 12px;
+}
+
+.products_listing_square .products_infinite_grid .products_list_initial_loader {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.products_listing_square .products_infinite_grid .products_list_initial_loader .loading-content {
+  min-height: 280px;
 }
 
 .products_listing_stock_badge {

@@ -4,12 +4,10 @@ import { useDispatch, useSelector } from "react-redux";
 
 import BrowseCategoryStrip from "../Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../Products/ProductsListingInfinite";
-import SimilarProductsRow from "../Products/SimilarProductsRow";
 import UXSkeleton from "../Common/UXSkeleton";
 import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
 import { apiGet } from "../../helpers/apiHelper";
 import {
-  extractMongoProductId,
   getHomeFeedRefreshToken,
   getProductDedupeKey,
   mergeUniqueProducts,
@@ -21,7 +19,7 @@ import { apiGetCategories } from "../../store/categories/actions";
 
 const PAGE_LIMIT_CATEGORY = 32;
 const ALL_PRODUCTS_CHUNK = 48;
-/** Keep loading pages on first paint until at least this many cards (or catalog ends). */
+/** Prefetch pages on first paint until at least this many cards (or catalog ends). */
 const MIN_HOME_VISIBLE_PRODUCTS = 24;
 const MAX_INITIAL_PREFETCH_PAGES = 8;
 
@@ -298,14 +296,6 @@ export default function DiscoverBrowseProducts() {
     [activeCategoryId, selectTabIndex, tabs]
   );
 
-  const similarAnchorId = useMemo(() => {
-    const first = (items || []).find((item) => {
-      const id = extractMongoProductId(item);
-      return id && /^[a-fA-F0-9]{24}$/.test(id);
-    });
-    return first ? extractMongoProductId(first) : "";
-  }, [items]);
-
   return (
     <div className="home_discover_browse_outer home_feed_section_offset px-3 w-100">
       <h2 id="home-discover-browse-title" className="visually-hidden">
@@ -366,15 +356,6 @@ export default function DiscoverBrowseProducts() {
           )}
         </div>
       </section>
-
-      {similarAnchorId ? (
-        <SimilarProductsRow
-          productId={similarAnchorId}
-          title="AI picks — similar products"
-          limit={10}
-          className="mt-3"
-        />
-      ) : null}
     </div>
   );
 }

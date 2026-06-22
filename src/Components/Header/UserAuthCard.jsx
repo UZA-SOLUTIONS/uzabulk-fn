@@ -16,16 +16,12 @@ import LoginPopup from "../LoginPopup";
 import UserAccountAvatar from "./UserAccountAvatar";
 import ROUTES from "../../helpers/routesHelper";
 
-/** `?auth=` values that open the login modal (merchant uses its own path + query). */
 const AUTH_QUERY_SIGNIN = "signin";
 const AUTH_QUERY_SIGNUP = "signup";
-const AUTH_QUERY_MERCHANT_SIGNUP = "merchant-signup";
 
 function authQueryToModalTab(authParam) {
   if (authParam === AUTH_QUERY_SIGNIN) return "signin";
-  if (authParam === AUTH_QUERY_SIGNUP || authParam === AUTH_QUERY_MERCHANT_SIGNUP) {
-    return "signup";
-  }
+  if (authParam === AUTH_QUERY_SIGNUP) return "signup";
   return null;
 }
 
@@ -44,7 +40,6 @@ const ICON_GLOBE = (
 export default function UserAuthCard({
   showCart = true,
   showAccount = true,
-  showMerchantSignup = true,
   signupButtonLabel = "Get Started",
   className = "",
   /** `mockupTop` / `mockupBottom`: split navbar per homepage mockup. */
@@ -118,15 +113,13 @@ export default function UserAuthCard({
             <button type="button" className="navbar-mockup-signin" onClick={() => openAuthModal("signin")}>
               Sign In
             </button>
-            {showMerchantSignup ? (
-              <button
-                type="button"
-                className="navbar-mockup-get-started"
-                onClick={() => openAuthModal("signup")}
-              >
-                {signupButtonLabel}
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="navbar-mockup-get-started"
+              onClick={() => openAuthModal("signup")}
+            >
+              {signupButtonLabel}
+            </button>
             <LoginPopup
               show={isAuthModalOpen}
               initialTab={authModalTab}
@@ -148,16 +141,6 @@ export default function UserAuthCard({
       <div
         className={`navbar-mockup-bottom-tools user_card_below_header ${className}`}
       >
-        {showMerchantSignup && !isLogin ? (
-          <>
-            <div className="merchant_signup_wrap d-flex align-items-center">
-              <Link to={ROUTES.MERCHANT_SIGNUP} className="merchant-signup-btn">
-                {signupButtonLabel}
-              </Link>
-            </div>
-            <span className="navbar-mockup-vrule" aria-hidden />
-          </>
-        ) : null}
         <Link to={ROUTES.CART} className="navbar-mockup-cart" aria-label="Shopping cart">
           <span className="navbar-mockup-cart-icon" aria-hidden>
             {ICON_CART}
@@ -245,16 +228,6 @@ export default function UserAuthCard({
             </UncontrolledDropdown>
           </div>
         )
-      ) : null}
-
-      {showMerchantSignup && !isLogin && (showCart || showAccount) ? <div className="dividerline_verticle"></div> : null}
-
-      {showMerchantSignup && !isLogin ? (
-        <div className="merchant_signup_wrap d-flex align-items-center">
-          <Link to={ROUTES.MERCHANT_SIGNUP} className="merchant-signup-btn">
-            {signupButtonLabel}
-          </Link>
-        </div>
       ) : null}
 
       {!isLogin ? (

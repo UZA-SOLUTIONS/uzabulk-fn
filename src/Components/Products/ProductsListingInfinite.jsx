@@ -64,11 +64,13 @@ const ProductsListingInfinite = ({
         next={() => fetchRecords?.()}
         hasMore={Boolean(hasMore)}
         scrollThreshold={0.85}
-        loader={(
-          <div className="px-0 uza-infinite-scroll">
-            <LoadingContent />
-          </div>
-        )}
+        loader={
+          items?.length > 0 ? (
+            <div className="px-0 uza-infinite-scroll">
+              <LoadingContent />
+            </div>
+          ) : null
+        }
         endMessage=""
         className="px-0"
       >
@@ -84,7 +86,7 @@ const ProductsListingInfinite = ({
               />
             ))
           ) : isLoading ? (
-            <div className="px-0 uza-infinite-scroll">
+            <div className="products_list_initial_loader">
               <LoadingContent />
             </div>
           ) : (

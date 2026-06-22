@@ -2,8 +2,6 @@ const ROUTES = {
   HOME: "/",
   LOGIN: "/auth/login",
   SIGNUP: "/auth/signup",
-  /** Merchant / vendor registration entry (distinct from customer signup). */
-  MERCHANT_SIGNUP: "/auth/merchant-signup",
   FORGOT: "/auth/forgot-password",
   CATEGORIES: "/categories",
   PRODUCT_LISTING: "/products",

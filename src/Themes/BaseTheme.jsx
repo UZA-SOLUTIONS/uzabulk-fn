@@ -1,6 +1,8 @@
 import React from 'react';
 import Header from '../Components/Header/Header';
 import Footer from '../Components/Footer/Footer';
+import BrowsingBehaviorTracker from '../Components/Common/BrowsingBehaviorTracker';
+import FloatingBuyerAssistant from '../Components/Common/FloatingBuyerAssistant';
 import { Outlet, useLocation } from 'react-router-dom';
 import ROUTES from '../helpers/routesHelper';
 
@@ -15,11 +17,13 @@ const BaseTheme = ({ header = true, footer = true }) => {
 
     return (
         <div className="app-layout-shell">
+            <BrowsingBehaviorTracker />
             {!hideHeaderFooter && <Header />}
             <main className="app-layout-shell__main">
                 <Outlet />
             </main>
             {!hideHeaderFooter && <Footer />}
+            <FloatingBuyerAssistant />
         </div>
     );
 };

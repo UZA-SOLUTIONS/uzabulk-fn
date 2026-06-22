@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit'
-import { apiGetBestSalerProducts, apiGetGuaranteedProducts, apiGetHomeBestSalerProducts, apiGetHomeGuaranteedProducts, apiGetHomeNewArrivalProducts, apiGetHomeProducts, apiGetHomeSavingSpotlightProducts, apiGetHomeTopRankingProducts, apiGetNewArrivalProducts, apiGetProductDetail, apiGetProducts, apiGetRecommendedProducts, apiGetSavingSpotlightProducts, apiGetTopRankingProducts } from './actions'
+import { apiGetBestSalerProducts, apiGetGuaranteedProducts, apiGetHomeBestSalerProducts, apiGetHomeGuaranteedProducts, apiGetHomeNewArrivalProducts, apiGetHomepageFeed, apiGetHomeProducts, apiGetHomeSavingSpotlightProducts, apiGetHomeTopRankingProducts, apiGetNewArrivalProducts, apiGetProductDetail, apiGetProducts, apiGetRecommendedProducts, apiGetSavingSpotlightProducts, apiGetTopRankingProducts } from './actions'
 import { paginateFulfilled, paginateInfiniteFulfilled, paginatePending, paginateRejected, paginationInfiniteInitialState, paginationInitialState } from '../../helpers/reduxHelper';
 
 const initialState = {
@@ -102,6 +102,11 @@ export const slice = createSlice({
             .addCase(apiGetRecommendedProducts.fulfilled, paginateFulfilled('homeRecommendedProducts'))
             .addCase(apiGetRecommendedProducts.pending, paginatePending('homeRecommendedProducts'))
             .addCase(apiGetRecommendedProducts.rejected, paginateRejected('homeRecommendedProducts'));
+
+        builder
+            .addCase(apiGetHomepageFeed.fulfilled, paginateFulfilled('homeRecommendedProducts'))
+            .addCase(apiGetHomepageFeed.pending, paginatePending('homeRecommendedProducts'))
+            .addCase(apiGetHomepageFeed.rejected, paginateRejected('homeRecommendedProducts'));
 
 
         // Top ranking products

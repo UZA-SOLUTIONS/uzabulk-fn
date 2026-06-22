@@ -2,16 +2,15 @@ import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 import { getHomeFeedRefreshToken } from "../../helpers/commonHelper";
-import { apiGetRecommendedProducts } from "../../store/products/actions";
+import { apiGetHomepageFeed } from "../../store/products/actions";
 
 /** Enough for home row merges; keeps recommender DB/Python work bounded. */
-const HOME_RECOMMENDED_LIMIT = 24;
+const HOME_RECOMMENDED_LIMIT = 12;
 /** Defer so New Arrivals / categories win the first network slice. */
 const PREFETCH_DELAY_MS = 2500;
 
 /**
- * Loads personalized `/products/recommended` after initial paint so home sections
- * can use a rotated pool without blocking first load.
+ * Prefetches behavioral `recommendations/homepage-feed` after initial paint.
  */
 export default function PrefetchHomeRecommended() {
   const dispatch = useDispatch();
@@ -36,7 +35,7 @@ export default function PrefetchHomeRecommended() {
     const runPrefetch = () => {
       lastRefreshRef.current = refresh;
       dispatch(
-        apiGetRecommendedProducts({
+        apiGetHomepageFeed({
           limit: HOME_RECOMMENDED_LIMIT,
           refresh,
           suppressGlobalErrorToast: true,

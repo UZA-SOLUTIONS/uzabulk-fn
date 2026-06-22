@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Autocomplete from "react-autocomplete";
 import { toast } from "react-toastify";
 import apiClient from "../../helpers/apiHelper";
-import { uploadImageSearch } from "../../helpers/imageSearchHelper";
+import { uploadImageForSearchBar, buildSearchBarImageListingUrl } from "../../helpers/imageSearchHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import {
     logger,
@@ -220,14 +220,9 @@ export default function ProductSearch({
 
         setImageSearchLoading(true);
         try {
-            const data = await uploadImageSearch(file, { limit: 32 });
-            const imageUrl = data?.others?.imageUrl || "";
-            const keyword = data?.others?.imageSearchKeyword || data?.others?.imageSearchPhrase || "";
-            const params = new URLSearchParams();
-            params.set("skip", "1");
-            if (imageUrl) params.set("image", imageUrl);
-            if (keyword) params.set("search", keyword);
-            navigate(`${ROUTES.PRODUCT_LISTING}?${params.toString()}`);
+            const imageUrl = await uploadImageForSearchBar(file);
+            const params = buildSearchBarImageListingUrl({ imageUrl });
+            navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
         } catch (error) {
             toast.error(error?.message || "Could not search by image. Try again.");
             console.error("Image search failed:", error);

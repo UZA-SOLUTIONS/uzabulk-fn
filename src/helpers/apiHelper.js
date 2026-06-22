@@ -8,26 +8,10 @@ import { getCurrencySymbol } from "./currencyHelper";
 
 const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:1302").replace(/\/+$/, "");
 
-/**
- * Axios request timeout (ms). Default 0 = no client timeout (avoids "timeout of 120000ms exceeded").
- * Set REACT_APP_API_TIMEOUT_MS to cap wait time (min 5s when > 0, max 5m).
- */
-const resolveApiTimeoutMs = () => {
-  const raw = process.env.REACT_APP_API_TIMEOUT_MS;
-  if (raw === "" || raw === undefined || raw === null) {
-    return 0;
-  }
-  const parsed = parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 0;
-  }
-  return Math.min(Math.max(parsed, 5000), 300_000);
-};
-
 // Create an instance of axios with default settings
 const apiClient = axios.create({
   baseURL: `${API_URL}/api/v1`,
-  timeout: resolveApiTimeoutMs(),
+  timeout: 0,
   headers: {
     "Content-Type": "application/json",
     "DeviceId": getDeviceId(),

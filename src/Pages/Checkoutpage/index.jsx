@@ -8,6 +8,7 @@ import { Container, Row, Col, Accordion } from "react-bootstrap";
 import LoginPopup from "../../Components/LoginPopup";
 import RenderAddress from "../../Components/Common/RenderAddress";
 import AddAddressModal from "../../Components/Modals/AddAddressModal";
+import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
 
 import ROUTES from "../../helpers/routesHelper";
 import { formatNumber } from "../../helpers/commonHelper";
@@ -653,6 +654,19 @@ const Checkoutpage = () => {
             </div>
           </Col>
         </Row>
+
+        {orderDetails?.cross_sell?.length ? (
+          <Row className="mt-4">
+            <Col lg={12}>
+              <SimilarProductsRow
+                items={orderDetails.cross_sell}
+                title="You may also like"
+                limit={4}
+                usePersonalized={false}
+              />
+            </Col>
+          </Row>
+        ) : null}
       </Container>
     </section>
   );
