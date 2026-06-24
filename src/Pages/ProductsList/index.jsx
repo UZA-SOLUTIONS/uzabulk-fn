@@ -7,6 +7,7 @@ import AbortController from "abort-controller";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
+import { readImageSearchBlobPreview } from "../../helpers/imageSearchHelper";
 import { APP_NAME } from "../../config/constants";
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 import { trackFilterEngagement, trackSearchEngagement } from "../../helpers/browsingBehaviorHelper";
@@ -69,7 +70,7 @@ const Productlist = () => {
     : "More like this";
 
   const pageTitle = useMemo(() => {
-    if (imageQuery) {
+    if (imageQuery || others?.imageSearch) {
       const kw = others?.imageSearchKeyword || others?.imageSearchPhrase || searchQuery;
       return kw ? `Image search: ${kw}` : "Image search results";
     }
@@ -80,6 +81,14 @@ const Productlist = () => {
     if (searchParams.get("name")) return searchParams.get("name");
     return isCategoriesHub ? "Categories" : "All products";
   }, [imageQuery, searchQuery, effectiveSearchLabel, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category?.catName, searchParams, isCategoriesHub]);
+
+  const imageSearchKeyword = others?.imageSearchKeyword || others?.imageSearchPhrase || searchQuery;
+  const isImageSearchSession = Boolean(imageQuery || others?.imageSearch);
+  const searchedImageSrc =
+    imageQuery
+    || others?.imageUrl
+    || readImageSearchBlobPreview()
+    || "";
 
   const {
     catstripSentinelRef,
@@ -268,7 +277,32 @@ const Productlist = () => {
         ) : null}
 
         <div className="home_discover_browse_outer products_list_browse__outer">
-          <h1 className="products_list_browse__page_title">{pageTitle}</h1>
+          {isImageSearchSession ? (
+            <header className="products_list_image_search_header mb-2">
+              <h1 className="products_list_browse__page_title products_list_image_search_header__title">
+                {pageTitle}
+              </h1>
+              {searchedImageSrc ? (
+                <div
+                  className="products_list_image_search_banner products_list_image_search_banner--with-image"
+                  data-testid="image-search-results-preview"
+                >
+                  <figure className="products_list_image_search_query" aria-label="Image you searched for">
+                    <img
+                      src={searchedImageSrc}
+                      alt={imageSearchKeyword ? `Image search: ${imageSearchKeyword}` : "Image you searched for"}
+                      className="products_list_image_search_query__img"
+                      decoding="async"
+                    />
+                  </figure>
+                </div>
+              ) : isLoading ? (
+                <p className="products_list_image_search_loading mb-0">Analyzing image…</p>
+              ) : null}
+            </header>
+          ) : (
+            <h1 className="products_list_browse__page_title">{pageTitle}</h1>
+          )}
           {showCategoryStrip ? (
             <>
               <div ref={catstripSentinelRef} className="home_discover_catstrip_sentinel" aria-hidden="true" />

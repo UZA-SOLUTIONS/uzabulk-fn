@@ -12,7 +12,6 @@ import "react-toastify/dist/ReactToastify.css";
 
 import Loader from "./Components/Common/Loader";
 import PrefetchHomeCategories from "./Components/Common/PrefetchHomeCategories";
-import PrefetchHomeRecommended from "./Components/Common/PrefetchHomeRecommended";
 import MyRouts from "./Routers/routes";
 import { store } from "./store/store";
 
@@ -21,7 +20,6 @@ function App() {
     <div className="App">
       <Provider store={store}>
         <PrefetchHomeCategories />
-        <PrefetchHomeRecommended />
         <MyRouts />
         <ToastContainer />
         <Loader />

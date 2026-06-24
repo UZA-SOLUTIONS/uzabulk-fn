@@ -2,7 +2,6 @@ import React from "react";
 import { Row, Col } from "react-bootstrap";
 
 import NewArrivalProducts from "../../Components/Home/NewArrivalProducts";
-import PersonalizedHomeFeed from "../../Components/Home/PersonalizedHomeFeed";
 import DiscoverBrowseProducts from "../../Components/Home/DiscoverBrowseProducts";
 import SourceByCategory from "../../Components/Home/SourceByCategory";
 const Discover = () => {
@@ -18,11 +17,6 @@ const Discover = () => {
       <Row className="g-3 align-items-stretch">
         <Col lg={12} md={12} className="d-flex">
           <NewArrivalProducts />
-        </Col>
-      </Row>
-      <Row className="g-3 align-items-stretch">
-        <Col lg={12} md={12} className="d-flex">
-          <PersonalizedHomeFeed />
         </Col>
       </Row>
       <Row className="g-3 align-items-stretch">

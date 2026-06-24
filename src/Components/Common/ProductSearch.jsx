@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Autocomplete from "react-autocomplete";
 import { toast } from "react-toastify";
 import apiClient from "../../helpers/apiHelper";
-import { uploadImageForSearchBar, buildSearchBarImageListingUrl } from "../../helpers/imageSearchHelper";
+import { uploadImageForSearchBar, buildSearchBarImageListingUrl, persistImageSearchPreview } from "../../helpers/imageSearchHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import {
     logger,
@@ -219,9 +219,13 @@ export default function ProductSearch({
         }
 
         setImageSearchLoading(true);
+        let blobUrl = "";
         try {
+            blobUrl = URL.createObjectURL(file);
+            persistImageSearchPreview(blobUrl);
             const imageUrl = await uploadImageForSearchBar(file);
             const params = buildSearchBarImageListingUrl({ imageUrl });
+            persistImageSearchPreview(imageUrl);
             navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
         } catch (error) {
             toast.error(error?.message || "Could not search by image. Try again.");

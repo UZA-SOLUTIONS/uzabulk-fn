@@ -6,6 +6,7 @@ import ROUTES from "../../helpers/routesHelper";
 import { getHomeFeedRefreshToken } from "../../helpers/commonHelper";
 import {
   fetchCategoryRepresentativeImage,
+  fetchCategoryThumbnailsBatch,
   rotateHomeCategories,
 } from "../../helpers/homeCategoryFeedHelper";
 import {
@@ -15,7 +16,7 @@ import {
 import UXSkeleton from "../Common/UXSkeleton";
 
 const MAX_CATEGORIES = 12;
-const IMAGE_FETCH_CONCURRENCY = 4;
+const IMAGE_FETCH_CONCURRENCY = 3;
 
 export default function CategoryCircleSlider() {
   const level1Categories = useSelector((s) => s.categories.categories.level1 || []);
@@ -61,9 +62,22 @@ export default function CategoryCircleSlider() {
 
       setIsFetchingImages(true);
       try {
-        for (let i = 0; i < missing.length; i += IMAGE_FETCH_CONCURRENCY) {
+        const batch = await fetchCategoryThumbnailsBatch(missing, refresh);
+        if (!cancelled && batch && typeof batch === "object") {
+          Object.entries(batch).forEach(([categoryId, imageUrl]) => {
+            if (categoryId && imageUrl) {
+              setHomeCategoryCircleImage(categoryId, imageUrl, refresh);
+            }
+          });
+        }
+
+        const stillMissing = missing.filter(
+          (c) => c?._id && !getHomeCategoryCircleImage(c._id, refresh)
+        );
+
+        for (let i = 0; i < stillMissing.length; i += IMAGE_FETCH_CONCURRENCY) {
           if (cancelled) break;
-          const chunk = missing.slice(i, i + IMAGE_FETCH_CONCURRENCY);
+          const chunk = stillMissing.slice(i, i + IMAGE_FETCH_CONCURRENCY);
           const resolved = await Promise.all(
             chunk.map(async (category) => {
               const imageUrl = await fetchCategoryRepresentativeImage(category, refresh);

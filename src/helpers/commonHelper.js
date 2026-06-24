@@ -172,18 +172,26 @@ const getMediaOrigin = () => {
   return "";
 };
 
+const pickMediaField = (obj) => {
+  if (!obj || typeof obj !== "object") return "";
+  const fields = [obj.link, obj.url, obj.src, obj.path, obj.default];
+  for (const field of fields) {
+    if (typeof field === "string" && field.trim()) return field.trim();
+  }
+  return "";
+};
+
 /**
  * Turn API image fields (absolute URL, "/path", or "uploads/…") into a usable <img src>.
  */
 export const resolveMediaUrl = (value) => {
   if (value == null || value === "") return "";
+  if (typeof value === "function") return "";
   if (typeof value === "object") {
-    return resolveMediaUrl(
-      value.link || value.url || value.src || value.path || ""
-    );
+    return resolveMediaUrl(pickMediaField(value));
   }
   const raw = String(value).trim();
-  if (!raw) return "";
+  if (!raw || /^function\s+\w*\s*\(\)\s*\{\s*\[native code\]\s*\}$/i.test(raw)) return "";
   const unquoted = raw.replace(/^['"]+|['"]+$/g, "");
   if (!unquoted) return "";
   if (/^(https?:|data:|blob:)/i.test(unquoted)) return unquoted;

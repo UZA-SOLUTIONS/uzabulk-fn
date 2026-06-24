@@ -83,9 +83,157 @@ export const uploadImageForSearchBar = async (file) => {
   return imageUrl;
 };
 
+const IMAGE_SEARCH_PREVIEW_KEY = "uza_image_search_preview";
+const IMAGE_SEARCH_BLOB_KEY = "uza_image_search_preview_blob";
+
+export const persistImageSearchPreview = (url = "") => {
+  const value = String(url || "").trim();
+  if (!value || typeof sessionStorage === "undefined") return;
+  try {
+    if (/^blob:/i.test(value)) {
+      sessionStorage.setItem(IMAGE_SEARCH_BLOB_KEY, value);
+    } else {
+      sessionStorage.setItem(IMAGE_SEARCH_PREVIEW_KEY, value);
+    }
+  } catch {
+    // quota / private mode
+  }
+};
+
+export const readImageSearchPreview = () => {
+  if (typeof sessionStorage === "undefined") return "";
+  try {
+    return sessionStorage.getItem(IMAGE_SEARCH_PREVIEW_KEY) || "";
+  } catch {
+    return "";
+  }
+};
+
+export const readImageSearchBlobPreview = () => {
+  if (typeof sessionStorage === "undefined") return "";
+  try {
+    return sessionStorage.getItem(IMAGE_SEARCH_BLOB_KEY) || "";
+  } catch {
+    return "";
+  }
+};
+
+export const clearImageSearchPreview = () => {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.removeItem(IMAGE_SEARCH_PREVIEW_KEY);
+    sessionStorage.removeItem(IMAGE_SEARCH_BLOB_KEY);
+  } catch {
+    // ignore
+  }
+};
+
+const getApiRoot = () => (process.env.REACT_APP_API_URL || "http://localhost:1302").replace(/\/+$/, "");
+
+const isApiImageUrl = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw || /^(blob:|data:image)/i.test(raw)) return false;
+
+  const apiRoot = getApiRoot();
+  if (raw.startsWith(apiRoot)) return true;
+
+  try {
+    const parsed = new URL(raw);
+    const api = new URL(apiRoot);
+    return (
+      parsed.protocol === api.protocol
+      && parsed.hostname === api.hostname
+      && String(parsed.port || "") === String(api.port || "")
+      && parsed.pathname.startsWith("/images/")
+    );
+  } catch {
+    return false;
+  }
+};
+
+/** Pick the best URL to show for the current image search session. */
+export const resolveImageSearchPreviewSource = ({
+  imageQuery = "",
+  imageUrl = "",
+} = {}) => {
+  const candidates = [
+    readImageSearchBlobPreview(),
+    imageQuery,
+    imageUrl,
+    readImageSearchPreview(),
+  ];
+
+  const seen = new Set();
+  for (const raw of candidates) {
+    const value = String(raw || "").trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    const resolved = resolveImageSearchDisplayUrl(value);
+    if (resolved) return resolved;
+  }
+  return "";
+};
+
 export const buildSearchBarImageListingUrl = ({ imageUrl, skip = 1 } = {}) => {
   const params = new URLSearchParams();
   params.set("skip", String(skip));
   if (imageUrl) params.set("image", imageUrl);
   return params.toString();
+};
+
+/** Use same-origin /images/... in the browser so CRA proxy avoids CORP blocks in dev. */
+const toBrowserImageSrc = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^(blob:|data:image)/i.test(raw)) return raw;
+
+  try {
+    const parsed = new URL(raw, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    if (parsed.pathname.startsWith("/images/")) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    // not a URL — fall through
+  }
+
+  if (raw.startsWith("/images/")) return raw;
+  if (/^images\//i.test(raw)) return `/${raw.replace(/^\/+/, "")}`;
+
+  return raw;
+};
+
+/** Absolute URL for displaying the searched image on the results page. */
+export const resolveImageSearchDisplayUrl = (rawUrl = "") => {
+  let value = String(rawUrl || "").trim();
+  if (!value) return "";
+
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      const decoded = decodeURIComponent(value);
+      if (decoded === value) break;
+      value = decoded;
+    } catch {
+      break;
+    }
+  }
+
+  if (/^(blob:|data:image)/i.test(value)) return value;
+
+  // Keep absolute API URLs (same as the header search bar thumb) — backend CORP allows embed.
+  if (isApiImageUrl(value)) return value;
+
+  if (typeof window !== "undefined") {
+    const sameOrigin = toBrowserImageSrc(value);
+    if (sameOrigin.startsWith("/images/")) {
+      return sameOrigin;
+    }
+  }
+
+  if (/^https?:/i.test(value)) return value;
+
+  const apiRoot = getApiRoot();
+  if (value.startsWith("/images/")) return value;
+  if (value.startsWith("/")) return `${apiRoot}${value}`;
+  if (/^images\//i.test(value)) return `/images/${value.replace(/^images\//i, "")}`;
+  return `${apiRoot}/${value.replace(/^\/+/, "")}`;
 };

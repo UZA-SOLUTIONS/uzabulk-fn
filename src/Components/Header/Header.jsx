@@ -9,7 +9,15 @@ import logoFallback from "../../assets/images/dark_logo.svg";
 import Homemenustrip from "./Homemenustrip";
 import ProductSearch from "../Common/ProductSearch";
 import ImageSearchTray from "../Common/ImageSearchTray";
-import { readImageFromClipboard, uploadImageForSearchBar, buildSearchBarImageListingUrl } from "../../helpers/imageSearchHelper";
+import {
+  persistImageSearchPreview,
+  readImageFromClipboard,
+  readImageSearchBlobPreview,
+  resolveImageSearchDisplayUrl,
+  uploadImageForSearchBar,
+  buildSearchBarImageListingUrl,
+  clearImageSearchPreview,
+} from "../../helpers/imageSearchHelper";
 
 const ICON_MAGNIFIER = (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -31,7 +39,10 @@ export default function Header() {
   const localPreviewRef = useRef("");
 
   const imageFromQuery = searchParams.get("image") || "";
-  const activeImagePreview = imageFromQuery || localImagePreview;
+  const activeImagePreview =
+    resolveImageSearchDisplayUrl(imageFromQuery)
+    || readImageSearchBlobPreview()
+    || localImagePreview;
 
   useLayoutEffect(() => {
     const readY = () => window.scrollY ?? document.documentElement.scrollTop ?? 0;
@@ -44,14 +55,6 @@ export default function Header() {
   useEffect(() => {
     setSearchText(searchParams.get("search") || "");
   }, [searchParams]);
-
-  useEffect(() => {
-    if (imageFromQuery && localPreviewRef.current) {
-      URL.revokeObjectURL(localPreviewRef.current);
-      localPreviewRef.current = "";
-      setLocalImagePreview("");
-    }
-  }, [imageFromQuery]);
 
   useEffect(() => () => {
     if (localPreviewRef.current) {
@@ -81,6 +84,7 @@ export default function Header() {
 
   const handleClearImageSearch = () => {
     revokeLocalPreview();
+    clearImageSearchPreview();
     if (imageSearchInputRef.current) {
       imageSearchInputRef.current.value = "";
     }
@@ -111,11 +115,13 @@ export default function Header() {
     const blobUrl = URL.createObjectURL(file);
     localPreviewRef.current = blobUrl;
     setLocalImagePreview(blobUrl);
+    persistImageSearchPreview(blobUrl);
 
     setImageSearchLoading(true);
 
     try {
       const imageUrl = await uploadImageForSearchBar(file);
+      persistImageSearchPreview(imageUrl);
       const params = buildSearchBarImageListingUrl({ imageUrl });
       navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
     } catch (error) {
@@ -133,6 +139,7 @@ export default function Header() {
 
     revokeLocalPreview();
     setLocalImagePreview(imageUrl);
+    persistImageSearchPreview(imageUrl);
     setImageSearchLoading(true);
 
     try {
