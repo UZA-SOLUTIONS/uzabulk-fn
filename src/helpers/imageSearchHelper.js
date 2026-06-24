@@ -72,3 +72,20 @@ export const uploadImageSearch = async (file) => {
 
   return res.data || {};
 };
+
+/** Fast search-bar upload — stores image URL; catalog search runs on the listing page. */
+export const uploadImageForSearchBar = async (file) => {
+  const data = await uploadImageSearch(file);
+  const imageUrl = data?.others?.imageUrl || data?.imageUrl || "";
+  if (!imageUrl) {
+    throw new Error("Image upload did not return a URL");
+  }
+  return imageUrl;
+};
+
+export const buildSearchBarImageListingUrl = ({ imageUrl, skip = 1 } = {}) => {
+  const params = new URLSearchParams();
+  params.set("skip", String(skip));
+  if (imageUrl) params.set("image", imageUrl);
+  return params.toString();
+};
