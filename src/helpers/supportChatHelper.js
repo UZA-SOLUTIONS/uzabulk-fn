@@ -54,7 +54,7 @@ export const openProductSupportChat = ({ detail, navigate }) => {
   const email = String(SUPPORT_EMAIL || process.env.REACT_APP_SUPPORT_EMAIL || "").trim();
   if (email) {
     const subject = encodeURIComponent(
-      `Product inquiry: ${detail?.name || "UZA Store"}`
+      `Product inquiry: ${detail?.name || "UZABULK"}`
     );
     window.location.href = `mailto:${email}?subject=${subject}&body=${encodedMessage}`;
     return;

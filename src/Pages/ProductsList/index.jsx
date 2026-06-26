@@ -25,6 +25,7 @@ import {
   saveListSnapshot,
   savePageScroll,
 } from "../../helpers/fetchCacheHelper";
+import { readScrollY } from "../../helpers/scrollRootHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import useCategoryDisplayNames from "../../hooks/useCategoryDisplayNames";
@@ -249,7 +250,7 @@ const Productlist = () => {
         others: cachedOthers,
       });
     }
-    if (listKey) savePageScroll(listKey, window.scrollY);
+    if (listKey) savePageScroll(listKey, readScrollY());
   }, []);
 
   useEffect(() => {

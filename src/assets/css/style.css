@@ -7506,14 +7506,14 @@ table.order-table tr td {
   visibility: hidden;
 }
 
-/* Pinned: full-bleed bar under header (no side rounding) */
+/* Pinned: full-bleed bar under header (no side rounding, no shadow) */
 .home_discover_browse_catstrip.is-pinned {
   border-radius: 0 !important;
-  border-left: none;
-  border-right: none;
-  border-top: none;
-  box-shadow: none;
-  border-bottom: 1px solid #eceef2;
+  border: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  background: #fff;
+  z-index: 1100;
 }
 
 .home_discover_browse_catstrip.is-pinned .home_discover_browse_catstrip__inner {
@@ -7522,19 +7522,28 @@ table.order-table tr td {
   padding-right: clamp(12px, 3vw, 20px);
 }
 
-/* Hide header drop shadow while category strip is pinned (cleaner stack) */
+.home_discover_browse_catstrip.is-pinned .home_discover_browse_catstrip__sticky_rail::after {
+  display: none;
+}
+
+/* No header drop shadow while category strip is pinned */
 body.home-catstrip-pinned .site-header,
 body.home-catstrip-pinned .site-header.is-scrolled,
 body.home-catstrip-pinned .site-header.site-header--mockup,
-body.home-catstrip-pinned .site-header.site-header--mockup.is-scrolled {
-  box-shadow: none !important;
-}
-
+body.home-catstrip-pinned .site-header.site-header--mockup.is-scrolled,
 body.products-catstrip-pinned .site-header,
 body.products-catstrip-pinned .site-header.is-scrolled,
 body.products-catstrip-pinned .site-header.site-header--mockup,
 body.products-catstrip-pinned .site-header.site-header--mockup.is-scrolled {
   box-shadow: none !important;
+  filter: none !important;
+}
+
+body.home-catstrip-pinned .home_discover_browse_catstrip,
+body.products-catstrip-pinned .home_discover_browse_catstrip {
+  border: none !important;
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 .home_discover_catstrip_spacer {
@@ -7547,8 +7556,11 @@ body.products-catstrip-pinned .site-header.site-header--mockup.is-scrolled {
   background: #fff;
   border-radius: 12px;
   border: 1px solid #eceef2;
-  box-shadow: 0 1px 0 rgba(15, 31, 51, 0.04);
+  box-shadow: none;
   margin-bottom: 10px;
+  position: sticky;
+  top: var(--home-discover-catstrip-top, 120px);
+  z-index: 1100;
 }
 
 .home_discover_browse_catstrip__inner {

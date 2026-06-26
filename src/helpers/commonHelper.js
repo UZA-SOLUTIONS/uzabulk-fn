@@ -322,6 +322,9 @@ export const openProductDetail = (navigate, item, options = {}) => {
 export const getProductImageUrl = (product, fallback = "") => {
   const candidates = [];
   if (product?.featured_image != null) candidates.push(product.featured_image);
+  if (product?.image != null) candidates.push(product.image);
+  if (product?.imageUrl != null) candidates.push(product.imageUrl);
+  if (product?.thumbnail != null) candidates.push(product.thumbnail);
   if (Array.isArray(product?.images)) {
     candidates.push(...product.images);
   }

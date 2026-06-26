@@ -9,7 +9,7 @@ import {
     logger,
     buildProductDetailUrl,
     isRestrictedCatalogProduct,
-    resolveMediaUrl,
+    getProductImageUrl,
 } from "../../helpers/commonHelper";
 import ROUTES from "../../helpers/routesHelper";
 import suggestionPlaceholder from "../../assets/images/default_name.webp";
@@ -29,17 +29,6 @@ function pickAutocompleteList(res) {
     if (Array.isArray(res?.items)) return res.items;
     if (Array.isArray(res?.results)) return res.results;
     return [];
-}
-
-function resolveSuggestionThumb(raw) {
-    if (!raw || typeof raw !== "string") return "";
-    const s = raw.trim();
-    if (!s) return "";
-    if (/^(https?:|data:|blob:)/i.test(s) || s.startsWith("//")) return s;
-    if (s.startsWith("/static/") && typeof window !== "undefined") {
-        return `${window.location.origin}${s}`;
-    }
-    return resolveMediaUrl(s) || s;
 }
 
 export default function ProductSearch({
@@ -64,21 +53,7 @@ export default function ProductSearch({
     const imageInputRef = useRef(null);
 
     const navigate = useNavigate();
-    const getSuggestionImage = (item) => {
-        if (!item) return "";
-        if (typeof item?.featured_image === "string" && item.featured_image.trim()) {
-            return item.featured_image;
-        }
-        if (item?.featured_image?.link) {
-            return item.featured_image.link;
-        }
-        if (Array.isArray(item?.images) && item.images.length) {
-            const firstImage = item.images[0];
-            if (typeof firstImage === "string" && firstImage.trim()) return firstImage;
-            if (firstImage?.link) return firstImage.link;
-        }
-        return "";
-    };
+
     const openSuggestion = (item) => {
         const searchLabel = item?.name || item?.title || "";
         const path = buildProductDetailUrl(item);
@@ -169,14 +144,10 @@ export default function ProductSearch({
                 const rawList = pickAutocompleteList(res);
 
                 const nextItems = rawList
-                    .map((item) => {
-                        const rawImg = getSuggestionImage(item);
-                        return {
-                            ...item,
-                            _suggestionImage:
-                                resolveSuggestionThumb(rawImg) || suggestionPlaceholder,
-                        };
-                    })
+                    .map((item) => ({
+                        ...item,
+                        _suggestionImage: getProductImageUrl(item, ""),
+                    }))
                     .filter((item) =>
                         !!(item?.name || item?.title || item?._id || item?.offerId)
                     )
@@ -299,11 +270,16 @@ export default function ProductSearch({
                     onClick={() => openSuggestion(item)}
                 >
                     <img
-                        src={item?._suggestionImage}
+                        src={item?._suggestionImage || suggestionPlaceholder}
                         alt={item?.name || item?.title || "product"}
                         className="search-suggestion-thumb"
                         loading="lazy"
                         decoding="async"
+                        onError={(event) => {
+                            if (event.currentTarget.dataset.fallbackApplied === "1") return;
+                            event.currentTarget.dataset.fallbackApplied = "1";
+                            event.currentTarget.src = suggestionPlaceholder;
+                        }}
                     />
                     <div className="search-suggestion-copy">
                         <p className="search-suggestion-title">

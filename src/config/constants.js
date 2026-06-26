@@ -1,4 +1,4 @@
-export const APP_NAME = "UZA Store";
+export const APP_NAME = "UZABULK";
 
 /** Public site URL for SEO canonical links, sitemap, and Open Graph */
 export const SITE_URL = (process.env.REACT_APP_SITE_URL || "https://uzabulk.com").replace(/\/+$/, "");

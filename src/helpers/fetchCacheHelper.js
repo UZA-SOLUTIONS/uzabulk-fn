@@ -1,4 +1,5 @@
 import { mergeUniqueProducts } from "./commonHelper";
+import { readScrollY, writeScrollY } from "./scrollRootHelper";
 
 const STORAGE_PREFIX = "uzabulk_fetch_cache_v1:";
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
@@ -218,7 +219,7 @@ export function restorePageScroll(listKey) {
     const y = Number(raw);
     if (!Number.isFinite(y)) return;
     requestAnimationFrame(() => {
-      window.scrollTo({ top: y, behavior: "auto" });
+      writeScrollY(y, { behavior: "auto" });
     });
   } catch {
     /* ignore */

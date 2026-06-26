@@ -18,6 +18,7 @@ import {
   saveListSnapshot,
   savePageScroll,
 } from "../../helpers/fetchCacheHelper";
+import { readScrollY } from "../../helpers/scrollRootHelper";
 import {
   getHomeFeedRefreshToken,
   getProductDedupeKey,
@@ -155,7 +156,7 @@ export default function DiscoverBrowseProducts() {
           skip,
         });
       }
-      if (cacheKeyAtMount) savePageScroll(cacheKeyAtMount, window.scrollY);
+      if (cacheKeyAtMount) savePageScroll(cacheKeyAtMount, readScrollY());
     };
   }, [listCacheKey]);
 

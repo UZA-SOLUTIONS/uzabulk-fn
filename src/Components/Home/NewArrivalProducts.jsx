@@ -16,6 +16,7 @@ import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
 import SupplierVerificationBadge from "../Products/SupplierVerificationBadge";
 import TranslatedProductName from "../Common/TranslatedProductName";
+import { getMainContentWidth } from "../../helpers/scrollRootHelper";
 
 const HOME_NEW_ARRIVAL_LIMIT = 12;
 
@@ -45,7 +46,7 @@ export default function NewArrivalProducts() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [skeletonSlots, setSkeletonSlots] = useState(() =>
-    typeof window !== "undefined" ? newArrivalsSkeletonSlotCount(window.innerWidth) : 12
+    typeof window !== "undefined" ? newArrivalsSkeletonSlotCount(getMainContentWidth()) : 12
   );
   const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
   const { isLoading, items } = useSelector((s) => s.products.homeNewArrivalProducts);
@@ -60,10 +61,19 @@ export default function NewArrivalProducts() {
   );
 
   useEffect(() => {
-    const onResize = () => setSkeletonSlots(newArrivalsSkeletonSlotCount(window.innerWidth));
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const updateSlots = () => setSkeletonSlots(newArrivalsSkeletonSlotCount(getMainContentWidth()));
+    updateSlots();
+
+    const shell = document.querySelector(".app-layout-shell");
+    const ro =
+      shell && typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateSlots) : null;
+    ro?.observe(shell);
+
+    window.addEventListener("resize", updateSlots);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", updateSlots);
+    };
   }, []);
 
   useEffect(() => {

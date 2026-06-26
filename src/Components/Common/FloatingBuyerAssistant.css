@@ -44,27 +44,17 @@
   display: none;
 }
 
-/* —— Desktop split: site scrolls left, assistant scrolls right —— */
-body.assistant-side-dock {
-  overflow: hidden;
-  height: 100vh;
-  height: 100dvh;
+/* —— Desktop split: narrow main column; page keeps normal window scroll —— */
+body.assistant-side-dock .app-layout-shell {
+  width: calc(100vw - var(--assistant-dock-width, 328px));
+  max-width: calc(100vw - var(--assistant-dock-width, 328px));
+  margin-right: 0;
+  overflow-x: hidden;
 }
 
 body.assistant-side-dock--resizing {
   cursor: col-resize;
   user-select: none;
-}
-
-body.assistant-side-dock .app-layout-shell {
-  width: calc(100vw - var(--assistant-dock-width, 328px));
-  max-width: calc(100vw - var(--assistant-dock-width, 328px));
-  margin-right: 0;
-  height: 100vh;
-  height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 body.assistant-side-dock--resizing .app-layout-shell {
@@ -124,7 +114,62 @@ body.assistant-side-dock .home_main_split,
 body.assistant-side-dock .home_main_right,
 body.assistant-side-dock .app-layout-shell__main {
   max-width: 100%;
-  overflow-x: clip;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+body.assistant-side-dock .discover_alibaba > .row > [class*="col-"].d-flex {
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+}
+
+body.assistant-side-dock .home_feed_section_offset,
+body.assistant-side-dock .home_new_arrivals_panel,
+body.assistant-side-dock .home_recently_viewed_panel {
+  min-width: 0;
+  width: 100%;
+}
+
+body.assistant-side-dock .home_new_arrivals_row,
+body.assistant-side-dock .home_recently_viewed_row,
+body.assistant-side-dock .home_new_arrivals_panel__skeleton .ux-skeleton-grid {
+  width: 100%;
+  max-width: 100%;
+  min-height: 180px;
+}
+
+body.assistant-side-dock .home_new_arrivals_panel .home_new_arrivals_row .new_arrival_product_card,
+body.assistant-side-dock .home_new_arrivals_panel__skeleton .ux-skeleton-card {
+  flex: 0 0 clamp(120px, 38%, 200px);
+  min-width: 118px;
+  max-width: 200px;
+}
+
+body.assistant-side-dock .home_new_arrivals_panel .home_new_arrivals_row .new_arrival_img {
+  height: auto;
+  width: auto;
+}
+
+/* Category filter strip stays pinned under header inside narrowed main column */
+body.assistant-side-dock .home_discover_browse_catstrip.is-pinned,
+body.assistant-side-dock.home-catstrip-pinned .home_discover_browse_catstrip,
+body.assistant-side-dock.products-catstrip-pinned .home_discover_browse_catstrip {
+  z-index: 1100;
+  box-shadow: none !important;
+  border: none !important;
+  filter: none !important;
+}
+
+body.assistant-side-dock.home-catstrip-pinned .home_discover_browse_outer,
+body.assistant-side-dock.products-catstrip-pinned .home_discover_browse_outer,
+body.assistant-side-dock.products-catstrip-pinned .products_list_browse__container {
+  overflow: visible;
+}
+
+body.assistant-side-dock .home_discover_browse_outer,
+body.assistant-side-dock .products_list_browse__outer {
+  overflow: visible;
 }
 
 body.assistant-side-dock .home_alibaba_hero--copy .home_alibaba_hero_slideshow {

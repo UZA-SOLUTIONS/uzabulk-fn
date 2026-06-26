@@ -1,4 +1,5 @@
 import ROUTES from "./routesHelper";
+import { APP_NAME } from "../config/constants";
 import { SEO_LOCALES, SITE_URL } from "../config/seoConfig";
 
 export const getSiteBaseUrl = () => {
@@ -87,7 +88,7 @@ export const buildProductJsonLd = ({
     sku: sku || undefined,
     brand: {
       "@type": "Brand",
-      name: "UZA Store",
+      name: APP_NAME,
     },
     offers: {
       "@type": "Offer",
@@ -98,7 +99,7 @@ export const buildProductJsonLd = ({
         : "https://schema.org/OutOfStock",
       seller: {
         "@type": "Organization",
-        name: "UZA Store",
+        name: APP_NAME,
       },
     },
   };
