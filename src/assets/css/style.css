@@ -7317,6 +7317,57 @@ table.order-table tr td {
   height: 0;
 }
 
+.home_horizontal_scroll__wrap {
+  position: relative;
+}
+
+.home_horizontal_scroll__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  box-shadow: 0 2px 14px rgba(15, 31, 51, 0.14);
+  color: #111;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.home_horizontal_scroll__arrow:hover:not(:disabled) {
+  box-shadow: 0 4px 18px rgba(15, 31, 51, 0.18);
+}
+
+.home_horizontal_scroll__arrow:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.home_horizontal_scroll__arrow--prev {
+  left: 2px;
+}
+
+.home_horizontal_scroll__arrow--next {
+  right: 2px;
+}
+
+.home_horizontal_scroll__arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.home_horizontal_scroll__track.home_new_arrivals_row {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
 /* Large strip cards; white surface + original home text / border colors */
 .home_new_arrivals_panel .home_new_arrivals_row .new_arrival_product_card {
   width: auto !important;

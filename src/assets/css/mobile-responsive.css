@@ -800,6 +800,24 @@ label {
     padding-inline: 0;
   }
 
+  .home_horizontal_scroll__arrow {
+    width: 32px;
+    height: 32px;
+  }
+
+  .home_horizontal_scroll__arrow--prev {
+    left: 0;
+  }
+
+  .home_horizontal_scroll__arrow--next {
+    right: 0;
+  }
+
+  .home_horizontal_scroll__track.home_new_arrivals_row {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
   .home_source_by_category {
     padding-left: max(8px, env(safe-area-inset-left, 0px));
     padding-right: max(8px, env(safe-area-inset-right, 0px));

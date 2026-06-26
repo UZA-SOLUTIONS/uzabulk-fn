@@ -30,7 +30,7 @@ const ICON_MAGNIFIER = (
 export default function Header() {
   const { t } = useTranslation();
   const [searchText, setSearchText] = useState("");
-  const [scrollY, setScrollY] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
   const imageSearchLoadingLabel = t("search.loading");
   const [localImagePreview, setLocalImagePreview] = useState("");
@@ -48,10 +48,24 @@ export default function Header() {
 
   useLayoutEffect(() => {
     const readY = () => window.scrollY ?? document.documentElement.scrollTop ?? 0;
-    const onScroll = () => setScrollY(readY());
-    setScrollY(readY());
+    let rafId = 0;
+    const syncScrolled = () => {
+      const next = readY() > 4;
+      setIsScrolled((prev) => (prev === next ? prev : next));
+    };
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        syncScrolled();
+      });
+    };
+    syncScrolled();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -181,7 +195,7 @@ export default function Header() {
 
   return (
     <header
-      className={`site-header site-header--mockup${scrollY > 4 ? " is-scrolled" : ""} site-header--search-visible${activeImagePreview ? " has-image-search-preview" : ""}${imageSearchLoading ? " is-image-search-loading" : ""}`}
+      className={`site-header site-header--mockup${isScrolled ? " is-scrolled" : ""} site-header--search-visible${activeImagePreview ? " has-image-search-preview" : ""}${imageSearchLoading ? " is-image-search-loading" : ""}`}
     >
       <section className="header-sub-actions">
         <Container fluid className="header-mockup-container px-3 px-sm-4 px-xl-5">

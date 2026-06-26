@@ -104,12 +104,7 @@ export default function DiscoverBrowseProducts() {
 
   useFrenchTranslationPrefetch(items, categoriesAll);
 
-  const {
-    catstripSentinelRef,
-    catstripNavRef,
-    catstripPinned,
-    catstripSpacerHeight,
-  } = useCategoryStripPin({ enabled: tabs.length > 0, bodyClass: "home-catstrip-pinned" });
+  const { catstripNavRef } = useCategoryStripPin({ enabled: tabs.length > 0 });
 
   const listCacheKey = useMemo(
     () => buildDiscoverCacheKey(activeCategoryId, feedRefresh),
@@ -414,15 +409,10 @@ export default function DiscoverBrowseProducts() {
         All products — filter by category
       </h2>
 
-      <div ref={catstripSentinelRef} className="home_discover_catstrip_sentinel" aria-hidden="true" />
-      {catstripSpacerHeight > 0 ? (
-        <div className="home_discover_catstrip_spacer" style={{ height: catstripSpacerHeight }} aria-hidden />
-      ) : null}
       <BrowseCategoryStrip
         tabs={tabs}
         activeTabId={activeCategoryId}
         navRef={catstripNavRef}
-        isPinned={catstripPinned}
         onTabClick={selectTab}
         onTabKeyDown={handleTablistKeyDown}
         ariaLabel="Filter all products by category"

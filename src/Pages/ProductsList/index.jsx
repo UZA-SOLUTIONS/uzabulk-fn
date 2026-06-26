@@ -116,14 +116,8 @@ const Productlist = () => {
     || readImageSearchBlobPreview()
     || "";
 
-  const {
-    catstripSentinelRef,
-    catstripNavRef,
-    catstripPinned,
-    catstripSpacerHeight,
-  } = useCategoryStripPin({
+  const { catstripNavRef } = useCategoryStripPin({
     enabled: categoryTabs.length > 0 && !searchQuery && !imageQuery,
-    bodyClass: "products-catstrip-pinned",
   });
 
   const getSortQuery = (sortValue) => {
@@ -374,21 +368,14 @@ const Productlist = () => {
             <h1 className="products_list_browse__page_title">{pageTitle}</h1>
           )}
           {showCategoryStrip ? (
-            <>
-              <div ref={catstripSentinelRef} className="home_discover_catstrip_sentinel" aria-hidden="true" />
-              {catstripSpacerHeight > 0 ? (
-                <div className="home_discover_catstrip_spacer" style={{ height: catstripSpacerHeight }} aria-hidden />
-              ) : null}
-              <BrowseCategoryStrip
-                tabs={categoryTabs}
-                activeTabId={selectedCategory}
-                navRef={catstripNavRef}
-                isPinned={catstripPinned}
-                getTabTo={buildCategoryHref}
-                ariaLabel="Filter products by category"
-                tablistId="products-list-category-tablist"
-              />
-            </>
+            <BrowseCategoryStrip
+              tabs={categoryTabs}
+              activeTabId={selectedCategory}
+              navRef={catstripNavRef}
+              getTabTo={buildCategoryHref}
+              ariaLabel="Filter products by category"
+              tablistId="products-list-category-tablist"
+            />
           ) : null}
 
           <section className="home_discover_browse home_discover_browse--flat" aria-label={pageTitle}>

@@ -161,6 +161,8 @@
     "nextCategories": "Catégories suivantes",
     "scrollCategoriesLeft": "Faire défiler les catégories vers la gauche",
     "scrollCategoriesRight": "Faire défiler les catégories vers la droite",
+    "scrollProductsLeft": "Faire défiler les produits vers la gauche",
+    "scrollProductsRight": "Faire défiler les produits vers la droite",
     "aiPicks": "Sélections IA — nouveautés similaires",
     "sourceByCategory": "Sourcer par catégorie",
     "categoriesLoadError": "Impossible de charger les catégories. Vérifiez que l'API est en cours d'exécution et que MongoDB est accessible, puis actualisez.",

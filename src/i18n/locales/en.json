@@ -161,6 +161,8 @@
     "nextCategories": "Next categories",
     "scrollCategoriesLeft": "Scroll categories left",
     "scrollCategoriesRight": "Scroll categories right",
+    "scrollProductsLeft": "Scroll products left",
+    "scrollProductsRight": "Scroll products right",
     "aiPicks": "AI picks — similar new arrivals",
     "sourceByCategory": "Source by category",
     "categoriesLoadError": "Categories could not be loaded. Check that the API is running and MongoDB is reachable, then refresh.",

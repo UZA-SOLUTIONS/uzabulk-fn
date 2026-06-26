@@ -66,20 +66,24 @@ export default function PrefetchFrenchTranslations() {
   const cartState = useSelector((s) => s.cart);
 
   useEffect(() => {
-    const products = collectProductItems({
-      products: productsState,
-      cart: cartState,
-    });
-    const categories = collectCategories({ categories: categoriesState });
-    const detail = productsState?.productDetail?.detail;
+    const timer = window.setTimeout(() => {
+      const products = collectProductItems({
+        products: productsState,
+        cart: cartState,
+      });
+      const categories = collectCategories({ categories: categoriesState });
+      const detail = productsState?.productDetail?.detail;
 
-    if (!products.length && !categories.length && !detail) return;
+      if (!products.length && !categories.length && !detail) return;
 
-    void prefetchFrenchTranslations({ products, categories });
+      void prefetchFrenchTranslations({ products, categories });
 
-    if (detail) {
-      void prefetchBilingualProductDetailTranslations(detail);
-    }
+      if (detail) {
+        void prefetchBilingualProductDetailTranslations(detail);
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timer);
   }, [productsState, categoriesState, cartState]);
 
   return null;

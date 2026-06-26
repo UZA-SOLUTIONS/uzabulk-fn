@@ -17,6 +17,7 @@ import UXSkeleton from "../Common/UXSkeleton";
 import SupplierVerificationBadge from "../Products/SupplierVerificationBadge";
 import TranslatedProductName from "../Common/TranslatedProductName";
 import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefetch";
+import HomeHorizontalScrollRow from "./HomeHorizontalScrollRow";
 
 function rowSkeletonSlotCount(viewportWidth) {
   const w = viewportWidth || 1200;
@@ -149,7 +150,10 @@ export default function RecentlyViewedProducts() {
             <UXSkeleton count={skeletonSlots} />
           </div>
         ) : (
-          <div className="home_new_arrivals_row home_recently_viewed_row">
+          <HomeHorizontalScrollRow
+            className="home_new_arrivals_row home_recently_viewed_row"
+            depKey={displayItems.length}
+          >
             {displayItems.map((item, idx) => {
               const productLink = buildProductDetailUrl(item) || ROUTES.PRODUCT_LISTING;
               return (
@@ -180,7 +184,7 @@ export default function RecentlyViewedProducts() {
                 </Link>
               );
             })}
-          </div>
+          </HomeHorizontalScrollRow>
         )}
       </section>
     </div>

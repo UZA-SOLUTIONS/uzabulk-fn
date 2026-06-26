@@ -17,6 +17,7 @@ import UXSkeleton from "../Common/UXSkeleton";
 import SupplierVerificationBadge from "../Products/SupplierVerificationBadge";
 import TranslatedProductName from "../Common/TranslatedProductName";
 import { getMainContentWidth } from "../../helpers/scrollRootHelper";
+import HomeHorizontalScrollRow from "./HomeHorizontalScrollRow";
 
 const HOME_NEW_ARRIVAL_LIMIT = 12;
 
@@ -115,7 +116,7 @@ export default function NewArrivalProducts() {
             <UXSkeleton count={skeletonSlots} />
           </div>
         ) : (
-          <div className="home_new_arrivals_row">
+          <HomeHorizontalScrollRow className="home_new_arrivals_row" depKey={displayItems.length}>
             {displayItems.map((item, idx) => {
               const trust = resolveTrustLine(item);
               const productLink = buildProductDetailUrl(item) || ROUTES.PRODUCT_LISTING;
@@ -150,7 +151,7 @@ export default function NewArrivalProducts() {
                 </Link>
               );
             })}
-          </div>
+          </HomeHorizontalScrollRow>
         )}
       </section>
     </div>
