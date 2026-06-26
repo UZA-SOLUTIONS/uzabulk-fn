@@ -2,6 +2,8 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
+import { useTranslation } from "react-i18next";
+
 import ROUTES from "../../helpers/routesHelper";
 import { apiGetCategories } from "../../store/categories/actions";
 import { apiGet } from "../../helpers/apiHelper";
@@ -14,6 +16,8 @@ import {
 } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
+import TranslatedProductName from "../Common/TranslatedProductName";
+import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 
 const MAX_CATEGORIES = 12;
 const PRODUCTS_PER_CATEGORY = 4;
@@ -26,6 +30,62 @@ function resolveVisibleCategoryColumns() {
   if (w < 768) return 1;
   if (w < 992) return 2;
   return 4;
+}
+
+function OftenCategoryColumn({
+  category,
+  items,
+  loading,
+  onOpenProduct,
+  currentCurrency,
+  appConfig,
+  resolveTrustText,
+}) {
+  const { t } = useTranslation();
+  const displayName = useCategoryDisplayName(category) || t("home.categoryFallback");
+
+  return (
+    <div className="often_category_col">
+      <div className="often_category_box h-100">
+        <div className="often_category_box_head d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h6 className="mb-0">{displayName}</h6>
+          <Link
+            to={`${ROUTES.PRODUCT_LISTING}?skip=1&category=${category?._id}&name=${encodeURIComponent(displayName)}`}
+          >
+            View more
+          </Link>
+        </div>
+
+        <div className="often_category_products mt-2">
+          {(items || []).slice(0, PRODUCTS_PER_CATEGORY).map((item) => (
+            <button
+              type="button"
+              key={item?._id}
+              className="often_category_product_item new_arrival_product_card cursor-pointer text-start"
+              onClick={() => onOpenProduct(item)}
+            >
+              <div className="new_arrival_media">
+                <img src={getProductImageUrl(item, placeholder)} alt={item?.name || "product"} />
+              </div>
+              <div className="home_product_card_body px-1 pt-2">
+                <TranslatedProductName product={item} className="home_product_title mb-1" as="p" />
+                <p className="home_product_price mb-1">
+                  {currentCurrency?.symbol} {amountConversion(item?.price, appConfig)}
+                </p>
+                <div className="home_product_footer">
+                  <p className="home_product_meta mb-0">{resolveTrustText(item) || "\u00A0"}</p>
+                  <span className="home_product_cta">View details</span>
+                </div>
+              </div>
+            </button>
+          ))}
+          {!loading && !items.length ? (
+            <p className="often_empty_text mb-0">No products found.</p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
 }
 const FILTER_OPTIONS = [
   { id: "recommended", label: "Recommended" },
@@ -427,48 +487,16 @@ export default function OftenPurchasedCategories() {
             {slidingCategories.map((category, idx) => {
               const items = sortProducts(categoryProducts[category?._id] || []);
               return (
-                <div className="often_category_col" key={`${category?._id || "cat"}-${idx}`}>
-                  <div className="often_category_box h-100">
-                    <div className="often_category_box_head d-flex justify-content-between align-items-center flex-wrap gap-2">
-                      <h6 className="mb-0">{category?.catName || "Category"}</h6>
-                      <Link
-                        to={`${ROUTES.PRODUCT_LISTING}?skip=1&category=${category?._id}&name=${encodeURIComponent(
-                          category?.catName || "Category"
-                        )}`}
-                      >
-                        View more
-                      </Link>
-                    </div>
-
-                    <div className="often_category_products mt-2">
-                      {(items || []).slice(0, PRODUCTS_PER_CATEGORY).map((item) => (
-                        <button
-                          type="button"
-                          key={item?._id}
-                          className="often_category_product_item new_arrival_product_card cursor-pointer text-start"
-                          onClick={() => handleOpenProduct(item)}
-                        >
-                          <div className="new_arrival_media">
-                            <img src={getProductImageUrl(item, placeholder)} alt={item?.name || "product"} />
-                          </div>
-                          <div className="home_product_card_body px-1 pt-2">
-                            <p className="home_product_title mb-1">{item?.name}</p>
-                            <p className="home_product_price mb-1">
-                              {currentCurrency?.symbol} {amountConversion(item?.price, appConfig)}
-                            </p>
-                            <div className="home_product_footer">
-                              <p className="home_product_meta mb-0">{resolveTrustText(item) || "\u00A0"}</p>
-                              <span className="home_product_cta">View details</span>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                      {!loading && !items.length ? (
-                        <p className="often_empty_text mb-0">No products found.</p>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
+                <OftenCategoryColumn
+                  key={`${category?._id || "cat"}-${idx}`}
+                  category={category}
+                  items={items}
+                  loading={loading}
+                  onOpenProduct={handleOpenProduct}
+                  currentCurrency={currentCurrency}
+                  appConfig={appConfig}
+                  resolveTrustText={resolveTrustText}
+                />
               );
             })}
           </div>

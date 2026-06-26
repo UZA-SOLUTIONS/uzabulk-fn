@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import ROUTES from "../../helpers/routesHelper";
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 import { apiGetSourceByApplication } from "../../store/categories/actions";
+import TranslatedCategoryName from "../../Components/Common/TranslatedCategoryName";
 
 // images
 import placeholder from "../../assets/images/souone.jpg";
@@ -45,7 +46,7 @@ const Sourceapp = () => {
                   />
                 </div>
                 <div className="single_box_content">
-                  <p>{value?.catName}</p>
+                  <TranslatedCategoryName category={value} as="p" />
                 </div>
               </div>
             );

@@ -1,4 +1,5 @@
 import { toast } from "react-toastify";
+import i18n from "../i18n";
 import { manageProductForCart, setAddedInCart } from "../store/products/slice";
 import { isEqualArray, scrollToId, logger, formatNumber } from "./commonHelper";
 import { apiAddToCart, apiUpdateCart } from "../store/cart/actions";
@@ -51,13 +52,13 @@ export const addToCart = ({ cartData, isLogin }) => {
       apiAddToCart({
         data: cartData,
         callback: () => {
-          toast.success("Cart updated successfully!");
+          toast.success(i18n.t("cart.cartUpdated"));
           dispatch(setAddedInCart({ variation_id: cartData.items[0].variation_id }));
         },
       })
     );
   } else {
-    toast.warn("Please add items to add cart!");
+    toast.warn(i18n.t("cart.addItemsFirst"));
   }
 };
 

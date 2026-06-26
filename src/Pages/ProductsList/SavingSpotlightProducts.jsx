@@ -11,6 +11,19 @@ import ROUTES from "../../helpers/routesHelper";
 import { apiGetCategories } from "../../store/categories/actions";
 import { apiGetProductDetail, apiGetSavingSpotlightProducts } from "../../store/products/actions";
 import { clearProductList } from "../../store/products/slice";
+import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
+
+function RelatedCategoryLink({ category }) {
+  const displayName = useCategoryDisplayName(category) || "Category";
+
+  return (
+    <Link
+      to={`${ROUTES.SAVING_SPOTLIGHT_PRODUCT_LISTING}?category=${category._id}&name=${encodeURIComponent(displayName)}`}
+    >
+      {displayName}
+    </Link>
+  );
+}
 
 const SavingSpotlightProducts = () => {
   let [searchParams, setSearchParams] = useSearchParams();
@@ -98,12 +111,7 @@ const SavingSpotlightProducts = () => {
                 <h6>Related categories</h6>
                 <div className="products_related_categories">
                   {relatedCategories.map((category) => (
-                    <Link
-                      key={category._id}
-                      to={`${ROUTES.SAVING_SPOTLIGHT_PRODUCT_LISTING}?category=${category._id}&name=${encodeURIComponent(category?.catName || "Category")}`}
-                    >
-                      {category?.catName}
-                    </Link>
+                    <RelatedCategoryLink key={category._id} category={category} />
                   ))}
                 </div>
               </div>

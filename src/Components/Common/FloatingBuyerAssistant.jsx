@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import ROUTES from "../../helpers/routesHelper";
+import { getLanguageCode } from "../../helpers/languageHelper";
 import {
   QUICK_PROMPTS,
   escalateAssistantChat,
@@ -10,6 +12,7 @@ import {
   sendAssistantMessage,
   setAssistantSessionId,
 } from "../../helpers/buyerAssistantHelper";
+import AssistantMessage from "./AssistantMessage";
 import "./FloatingBuyerAssistant.css";
 
 const LANG_OPTIONS = [
@@ -59,12 +62,13 @@ function ChatIcon() {
 }
 
 export default function FloatingBuyerAssistant() {
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState(() => getAssistantSessionId());
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState(() => getLanguageCode());
   const [loading, setLoading] = useState(false);
   const [disputeFlag, setDisputeFlag] = useState(false);
   const [escalated, setEscalated] = useState(false);
@@ -80,14 +84,33 @@ export default function FloatingBuyerAssistant() {
   }, []);
 
   useEffect(() => {
+    const onLanguageChanged = (code) => {
+      const next = code === "fr" ? "fr" : "en";
+      setLanguage(next);
+      setMessages([]);
+    };
+    i18n.on("languageChanged", onLanguageChanged);
+    return () => i18n.off("languageChanged", onLanguageChanged);
+  }, [i18n]);
+
+  useEffect(() => {
+    const onLanguageChanged = (lng) => {
+      const next = lng === "fr" ? "fr" : "en";
+      setLanguage(next);
+      setMessages([]);
+    };
+    i18n.on("languageChanged", onLanguageChanged);
+    return () => i18n.off("languageChanged", onLanguageChanged);
+  }, [i18n]);
+
+  useEffect(() => {
     if (!open || messages.length) return undefined;
     let cancelled = false;
 
     fetchAssistantWelcome(language)
       .then((data) => {
         if (cancelled) return;
-        const welcome = data?.message
-          || "Hi! I'm your UZA Bulk buyer assistant. Ask about products, delivery, or your order.";
+        const welcome = data?.message || t("assistant.welcomeFallback");
         setMessages([{ role: "assistant", content: welcome, id: "welcome" }]);
       })
       .catch(() => {
@@ -95,7 +118,7 @@ export default function FloatingBuyerAssistant() {
         setMessages([
           {
             role: "assistant",
-            content: "Hi! I'm your UZA Bulk buyer assistant. Ask about products, delivery, or your order.",
+            content: t("assistant.welcomeFallback"),
             id: "welcome-fallback",
           },
         ]);
@@ -104,7 +127,7 @@ export default function FloatingBuyerAssistant() {
     return () => {
       cancelled = true;
     };
-  }, [open, language, messages.length]);
+  }, [open, language, messages.length, t]);
 
   useEffect(() => {
     scrollToBottom();
@@ -153,6 +176,8 @@ export default function FloatingBuyerAssistant() {
       pushMessage("assistant", data?.answer || "Sorry, I could not generate a reply.", {
         dispute_flag: data?.dispute_flag,
         status: data?.status,
+        products: data?.products || [],
+        actions: data?.actions || [],
       });
     } catch (error) {
       pushMessage(
@@ -182,17 +207,23 @@ export default function FloatingBuyerAssistant() {
     }
   };
 
+  const handleAction = (action) => {
+    if (action?.type === "chat" && action.message) {
+      handleSend(action.message);
+    }
+  };
+
   return (
     <div className={`floating-buyer-assistant ${open ? "is-open" : ""}`}>
       {open ? (
-        <div className="floating-buyer-assistant__panel" role="dialog" aria-label="UZA buyer assistant">
+        <div className="floating-buyer-assistant__panel" role="dialog" aria-label={t("assistant.dialogLabel")}>
           <header className="floating-buyer-assistant__header">
             <div>
-              <p className="floating-buyer-assistant__eyebrow">AI Buyer Assistant</p>
-              <h2 className="floating-buyer-assistant__title">UZA Bulk Support</h2>
+              <p className="floating-buyer-assistant__eyebrow">{t("assistant.eyebrow")}</p>
+              <h2 className="floating-buyer-assistant__title">{t("assistant.title")}</h2>
             </div>
             <div className="floating-buyer-assistant__header_actions">
-              <div className="floating-buyer-assistant__langs" role="group" aria-label="Language hint">
+              <div className="floating-buyer-assistant__langs" role="group" aria-label={t("assistant.languageHint")}>
                 {LANG_OPTIONS.map((opt) => (
                   <button
                     key={opt.code}
@@ -209,7 +240,7 @@ export default function FloatingBuyerAssistant() {
                 type="button"
                 className="floating-buyer-assistant__close"
                 onClick={() => setOpen(false)}
-                aria-label="Close assistant"
+                aria-label={t("assistant.close")}
               >
                 ×
               </button>
@@ -229,7 +260,7 @@ export default function FloatingBuyerAssistant() {
             </div>
           ) : null}
 
-          <div className="floating-buyer-assistant__quick" aria-label="Quick questions">
+          <div className="floating-buyer-assistant__quick" aria-label={t("assistant.quickQuestions")}>
             {QUICK_PROMPTS.map((prompt) => (
               <button
                 key={prompt.id}
@@ -244,12 +275,7 @@ export default function FloatingBuyerAssistant() {
 
           <div className="floating-buyer-assistant__messages" ref={listRef}>
             {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`floating-buyer-assistant__bubble floating-buyer-assistant__bubble--${msg.role}`}
-              >
-                {msg.content}
-              </div>
+              <AssistantMessage key={msg.id} message={msg} onAction={handleAction} />
             ))}
             {loading ? (
               <div className="floating-buyer-assistant__typing" aria-live="polite">
@@ -270,18 +296,18 @@ export default function FloatingBuyerAssistant() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about products, delivery, or your order…"
+              placeholder={t("assistant.placeholder")}
               disabled={loading}
               maxLength={2000}
               aria-label="Message to buyer assistant"
             />
             <button type="submit" disabled={loading || !input.trim()}>
-              Send
+              {t("common.submit")}
             </button>
           </form>
 
           <footer className="floating-buyer-assistant__footer">
-            <Link to={ROUTES.CONTACT_US}>Contact Us</Link>
+            <Link to={ROUTES.CONTACT_US}>{t("nav.contactUs")}</Link>
             <span aria-hidden>·</span>
             <span>Grounded on live catalog &amp; policies</span>
           </footer>
@@ -296,7 +322,7 @@ export default function FloatingBuyerAssistant() {
         aria-label={open ? "Close buyer assistant" : "Open buyer assistant"}
       >
         <ChatIcon />
-        <span className="floating-buyer-assistant__launcher_label">Ask UZA</span>
+        <span className="floating-buyer-assistant__launcher_label">{t("assistant.askUza")}</span>
       </button>
     </div>
   );

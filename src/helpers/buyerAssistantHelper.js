@@ -59,8 +59,8 @@ export const escalateAssistantChat = async ({ sessionId, note }) => {
 };
 
 export const QUICK_PROMPTS = [
-  { id: "order", label: "My orders", message: "What are my recent orders and their status?" },
-  { id: "product", label: "Product details", message: "Tell me about this product — price, MOQ, and description." },
-  { id: "moq", label: "MOQ & pricing", message: "How does MOQ and wholesale pricing work on UZA Bulk?" },
+  { id: "order", label: "My orders", message: "What are my recent orders and what products did I order?" },
+  { id: "product", label: "Find a product", message: "Help me find a product — tell me price, MOQ, and show matching items." },
+  { id: "cart", label: "My cart", message: "What is in my cart and how do I checkout?" },
   { id: "delivery", label: "Delivery ETA", message: "How long does delivery take from 1688 suppliers?" },
 ];

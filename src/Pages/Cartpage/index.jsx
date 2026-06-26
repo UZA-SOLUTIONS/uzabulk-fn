@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Form } from "reactstrap";
+import { useTranslation } from "react-i18next";
 
 import ROUTES from "../../helpers/routesHelper";
 import { APP_NAME } from "../../config/constants";
@@ -24,8 +25,10 @@ import { clearSelectedCart, setCouponCode } from "../../store/cart/slice";
 
 import placeholder from "../../assets/images/sousix.jpg";
 import ICON_TRASH from "../../assets/images/icon-trash.svg";
+import TranslatedProductName from "../../Components/Common/TranslatedProductName";
 
 const Cartpage = () => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { currentCurrency } = useSelector(s => s.config);
   const { cartCoupon, cartList, isLoading } = useSelector((s) => s.cart);
@@ -94,12 +97,12 @@ const Cartpage = () => {
         onhide={() => setShowAddressModal(false)}
       />
       <Helmet>
-        <title>{APP_NAME} | Cart</title>
+        <title>{APP_NAME} | {t("cart.title")}</title>
       </Helmet>
       <Container>
         <Row>
           <Col lg="12" className="text-start">
-            <h2 className="fw-bold mt-0 mb-4">Shopping cart</h2>
+            <h2 className="fw-bold mt-0 mb-4">{t("cart.title")}</h2>
           </Col>
         </Row>
         {cartList?.length ? (
@@ -144,7 +147,7 @@ const Cartpage = () => {
                                           "/" +
                                           cart?.product?._id
                                         );
-                                      }}>{cart.product.name}</span>
+                                      }}><TranslatedProductName product={cart.product} /></span>
                                       <p className="text-success fs-xs mb-1">
                                         {getCouponDiscount({
                                           orderDetails,
@@ -155,7 +158,7 @@ const Cartpage = () => {
                                     </h2>
 
                                     <div className="counter_div d-flex align-items-center gap-3">
-                                      <p className="fw-light mb-0 fs-xs">Quantity</p>
+                                      <p className="fw-light mb-0 fs-xs">{t("cart.quantity")}</p>
                                       <AddToCart
                                         className="fs-base"
                                         value={item.quantity}
@@ -226,12 +229,12 @@ const Cartpage = () => {
                                         setDelId("");
                                       })
                                     }}>
-                                    <img width={15} height={15} src={ICON_TRASH} alt="Remove item" />
+                                    <img width={15} height={15} src={ICON_TRASH} alt={t("cart.removeItem")} />
                                   </Button>
 
-                                  <h2 className="mb-0 text-primary fs-6 text-nowrap"><small className="fw-light fs-xs fst-italic mb-0 me-3">(Unit Price)</small> {currentCurrency?.symbol} {formatNumber(item.unitPrice)}</h2>
-                                  <h2 className="mb-0 text-primary fs-6 text-nowrap"><small className="fw-light fs-xs fst-italic mb-0 me-3">(Sub Total {item.quantity}x)</small> {currentCurrency?.symbol} {formatNumber(item.amount)}</h2>
-                                  <p className="fw-light fs-base fst-italic mb-0 text-end text-nowrap">(Price incl. of all taxes)</p>
+                                  <h2 className="mb-0 text-primary fs-6 text-nowrap"><small className="fw-light fs-xs fst-italic mb-0 me-3">({t("cart.unitPrice")})</small> {currentCurrency?.symbol} {formatNumber(item.unitPrice)}</h2>
+                                  <h2 className="mb-0 text-primary fs-6 text-nowrap"><small className="fw-light fs-xs fst-italic mb-0 me-3">({t("cart.subTotalWithQty", { qty: item.quantity })})</small> {currentCurrency?.symbol} {formatNumber(item.amount)}</h2>
+                                  <p className="fw-light fs-base fst-italic mb-0 text-end text-nowrap">({t("cart.priceInclTax")})</p>
 
                                   <small className="fw-light fs-xs fst-italic mb-0 text-end mt-3 text-danger">{item?.message || ''}</small>
 
@@ -265,33 +268,33 @@ const Cartpage = () => {
                 <Form>
                   <div className="car_total mt-3 text-start position-relative overflow-hidden">
                     {loadingOrder && <BlockContent />}
-                    <h5>Price details</h5>
+                    <h5>{t("cart.priceDetails")}</h5>
                     <p className="text-danger">{message}</p>
                     <ul className="p-0">
                       <li>
-                        <p>Total Items</p>
+                        <p>{t("cart.totalItems")}</p>
                         <p>{formatNumber(orderDetails?.totalItems || 0)}</p>
                       </li>
                       {orderDetails ? (
                         <>
                           <li>
-                            <p>Sub Total</p>
+                            <p>{t("cart.subTotal")}</p>
                             <p>{currentCurrency?.symbol} {formatNumber(orderDetails?.subTotal || 0)}</p>
                           </li>
                           <li>
-                            <p>Tax Amount ({orderDetails.taxAmount}%)</p>
+                            <p>{t("cart.taxAmount", { percent: orderDetails.taxAmount })}</p>
                             <p>{currentCurrency?.symbol} {formatNumber(orderDetails?.tax || 0)}</p>
                           </li>
                           {orderDetails?.coupon ? (
                             <li>
-                              <p>Coupon discount</p>
+                              <p>{t("cart.couponDiscount")}</p>
                               <p className="text-success">-{currentCurrency?.symbol} {formatNumber(orderDetails.couponAmount)}</p>
                             </li>
                           ) : null}
                         </>
                       ) : null}
                       <li>
-                        <p className="fs-6 fw-medium mt-3">Total Amount</p>
+                        <p className="fs-6 fw-medium mt-3">{t("cart.totalAmount")}</p>
                         <p className="fs-6 fw-medium mt-3">
                           {currentCurrency?.symbol} {formatNumber(orderDetails?.orderTotal || 0)}
                         </p>
@@ -305,7 +308,7 @@ const Cartpage = () => {
                           navigate(ROUTES.CHECKOUT)
                         }}
                       >
-                        Checkout
+                        {t("cart.checkout")}
                       </Button>
                     </div>
                   </div>

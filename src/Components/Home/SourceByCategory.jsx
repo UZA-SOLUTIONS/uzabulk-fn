@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import ROUTES from "../../helpers/routesHelper";
 import { getHomeFeedRefreshToken } from "../../helpers/commonHelper";
 import {
   fetchCategoryRepresentativeImage,
   fetchCategoryThumbnailsBatch,
-  getCategoryDisplayName,
   resolveCategoryIconUrl,
   rotateHomeCategories,
 } from "../../helpers/homeCategoryFeedHelper";
@@ -17,6 +17,7 @@ import {
   getHomeCategoryCircleImage,
   setHomeCategoryCircleImage,
 } from "../../helpers/homeCategoryCircleImageCache";
+import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import UXSkeleton from "../Common/UXSkeleton";
 
 const MAX_CATEGORIES = 16;
@@ -36,58 +37,80 @@ const Chevron = ({ dir }) => (
 );
 
 function SourceCategoryCard({ category, imageUrl, onRequestImage, onImageError, priority = false }) {
+  const { t } = useTranslation();
   const id = String(category?._id || "");
-  const name = getCategoryDisplayName(category) || "Category";
-  const to = `${ROUTES.PRODUCT_LISTING}?skip=1&category=${encodeURIComponent(id)}&name=${encodeURIComponent(name)}`;
-  const [imgReady, setImgReady] = useState(false);
+  const displayName = useCategoryDisplayName(category) || t("home.categoryFallback");
+  const fallbackIcon = resolveCategoryIconUrl(category);
+  const [displaySrc, setDisplaySrc] = useState(() => imageUrl || fallbackIcon);
+  const to = `${ROUTES.PRODUCT_LISTING}?skip=1&category=${encodeURIComponent(id)}&name=${encodeURIComponent(displayName)}`;
+  const [imgReady, setImgReady] = useState(() => Boolean((imageUrl || fallbackIcon) && !imageUrl));
   const imgRef = useRef(null);
 
   useEffect(() => {
+    setDisplaySrc(imageUrl || fallbackIcon);
+  }, [imageUrl, fallbackIcon]);
+
+  useEffect(() => {
+    if (!displaySrc) {
+      setImgReady(false);
+      return;
+    }
+    if (!imageUrl && fallbackIcon) {
+      setImgReady(true);
+      return;
+    }
     setImgReady(false);
-    if (!imageUrl) return;
     const img = imgRef.current;
     if (img?.complete && img.naturalWidth > 0) {
       setImgReady(true);
     }
-  }, [imageUrl]);
+  }, [displaySrc, imageUrl, fallbackIcon]);
 
   useEffect(() => {
-    if (!id || imageUrl) return;
+    if (!id || imageUrl || fallbackIcon) return;
     onRequestImage?.(category);
-  }, [category, id, imageUrl, onRequestImage]);
+  }, [category, id, imageUrl, fallbackIcon, onRequestImage]);
 
   return (
     <Link to={to} className="home_source_category_card">
       <div className="home_source_category_card__head">
-        <span className="home_source_category_card__name">{name}</span>
-        <span className="home_source_category_card__explore">Explore</span>
+        <span className="home_source_category_card__name">{displayName}</span>
+        <span className="home_source_category_card__explore">{t("home.explore")}</span>
       </div>
       <div className="home_source_category_card__image">
-        {!imgReady ? (
+        {!imgReady && displaySrc ? (
           <span className="home_source_category_card__img_placeholder shimmer" aria-hidden />
         ) : null}
-        {imageUrl ? (
+        {displaySrc ? (
           <img
             ref={imgRef}
-            src={imageUrl}
-            alt=""
+            src={displaySrc}
+            alt={displayName}
             decoding="async"
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
             onLoad={() => setImgReady(true)}
             onError={() => {
+              if (displaySrc !== fallbackIcon && fallbackIcon) {
+                setDisplaySrc(fallbackIcon);
+                setImgReady(true);
+                return;
+              }
               setImgReady(false);
               onImageError?.(category);
             }}
             style={{ opacity: imgReady ? 1 : 0 }}
           />
-        ) : null}
+        ) : (
+          <span className="home_source_category_card__img_placeholder shimmer" aria-hidden />
+        )}
       </div>
     </Link>
   );
 }
 
 export default function SourceByCategory() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const level1Categories = useSelector((s) => s.categories.categories.level1 || []);
   const level2Categories = useSelector((s) => s.categories.categories.level2 || []);
@@ -252,7 +275,7 @@ export default function SourceByCategory() {
     return (
       <section className="home_source_by_category py-3" aria-labelledby="home-source-by-category-title">
         <h2 id="home-source-by-category-title" className="home_source_by_category__title">
-          Source by category
+          {t("home.sourceByCategory")}
         </h2>
         <UXSkeleton type="source-by-category" count={SKELETON_CARD_COUNT} />
       </section>
@@ -263,10 +286,10 @@ export default function SourceByCategory() {
     return (
       <section className="home_source_by_category py-3" aria-labelledby="home-source-by-category-title">
         <h2 id="home-source-by-category-title" className="home_source_by_category__title">
-          Source by category
+          {t("home.sourceByCategory")}
         </h2>
         <p className="text-muted mb-0 small">
-          Categories could not be loaded. Check that the API is running and MongoDB is reachable, then refresh.
+          {t("home.categoriesLoadError")}
         </p>
       </section>
     );
@@ -276,9 +299,9 @@ export default function SourceByCategory() {
     return (
       <section className="home_source_by_category py-3" aria-labelledby="home-source-by-category-title">
         <h2 id="home-source-by-category-title" className="home_source_by_category__title">
-          Source by category
+          {t("home.sourceByCategory")}
         </h2>
-        <p className="text-muted mb-0 small">No categories available to display.</p>
+        <p className="text-muted mb-0 small">{t("home.noCategoriesAvailable")}</p>
       </section>
     );
   }
@@ -286,7 +309,7 @@ export default function SourceByCategory() {
   return (
     <section className="home_source_by_category py-3" aria-labelledby="home-source-by-category-title">
       <h2 id="home-source-by-category-title" className="home_source_by_category__title">
-        Source by category
+        {t("home.sourceByCategory")}
       </h2>
 
       <div className="home_source_by_category__wrap">
@@ -295,7 +318,7 @@ export default function SourceByCategory() {
           className="home_source_by_category__arrow home_source_by_category__arrow--prev"
           onClick={() => scrollByDir("prev")}
           disabled={!canPrev}
-          aria-label="Scroll categories left"
+          aria-label={t("home.scrollCategoriesLeft")}
         >
           <Chevron dir="prev" />
         </button>
@@ -304,7 +327,7 @@ export default function SourceByCategory() {
           className="home_source_by_category__arrow home_source_by_category__arrow--next"
           onClick={() => scrollByDir("next")}
           disabled={!canNext}
-          aria-label="Scroll categories right"
+          aria-label={t("home.scrollCategoriesRight")}
         >
           <Chevron dir="next" />
         </button>

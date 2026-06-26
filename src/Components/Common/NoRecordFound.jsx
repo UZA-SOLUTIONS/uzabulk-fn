@@ -1,10 +1,12 @@
-export default function NoRecordFound({ message = "No Record Found!" }) {
+import { useTranslation } from "react-i18next";
+
+export default function NoRecordFound({ message }) {
+  const { t } = useTranslation();
+  const text = message || t("common.noRecordFound");
   return (
     <>
       <div className="no-record-found-content">
-        <p>{message}
-          {/* <span className="fw-bolder text-danger">404</span> */}
-        </p>
+        <p>{text}</p>
       </div>
     </>
   );

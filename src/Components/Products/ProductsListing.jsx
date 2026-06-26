@@ -10,6 +10,7 @@ import ROUTES from "../../helpers/routesHelper";
 import { amountConversion, formatNumber, fromNow } from "../../helpers/commonHelper";
 
 import placeholder from "../../assets/images/gurfive.jpg";
+import TranslatedProductName from "../Common/TranslatedProductName";
 import { getPendingQuantity } from "../../helpers/cartHelper";
 import { useSelector } from "react-redux";
 
@@ -69,7 +70,7 @@ const ProductsListing = ({
 
                                                     {pendingQty > 0 && pendingQty <= 10 ? <p className="text-secondary">{pendingQty <= 5 ? `${pendingQty} items left` : pendingQty <= 10 ? "Few left" : ""}</p> : null}
                                                 </div>
-                                                <h5>{item?.name}</h5>
+                                                <TranslatedProductName product={item} as="h5" />
                                                 {/* <p>{item?.short_description?.length >= 250 ? item?.short_description.substring(0, 245) + '...' : item?.short_description}</p> */}
                                             </div>
 

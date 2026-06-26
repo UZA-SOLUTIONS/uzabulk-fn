@@ -3,6 +3,7 @@ import { Container } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
+import { useTranslation } from "react-i18next";
 import AbortController from "abort-controller";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
@@ -16,8 +17,11 @@ import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
 import { apiGetCategories } from "../../store/categories/actions";
 import { apiGetProductDetail, apiGetProducts } from "../../store/products/actions";
 import { clearProductList } from "../../store/products/slice";
+import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
+import useCategoryDisplayNames from "../../hooks/useCategoryDisplayNames";
 
 const Productlist = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
@@ -41,15 +45,18 @@ const Productlist = () => {
     return base.filter((c) => c?._id && (c?.catName || c?.name));
   }, [level1Categories, level2Categories]);
 
+  const categoryDisplayNames = useCategoryDisplayNames(categoriesAll);
+  const selectedCategoryDisplayName = useCategoryDisplayName(others?.category);
+
   const categoryTabs = useMemo(
     () => [
-      { id: "", label: "All products" },
+      { id: "", label: t("nav.allProducts") },
       ...categoriesAll.map((c) => ({
         id: String(c._id),
-        label: (c.catName || c.name || "Category").trim(),
+        label: categoryDisplayNames[String(c._id)] || (c.catName || c.name || t("home.categoryFallback")).trim(),
       })),
     ],
-    [categoriesAll]
+    [categoriesAll, categoryDisplayNames, t]
   );
 
   const searchMeta = others?.searchMeta || {};
@@ -77,10 +84,16 @@ const Productlist = () => {
     if (searchQuery) {
       return `Search: ${effectiveSearchLabel || searchQuery}`;
     }
-    if (others?.category?.catName) return others.category.catName;
+    if (selectedCategory) {
+      return categoryDisplayNames[selectedCategory]
+        || selectedCategoryDisplayName
+        || searchParams.get("name")
+        || t("home.categoryFallback");
+    }
+    if (others?.category?.catName || others?.category?.name) return selectedCategoryDisplayName;
     if (searchParams.get("name")) return searchParams.get("name");
-    return isCategoriesHub ? "Categories" : "All products";
-  }, [imageQuery, searchQuery, effectiveSearchLabel, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category?.catName, searchParams, isCategoriesHub]);
+    return isCategoriesHub ? t("nav.allCategories") : t("nav.allProducts");
+  }, [imageQuery, searchQuery, effectiveSearchLabel, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category, selectedCategory, selectedCategoryDisplayName, categoryDisplayNames, searchParams, isCategoriesHub, t]);
 
   const imageSearchKeyword = others?.imageSearchKeyword || others?.imageSearchPhrase || searchQuery;
   const isImageSearchSession = Boolean(imageQuery || others?.imageSearch);
@@ -272,7 +285,7 @@ const Productlist = () => {
         {others?.category?.catImage ? (
           <div className="products_list_browse__hero mb-3">
             <img src={others.category.catImage} alt="" />
-            <h1 className="products_list_category_title">{others?.category?.catName}</h1>
+            <h1 className="products_list_category_title">{selectedCategoryDisplayName}</h1>
           </div>
         ) : null}
 

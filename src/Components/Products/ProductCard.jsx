@@ -1,5 +1,6 @@
 import React from "react";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import {
   amountConversion,
@@ -8,19 +9,19 @@ import {
 } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import SupplierVerificationBadge from "./SupplierVerificationBadge";
-
-const resolveTrustText = (item) => {
-  const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;
-  const sold = item?.sold || item?.totalSold || item?.orderCount || item?.sold_count;
-  if (moq && sold) return `MOQ ${moq} • ${sold} sold`;
-  if (moq) return `MOQ ${moq}`;
-  if (sold) return `${sold} sold`;
-  return "";
-};
+import TranslatedProductName from "../Common/TranslatedProductName";
 
 export default function ProductCard({ item, onOpen }) {
+  const { t } = useTranslation();
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
+
+  const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;
+  const sold = item?.sold || item?.totalSold || item?.orderCount || item?.sold_count;
+  let trust = "";
+  if (moq && sold) trust = t("product.moqSold", { moq, sold });
+  else if (moq) trust = t("product.moqOnly", { moq });
+  else if (sold) trust = t("product.soldOnly", { sold });
 
   const resolvedId =
     extractMongoProductId(item)
@@ -28,7 +29,6 @@ export default function ProductCard({ item, onOpen }) {
   const isOut =
     (!item?.manage_stock && item?.stock_status === "outofstock")
     || (item?.manage_stock && Number(item?.stock_quantity) === 0);
-  const trust = resolveTrustText(item);
 
   return (
     <div
@@ -46,16 +46,16 @@ export default function ProductCard({ item, onOpen }) {
       <div className="new_arrival_media position-relative">
         <img
           src={getProductImageUrl(item, placeholder)}
-          alt={item?.name || "Product"}
+          alt={item?.name || t("home.viewDetails")}
           className="img-fluid"
           loading="lazy"
         />
         {isOut ? (
-          <span className="products_listing_stock_badge">Out of stock</span>
+          <span className="products_listing_stock_badge">{t("product.outOfStock")}</span>
         ) : null}
       </div>
       <div className="home_product_card_body px-1 pt-2">
-        <p className="home_product_title mb-1">{item?.name}</p>
+        <TranslatedProductName product={item} className="home_product_title mb-1" as="p" />
         <p className="home_product_price mb-1">
           {currentCurrency?.symbol}{" "}
           {amountConversion(item?.price, appConfig)}
@@ -66,7 +66,7 @@ export default function ProductCard({ item, onOpen }) {
           ) : (
             <SupplierVerificationBadge item={item} />
           )}
-          <span className="home_product_cta">View details</span>
+          <span className="home_product_cta">{t("home.viewDetails")}</span>
         </div>
       </div>
     </div>

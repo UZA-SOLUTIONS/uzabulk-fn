@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import ROUTES from "../../helpers/routesHelper";
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 import { apiGetTopCategories } from "../../store/categories/actions";
+import TranslatedCategoryName from "../../Components/Common/TranslatedCategoryName";
 
 import placeholder from "../../assets/images/Decor.webp";
 
@@ -112,7 +113,7 @@ const Topcategories = () => {
                     className="img-fluid"
                   />
                 </div>
-                <p className="categorie_name">{value.catName}</p>
+                <TranslatedCategoryName category={value} className="categorie_name" as="p" />
               </div>
             );
           })}

@@ -7,7 +7,8 @@ import ROUTES from "../../helpers/routesHelper";
 import { amountConversion, getProductImageUrl, smoothScrollToTop, logger } from "../../helpers/commonHelper";
 import { apiGetHomeSavingSpotlightProducts } from "../../store/products/actions";
 import placeholder from "../../assets/images/Decor.webp";
-import Spinner from "../Spinner"; // Import the Spinner component
+import Spinner from "../Spinner";
+import TranslatedProductName from "../Common/TranslatedProductName";
 
 export default function SavingSpotLight() {
   const dispatch = useDispatch();
@@ -88,7 +89,7 @@ export default function SavingSpotLight() {
                         </div>
                         <div className="px-1 pt-2">
                           <p className="mb-1" style={{ fontSize: "12px", lineHeight: 1.3 }}>
-                            {item?.name}
+                            <TranslatedProductName product={item} />
                           </p>
                           <p className="mb-0 fw-semibold" style={{ fontSize: "12px" }}>
                             {currentCurrency?.symbol} {amountConversion(item?.price, appConfig)}

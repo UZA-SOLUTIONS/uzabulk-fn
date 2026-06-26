@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import ROUTES from "../../helpers/routesHelper";
 import { getHomeFeedRefreshToken } from "../../helpers/commonHelper";
@@ -13,12 +14,32 @@ import {
   getHomeCategoryCircleImage,
   setHomeCategoryCircleImage,
 } from "../../helpers/homeCategoryCircleImageCache";
+import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import UXSkeleton from "../Common/UXSkeleton";
 
 const MAX_CATEGORIES = 12;
 const IMAGE_FETCH_CONCURRENCY = 3;
 
+function CategoryCircleItem({ category }) {
+  const { t } = useTranslation();
+  const displayName = useCategoryDisplayName(category) || t("home.categoryFallback");
+  const id = category?._id;
+
+  return (
+    <Link
+      to={`${ROUTES.PRODUCT_LISTING}?skip=1&category=${id}&name=${encodeURIComponent(displayName)}`}
+      className="home_category_circle_item"
+    >
+      <div className="home_category_circle_image">
+        <img src={category?.resolvedImage} alt={displayName} />
+      </div>
+      <p>{displayName}</p>
+    </Link>
+  );
+}
+
 export default function CategoryCircleSlider() {
+  const { t } = useTranslation();
   const level1Categories = useSelector((s) => s.categories.categories.level1 || []);
   const level2Categories = useSelector((s) => s.categories.categories.level2 || []);
   const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
@@ -132,7 +153,7 @@ export default function CategoryCircleSlider() {
     return (
       <section className="home_category_circle_slider_wrap py-3">
         <div className="card_top_head d-flex align-items-center justify-content-center mb-3 text-center">
-          <h4 className="home_category_circle_title mb-2">Categories for you</h4>
+          <h4 className="home_category_circle_title mb-2">{t("home.categoriesForYou")}</h4>
         </div>
         <UXSkeleton type="category-circles" count={10} />
       </section>
@@ -143,7 +164,7 @@ export default function CategoryCircleSlider() {
     return (
       <section className="home_category_circle_slider_wrap py-3">
         <div className="card_top_head d-flex align-items-center justify-content-center mb-3 text-center">
-          <h4 className="home_category_circle_title mb-2">Categories for you</h4>
+          <h4 className="home_category_circle_title mb-2">{t("home.categoriesForYou")}</h4>
         </div>
         <UXSkeleton type="category-circles" count={10} />
       </section>
@@ -157,7 +178,7 @@ export default function CategoryCircleSlider() {
   return (
     <section className="home_category_circle_slider_wrap py-3">
       <div className="card_top_head d-flex align-items-center justify-content-center mb-3 text-center">
-        <h4 className="home_category_circle_title mb-2">Categories for you</h4>
+        <h4 className="home_category_circle_title mb-2">{t("home.categoriesForYou")}</h4>
       </div>
       <div className="home_category_circle_slider">
         <div
@@ -165,21 +186,10 @@ export default function CategoryCircleSlider() {
           style={{ "--marquee-shift": `${shiftPercent}%` }}
         >
           {animatedCategories.map((category, index) => (
-            <Link
-              to={`${ROUTES.PRODUCT_LISTING}?skip=1&category=${category?._id}&name=${encodeURIComponent(
-                category?.catName || "Category"
-              )}`}
-              className="home_category_circle_item"
+            <CategoryCircleItem
+              category={category}
               key={`${category?._id || "cat"}-${index}`}
-            >
-              <div className="home_category_circle_image">
-                <img
-                  src={category?.resolvedImage}
-                  alt={category?.catName || "Category"}
-                />
-              </div>
-              <p>{category?.catName || "Category"}</p>
-            </Link>
+            />
           ))}
         </div>
       </div>

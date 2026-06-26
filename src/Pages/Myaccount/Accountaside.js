@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import LogoutPopup from "../../Components/Modals/LogoutPopup";
 import ROUTES from "../../helpers/routesHelper";
@@ -9,6 +10,7 @@ import { apiLogout } from "../../store/auth/actions";
 import { setCouponCode } from "../../store/cart/slice";
 
 const Accountaside = () => {
+  const { t } = useTranslation();
   const { user, isLoading } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
   const { pathname } = useLocation();
@@ -25,9 +27,6 @@ const Accountaside = () => {
   return (
     <div className="sider_sidebar">
       <div className="header_details text-center">
-        {/* <div className="profile_img">
-          <img src={Profileimg} alt="" className="img-fluid" />
-        </div> */}
         <h5>{user?.name || ""}</h5>
         <p>
           {phonecicon} {user?.countryCode || ""} {user?.mobileNumber || ""}
@@ -40,7 +39,7 @@ const Accountaside = () => {
             to={ROUTES.MY_ORDERS}
             className={pathname === ROUTES.MY_ORDERS || pathname === `${ROUTES.ORDER_DETAIL}/${id}` ? "active" : ""}
           >
-            My Orders
+            {t("account.myOrders")}
           </Link>
         </li>
 
@@ -49,7 +48,7 @@ const Accountaside = () => {
             to={ROUTES.ORDER_ADDRESS}
             className={pathname === ROUTES.ORDER_ADDRESS ? "active" : ""}
           >
-            My Address
+            {t("account.myAddress")}
           </Link>
         </li>
 
@@ -58,7 +57,7 @@ const Accountaside = () => {
             to={ROUTES.PROFILE}
             className={pathname === ROUTES.PROFILE ? "active" : ""}
           >
-            Profile
+            {t("account.profile")}
           </Link>
         </li>
         <li>
@@ -66,7 +65,7 @@ const Accountaside = () => {
             to={ROUTES.CHANGE_PASSWORD}
             className={pathname === ROUTES.CHANGE_PASSWORD ? "active" : ""}
           >
-            Change Password
+            {t("account.changePassword")}
           </Link>
         </li>
         <li>
@@ -77,7 +76,7 @@ const Accountaside = () => {
               setShowLogoutPopup(true);
             }}
           >
-            Logout
+            {t("account.logout")}
           </Link>
           <LogoutPopup
             show={showLogoutPopup}
@@ -92,8 +91,6 @@ const Accountaside = () => {
 };
 
 export default Accountaside;
-
-// svg
 
 const phonecicon = (
   <svg

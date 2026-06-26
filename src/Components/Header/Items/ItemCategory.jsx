@@ -1,18 +1,20 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import ROUTES from "../../../helpers/routesHelper";
 
 export default function ItemCategory({ catalogTrigger = "hamburger" }) {
+  const { t } = useTranslation();
   return (
     <li className="productmenu">
       <Link
         to={`${ROUTES.PRODUCT_LISTING}?skip=1`}
         className="categories-nav-trigger"
-        aria-label="Browse all products"
+        aria-label={t("nav.browseAllProducts")}
       >
         <span className="categories-nav-trigger__icon" aria-hidden>
           {catalogTrigger === "grid" ? appsMenuGrid : threebar}
         </span>
-        <span className="categories-nav-trigger__label">All Categories</span>
+        <span className="categories-nav-trigger__label">{t("nav.allCategories")}</span>
       </Link>
     </li>
   );

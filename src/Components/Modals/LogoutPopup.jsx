@@ -1,5 +1,6 @@
 import React from "react";
 import { Modal, Button } from "react-bootstrap";
+import { useTranslation } from "react-i18next";
 
 const LogoutPopup = ({
   onhide,
@@ -9,6 +10,7 @@ const LogoutPopup = ({
   backdropClassName = "",
   ...modalProps
 }) => {
+  const { t } = useTranslation();
   return (
     <Modal
       {...modalProps}
@@ -21,12 +23,12 @@ const LogoutPopup = ({
     >
       <Modal.Header className="position-relative d-flex align-items-center justify-content-between">
         <Modal.Title id="contained-modal-title-vcenter">
-          Confirm Logout
+          {t("auth.confirmLogout")}
         </Modal.Title>
         <button
           type="button"
           className="btn p-0 border-0 bg-transparent"
-          aria-label="Close logout confirmation"
+          aria-label={t("common.close")}
           onClick={onhide}
           disabled={isLoggingOut}
         >
@@ -44,10 +46,8 @@ const LogoutPopup = ({
         </button>
       </Modal.Header>
       <Modal.Body>
-        <p className="mb-1 fw-semibold">Are you sure you want to log out?</p>
-        <p className="mb-0 text-muted">
-          You will need to sign in again to access your account.
-        </p>
+        <p className="mb-1 fw-semibold">{t("auth.logoutConfirm")}</p>
+        <p className="mb-0 text-muted">{t("auth.logoutHint")}</p>
       </Modal.Body>
       <Modal.Footer>
         <Button
@@ -56,7 +56,7 @@ const LogoutPopup = ({
           className="rounded rounded-5 py-1"
           disabled={isLoggingOut}
         >
-          Stay Signed In
+          {t("auth.staySignedIn")}
         </Button>
         <Button
           variant="danger"
@@ -64,7 +64,7 @@ const LogoutPopup = ({
           className="rounded rounded-5 py-1"
           disabled={isLoggingOut}
         >
-          {isLoggingOut ? "Logging out..." : "Log Out"}
+          {isLoggingOut ? t("auth.loggingOut") : t("auth.logOut")}
         </Button>
       </Modal.Footer>
     </Modal>

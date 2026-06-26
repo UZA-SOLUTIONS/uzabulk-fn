@@ -15,6 +15,7 @@ import {
 import ROUTES from "../../helpers/routesHelper";
 import suggestionPlaceholder from "../../assets/images/default_name.webp";
 import ImageSearchIcon from "./ImageSearchIcon";
+import TranslatedProductName from "./TranslatedProductName";
 
 const DEFAULT_MIN_CHARS = 2;
 const DEFAULT_DEBOUNCE_MS = 220;
@@ -309,7 +310,7 @@ export default function ProductSearch({
                     />
                     <div className="search-suggestion-copy">
                         <p className="search-suggestion-title">
-                            {item?.name || item?.title || "Product"}
+                            <TranslatedProductName product={item} name={item?.title} />
                         </p>
                         <span className="search-suggestion-meta">View product details</span>
                     </div>

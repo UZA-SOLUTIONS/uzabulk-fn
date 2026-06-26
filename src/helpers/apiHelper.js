@@ -3,10 +3,18 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { getAuthToken, removeAuthInfo } from "./authHelper";
 import ROUTES from "./routesHelper";
-import { getDeviceId, logger } from "./commonHelper";
+import { getDeviceId } from "./deviceHelper";
 import { getCurrencySymbol } from "./currencyHelper";
+import { getLanguageCode } from "./languageHelper";
+import i18n from "../i18n";
 
 const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:1302").replace(/\/+$/, "");
+
+const logger = (...params) => {
+  if (process.env.REACT_APP_ENVIORNMENT === "development") {
+    console.log(...params);
+  }
+};
 
 // Create an instance of axios with default settings
 const apiClient = axios.create({
@@ -14,7 +22,6 @@ const apiClient = axios.create({
   timeout: 0,
   headers: {
     "Content-Type": "application/json",
-    "DeviceId": getDeviceId(),
   },
 });
 let requestInterceptorId = null;
@@ -36,7 +43,7 @@ apiClient.interceptors.response.use(
 
     const message = error?.response?.data?.message
       || error?.message
-      || "Something went wrong, please try again later.";
+      || i18n.t("common.somethingWentWrong");
 
     // Do not show a global toast for network/timeout/offline failures — callers can handle UX; avoids noisy "check backend" toasts.
     if (!suppressGlobalErrorToast && !isNetworkError) {
@@ -76,12 +83,14 @@ export const updateAuthToken = () => {
     (config) => {
       // Modify the request config before sending the request
       const token = getAuthToken(); // Example: Get token from localStorage
+      config.headers.DeviceId = getDeviceId();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else if (config.headers?.Authorization) {
         delete config.headers.Authorization;
       }
       config.headers["Accept-Currency"] = getCurrencySymbol(); // Set the custom header for currency
+      config.headers["Accept-Language"] = getLanguageCode();
       if (typeof FormData !== "undefined" && config.data instanceof FormData) {
         delete config.headers["Content-Type"];
       }

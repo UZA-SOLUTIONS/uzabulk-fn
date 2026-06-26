@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import ROUTES from "../../helpers/routesHelper";
 import {
@@ -16,6 +17,7 @@ import { apiGetHomeNewArrivalProducts } from "../../store/products/actions";
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
 import SupplierVerificationBadge from "../Products/SupplierVerificationBadge";
+import TranslatedProductName from "../Common/TranslatedProductName";
 
 function newArrivalsSkeletonSlotCount(viewportWidth) {
   const w = viewportWidth || 1200;
@@ -40,6 +42,7 @@ const isTestProduct = (item) => {
 };
 
 export default function NewArrivalProducts() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [skeletonSlots, setSkeletonSlots] = useState(() =>
@@ -97,10 +100,10 @@ export default function NewArrivalProducts() {
       >
         <div className="home_new_arrivals_panel__head">
           <h2 id="home-new-arrivals-title" className="home_new_arrivals_panel__title">
-            New Arrivals
+            {t("home.newArrivals")}
           </h2>
           <Link to={ROUTES.NEW_ARRIVALS_PRODUCT_LISTING} className="home_new_arrivals_panel__view_all">
-            View All <span aria-hidden>&gt;</span>
+            {t("home.viewAll")} <span aria-hidden>&gt;</span>
           </Link>
         </div>
 
@@ -135,7 +138,7 @@ export default function NewArrivalProducts() {
                     />
                   </div>
                   <div className="home_product_card_body px-1 pt-2">
-                    <p className="home_product_title mb-1">{item?.name}</p>
+                    <TranslatedProductName product={item} className="home_product_title mb-1" as="p" />
                     <p className="home_product_price mb-1">
                       {currentCurrency?.symbol} {amountConversion(item?.price, appConfig)}
                     </p>
@@ -145,7 +148,7 @@ export default function NewArrivalProducts() {
                       ) : (
                         <SupplierVerificationBadge item={item} />
                       )}
-                      <span className="home_product_cta">View details</span>
+                      <span className="home_product_cta">{t("home.viewDetails")}</span>
                     </div>
                   </div>
                 </Link>

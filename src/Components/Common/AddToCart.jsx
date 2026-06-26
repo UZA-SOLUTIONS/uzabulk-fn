@@ -1,4 +1,5 @@
 import { Button } from "react-bootstrap";
+import { useTranslation } from "react-i18next";
 
 export default function AddToCart({
   onDecrement,
@@ -12,6 +13,7 @@ export default function AddToCart({
   /** Larger, labeled-friendly stepper for product detail */
   variant = "default",
 }) {
+  const { t } = useTranslation();
   const rootClass = [
     "add-to-cart-wrapper",
     variant === "product" ? "add-to-cart-wrapper--product" : "",
@@ -26,13 +28,13 @@ export default function AddToCart({
     : { variant: undefined, className: undefined };
 
   return (
-    <div className={rootClass} role="group" aria-label="Quantity">
+    <div className={rootClass} role="group" aria-label={t("cart.quantity")}>
       <Button
         type="button"
         {...qtyBtnProps}
         onClick={() => onDecrement()}
         disabled={decrementDisabled}
-        aria-label="Decrease quantity"
+        aria-label={t("cart.decreaseQuantity")}
       >
         -
       </Button>
@@ -43,7 +45,7 @@ export default function AddToCart({
           pattern="[0-9]*"
           className="form-control text-center cart-input"
           value={value}
-          aria-label="Quantity"
+          aria-label={t("cart.quantity")}
           onChange={(event) => {
             const raw = event.target.value;
             if (raw === "") return;
@@ -65,7 +67,7 @@ export default function AddToCart({
         {...qtyBtnProps}
         onClick={() => onIncrement()}
         disabled={disabled}
-        aria-label="Increase quantity"
+        aria-label={t("cart.increaseQuantity")}
       >
         +
       </Button>

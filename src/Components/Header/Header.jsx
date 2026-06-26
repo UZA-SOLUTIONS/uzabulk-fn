@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Container } from "react-bootstrap";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import UserAuthCard from "./UserAuthCard";
 import ROUTES from "../../helpers/routesHelper";
@@ -27,10 +28,11 @@ const ICON_MAGNIFIER = (
 );
 
 export default function Header() {
+  const { t } = useTranslation();
   const [searchText, setSearchText] = useState("");
   const [scrollY, setScrollY] = useState(0);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
-  const imageSearchLoadingLabel = "Loading";
+  const imageSearchLoadingLabel = t("search.loading");
   const [localImagePreview, setLocalImagePreview] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,7 +108,7 @@ export default function Header() {
   const runImageFileSearch = async (file) => {
     if (!file) return;
     if (!file.type?.startsWith("image/")) {
-      toast.error("Please choose or paste an image file.");
+      toast.error(t("search.invalidImage"));
       return;
     }
     if (imageSearchLoading) return;
@@ -126,7 +128,7 @@ export default function Header() {
       navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
     } catch (error) {
       revokeLocalPreview();
-      toast.error(error?.message || "Could not search by image. Try again.");
+      toast.error(error?.message || t("search.imageSearchFailed"));
       console.error("Image search failed:", error);
     } finally {
       setImageSearchLoading(false);
@@ -149,7 +151,7 @@ export default function Header() {
       navigate(`${ROUTES.PRODUCT_LISTING}?${params.toString()}`);
     } catch (error) {
       revokeLocalPreview();
-      toast.error(error?.message || "Could not search by image URL. Try again.");
+      toast.error(error?.message || t("search.imageUrlSearchFailed"));
       console.error("Image URL search failed:", error);
     } finally {
       setImageSearchLoading(false);
@@ -184,7 +186,7 @@ export default function Header() {
       <section className="header-sub-actions">
         <Container fluid className="header-mockup-container px-3 px-sm-4 px-xl-5">
           <div className="header-sub-actions-inner header-mockup-top-row">
-            <Link to={ROUTES.HOME} className="navbar-mockup-brand" aria-label="UZABULK Home">
+            <Link to={ROUTES.HOME} className="navbar-mockup-brand" aria-label={t("nav.uzabulkHome")}>
               <img
                 src={BRAND_LOGO_PNG}
                 alt="UZABULK"
@@ -201,7 +203,7 @@ export default function Header() {
                 <ProductSearch
                   wrapperClassName="header-mockup-autocomplete"
                   defaultValue={searchText}
-                  placeholder={activeImagePreview ? "Add keywords or search again…" : "Search products, paste or upload an image…"}
+                  placeholder={activeImagePreview ? t("search.placeholderWithImage") : t("search.placeholder")}
                   callback={({ search }) => setSearchText(search || "")}
                 />
                 <div className="header-mockup-search-tray">
@@ -214,7 +216,7 @@ export default function Header() {
                     onFileSelect={handleImageSearch}
                     onClear={handleClearImageSearch}
                   />
-                  <button type="submit" className="header-mockup-search-submit" aria-label="Search">
+                  <button type="submit" className="header-mockup-search-submit" aria-label={t("search.submit")}>
                     {ICON_MAGNIFIER}
                   </button>
                 </div>

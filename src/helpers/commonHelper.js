@@ -6,8 +6,10 @@ import { PRODUCTS } from "./urlHelper";
 
 export const ENVIRONMENT = process.env.REACT_APP_ENVIORNMENT || "production";
 
-const DEVICE_ID_STORE = "uza-retail-device-id";
 const COUPON_CODE = "uza-retail-coupon";
+
+export { generateUUID, getDeviceId } from "./deviceHelper";
+export { bumpHomeFeedRefreshToken, getHomeFeedRefreshToken } from "./homeFeedHelper";
 
 export const logger = (...params) => {
   if (ENVIRONMENT === "development")
@@ -50,43 +52,6 @@ export const scrollToId = (id) => {
   if (element) {
     element.scrollIntoView({ behavior: 'smooth' });
   }
-};
-
-// Generate a unique identifier (UUID)
-export const generateUUID = () => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : ((r & 0x3) | 0x8);
-    return v.toString(16);
-  });
-}
-
-export const getDeviceId = () => {
-  let deviceId = localStorage.getItem(DEVICE_ID_STORE);
-  if (!deviceId) {
-    deviceId = generateUUID();
-    localStorage.setItem(DEVICE_ID_STORE, deviceId);
-  }
-
-  return deviceId;
-}
-
-const HOME_FEED_REFRESH_KEY = "uza-home-feed-refresh";
-
-/** New token each home visit so rotated product pools change. */
-export const bumpHomeFeedRefreshToken = () => {
-  const token = String(Date.now());
-  if (typeof sessionStorage !== "undefined") {
-    sessionStorage.setItem(HOME_FEED_REFRESH_KEY, token);
-  }
-  return token;
-};
-
-export const getHomeFeedRefreshToken = () => {
-  if (typeof sessionStorage === "undefined") {
-    return String(Date.now());
-  }
-  return sessionStorage.getItem(HOME_FEED_REFRESH_KEY) || bumpHomeFeedRefreshToken();
 };
 
 /** Stable key for deduplicating catalog rows (_id, id, productId, offerId). */

@@ -7,6 +7,7 @@ import { apiGetHomeProducts } from "../../store/products/actions";
 import ROUTES from "../../helpers/routesHelper";
 import { amountConversion, getProductImageUrl } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/gurfive.jpg";
+import TranslatedProductName from "../Common/TranslatedProductName";
 
 const AllCategoriesProductsGrid = ({ withContainer = true }) => {
   const dispatch = useDispatch();
@@ -55,7 +56,7 @@ const AllCategoriesProductsGrid = ({ withContainer = true }) => {
               </div>
               <div className="card_content_list">
                 <div className="upper_head text-start w-100">
-                  <h5>{item?.name}</h5>
+                  <TranslatedProductName product={item} as="h5" />
                 </div>
                 <div className="products_ist d-flex justify-content-between align-items-center mt-3">
                   <p>

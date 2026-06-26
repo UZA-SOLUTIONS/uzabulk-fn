@@ -1,6 +1,7 @@
 import { Provider } from "react-redux";
 import { ToastContainer } from "react-toastify";
 
+import "./i18n";
 import "./App.css";
 import "./assets/css/style.css";
 import "./assets/css/mobile-responsive.css";

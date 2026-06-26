@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
+import { useTranslation } from "react-i18next";
 import Signin from "./Signin";
 import Signup from "./Signup";
 
 export default function LoginPopup({ show, handleClose, initialTab = "signin" }) {
+  const { t } = useTranslation();
   const [state, setState] = useState({ tab: initialTab });
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function LoginPopup({ show, handleClose, initialTab = "signin" })
             />
             <label htmlFor="signin">
               <span className="me-2">{signinicon}</span>
-              Sign In
+              {t("nav.signIn")}
             </label>
 
             <input
@@ -66,7 +68,7 @@ export default function LoginPopup({ show, handleClose, initialTab = "signin" })
             />
             <label htmlFor="signup">
               <span className="me-2">{signinicon}</span>
-              Sign Up
+              {t("nav.signUp")}
             </label>
           </div>
 

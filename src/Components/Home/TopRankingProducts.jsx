@@ -2,12 +2,14 @@ import React, { useEffect, Suspense } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Slider from "react-slick";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import { getProductImageUrl, smoothScrollToTop, logger } from "../../helpers/commonHelper";
 import ROUTES from "../../helpers/routesHelper";
 import { apiGetHomeTopRankingProducts } from "../../store/products/actions";
 import placeholder from "../../assets/images/Furniture.webp";
-import Spinner from "../Spinner"; // Import the Spinner component
+import Spinner from "../Spinner";
+import TranslatedProductName from "../Common/TranslatedProductName";
 
 function SampleNextArrow(props) {
   const { className, style, onClick } = props;
@@ -48,6 +50,7 @@ function SamplePrevArrow(props) {
 }
 
 export default function TopRankingProducts() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isLoading, items } = useSelector(
     (s) => s.products.homeTopRankingProducts
@@ -81,8 +84,8 @@ export default function TopRankingProducts() {
   const LoadingFallback = () => (
     <div className="discover_card px-3">
       <div className="card_top_head d-flex align-items-center justify-content-between">
-        <h4>Top Ranking</h4>
-        <Link to={ROUTES.TOP_RANKING_PRODUCT_LISTING}>View More</Link>
+        <h4>{t("home.topRanking")}</h4>
+        <Link to={ROUTES.TOP_RANKING_PRODUCT_LISTING}>{t("home.viewMore")}</Link>
       </div>
       <div className="card_white mt-3">
         <div className="most_popular_slider mt-2">
@@ -103,8 +106,8 @@ export default function TopRankingProducts() {
       ) : (
         <div className="discover_card px-3">
           <div className="card_top_head d-flex align-items-center justify-content-between">
-            <h4>Top Ranking</h4>
-            <Link to={ROUTES.TOP_RANKING_PRODUCT_LISTING}>View More</Link>
+            <h4>{t("home.topRanking")}</h4>
+            <Link to={ROUTES.TOP_RANKING_PRODUCT_LISTING}>{t("home.viewMore")}</Link>
           </div>
 
           <div className="card_white mt-3">
@@ -126,14 +129,14 @@ export default function TopRankingProducts() {
                         }}
                       >
                         <div className="most_popular text-start">
-                          <h6>Most Popular</h6>
+                          <h6>{t("home.mostPopular")}</h6>
                           <p className="" style={{
                             display: "-webkit-box",
                             WebkitBoxOrient: "vertical",
                             WebkitLineClamp: 3,
                             overflow: "hidden",
                             textOverflow: "ellipsis", // Optional: Adds an ellipsis for overflow
-                          }}>{item.name}</p>
+                          }}><TranslatedProductName product={item} /></p>
                         </div>
 
                         <div className="car_bag position-relative"

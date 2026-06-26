@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
 import BrowseCategoryStrip from "../Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../Products/ProductsListingInfinite";
@@ -13,9 +14,11 @@ import {
   mergeUniqueProducts,
   normalizeHomeCatalogProducts,
 } from "../../helpers/commonHelper";
+import { trackFilterEngagement } from "../../helpers/browsingBehaviorHelper";
 import ROUTES from "../../helpers/routesHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import { apiGetCategories } from "../../store/categories/actions";
+import useCategoryDisplayNames from "../../hooks/useCategoryDisplayNames";
 
 const PAGE_LIMIT_CATEGORY = 32;
 const ALL_PRODUCTS_CHUNK = 48;
@@ -34,6 +37,7 @@ function listingLink(categoryId, categoryName) {
 }
 
 export default function DiscoverBrowseProducts() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const level1 = useSelector((s) => s.categories.categories.level1 || []);
   const level2 = useSelector((s) => s.categories.categories.level2 || []);
@@ -44,12 +48,17 @@ export default function DiscoverBrowseProducts() {
     return base.filter((c) => c?._id && categoryLabel(c));
   }, [level1, level2]);
 
+  const categoryDisplayNames = useCategoryDisplayNames(categoriesAll);
+
   const tabs = useMemo(
     () => [
-      { id: "", label: "All products" },
-      ...categoriesAll.map((c) => ({ id: String(c._id), label: categoryLabel(c) })),
+      { id: "", label: t("nav.allProducts") },
+      ...categoriesAll.map((c) => ({
+        id: String(c._id),
+        label: categoryDisplayNames[String(c._id)] || categoryLabel(c),
+      })),
     ],
-    [categoriesAll]
+    [categoriesAll, categoryDisplayNames, t]
   );
 
   const [activeCategoryId, setActiveCategoryId] = useState("");
@@ -65,10 +74,11 @@ export default function DiscoverBrowseProducts() {
   activeCategoryRef.current = activeCategoryId;
 
   const activeFilterLabel = useMemo(() => {
-    if (!activeCategoryId) return "All products";
-    const cat = categoriesAll.find((c) => String(c._id) === String(activeCategoryId));
-    return categoryLabel(cat) || "Category";
-  }, [activeCategoryId, categoriesAll]);
+    if (!activeCategoryId) return t("nav.allProducts");
+    return categoryDisplayNames[activeCategoryId] || categoryLabel(
+      categoriesAll.find((c) => String(c._id) === String(activeCategoryId))
+    ) || t("home.categoryFallback");
+  }, [activeCategoryId, categoriesAll, categoryDisplayNames, t]);
 
   const {
     catstripSentinelRef,
@@ -98,6 +108,13 @@ export default function DiscoverBrowseProducts() {
 
   useEffect(() => {
     inFlightRef.current = false;
+    if (activeCategoryId) {
+      trackFilterEngagement({
+        page: "home",
+        category: activeCategoryId,
+        filters: { section: "discover_browse" },
+      });
+    }
   }, [activeCategoryId]);
 
   useEffect(() => {
@@ -328,7 +345,7 @@ export default function DiscoverBrowseProducts() {
           </p>
           <Link
             className="home_discover_browse__see_all"
-            to={listingLink(activeCategoryId, activeFilterLabel !== "All products" ? activeFilterLabel : "")}
+            to={listingLink(activeCategoryId, activeFilterLabel !== t("nav.allProducts") ? activeFilterLabel : "")}
           >
             See all <span aria-hidden>&gt;</span>
           </Link>

@@ -21,6 +21,7 @@ import { PRODUCTS } from "../../helpers/urlHelper";
 import { apiGetProductDetail } from "../../store/products/actions";
 import { manageProductForCart } from "../../store/products/slice";
 import useProductViewTracker from "../../hooks/useProductViewTracker";
+import useProductDisplayName from "../../hooks/useProductDisplayName";
 import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
 
 import placeholder from "../../assets/images/sousix.jpg";
@@ -90,6 +91,8 @@ const Singleview = () => {
       : detail?._id
         ? `simple:${detail._id}`
         : "";
+
+  const productDisplayName = useProductDisplayName(detail || {});
 
   const minQty = useMemo(() => {
     if (!detail) return 1;
@@ -370,7 +373,7 @@ const Singleview = () => {
           <>
             <Row className="g-4 align-items-start">
               <Helmet>
-                <title>{APP_NAME} | {outOfStock ? "Out of stock" : `${detail?.name}`}</title>
+                <title>{APP_NAME} | {outOfStock ? "Out of stock" : productDisplayName}</title>
               </Helmet>
               {outOfStock ? (
                 <>
@@ -380,7 +383,7 @@ const Singleview = () => {
                 <>
                   <Col lg={6} sm={12}>
                     <div className="product_preview text-start pe-0 pe-lg-4">
-                      <h4 className="fs-5">{detail?.name || ""}</h4>
+                      <h4 className="fs-5">{productDisplayName}</h4>
                       <div className="d-flex gap-3 flex-wrap align-items-center">
                         <p className="mb-0 d-flex flex-wrap align-items-center gap-2">
                           <ProductRating

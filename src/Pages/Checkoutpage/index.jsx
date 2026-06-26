@@ -9,6 +9,7 @@ import LoginPopup from "../../Components/LoginPopup";
 import RenderAddress from "../../Components/Common/RenderAddress";
 import AddAddressModal from "../../Components/Modals/AddAddressModal";
 import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
+import TranslatedProductName from "../../Components/Common/TranslatedProductName";
 
 import ROUTES from "../../helpers/routesHelper";
 import { formatNumber } from "../../helpers/commonHelper";
@@ -431,7 +432,7 @@ const Checkoutpage = () => {
                                                       "/" +
                                                       cart?.product?._id
                                                     );
-                                                  }}>{cart.product.name}</span>
+                                                  }}><TranslatedProductName product={cart.product} /></span>
                                                   <p className="text-success fs-xs mb-1">
                                                     {getCouponDiscount({
                                                       orderDetails,

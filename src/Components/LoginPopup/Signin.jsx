@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, FormGroup, Label } from "reactstrap";
 import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 
 import { getCredentials, removeCredentials, saveCredentials } from "../../helpers/authHelper";
@@ -15,6 +16,7 @@ import ROUTES from "../../helpers/routesHelper";
 import ButtonLoader from "../Common/ButtonLoader";
 
 const Signin = ({ handleClose }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const isAuthLoading = useSelector((s) => s.auth.isLoading);
   const [initialValues, setInitialValues] = useState({
@@ -23,12 +25,16 @@ const Signin = ({ handleClose }) => {
     rememberMe: false,
   });
 
-  const validationSchema = Yup.object().shape({
-    email: Yup.string()
-      .email("Please enter a valid email")
-      .required("Email is required"),
-    password: Yup.string().required("Password is required"),
-  });
+  const validationSchema = useMemo(
+    () =>
+      Yup.object().shape({
+        email: Yup.string()
+          .email(t("auth.validEmail"))
+          .required(t("auth.emailRequired")),
+        password: Yup.string().required(t("auth.passwordRequired")),
+      }),
+    [t]
+  );
 
   const onSubmit = async (data, form) => {
     try {
@@ -46,9 +52,9 @@ const Signin = ({ handleClose }) => {
         removeCredentials();
       }
       handleClose();
-      toast.success("Login successful");
+      toast.success(t("auth.loginSuccess"));
     } catch (e) {
-      const msg = typeof e === "string" ? e : e?.message || "Login failed";
+      const msg = typeof e === "string" ? e : e?.message || t("auth.loginFailed");
       toast.error(msg);
     } finally {
       form.setSubmitting(false);
@@ -64,7 +70,7 @@ const Signin = ({ handleClose }) => {
   return (
     <div className="auth_login_form position-relative">
       <div className="login_auth">
-        <h4 className="mb-4">USER LOGIN</h4>
+        <h4 className="mb-4">{t("auth.userLogin")}</h4>
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
@@ -83,7 +89,7 @@ const Signin = ({ handleClose }) => {
                       type="email"
                       name="email"
                       className="form-control auth-field__input"
-                      placeholder="Enter your email"
+                      placeholder={t("auth.email")}
                     />
                   </div>
                   {form.touched.email && form.errors.email ? (
@@ -101,18 +107,18 @@ const Signin = ({ handleClose }) => {
                         name="rememberMe"
                         className="form-check-input"
                       />
-                      Remember me
+                      {t("auth.rememberMe")}
                     </Label>
                   </FormGroup>
 
                   <div className="forgot_pasword">
-                    <Link to={ROUTES.FORGOT}>Forgot Password</Link>
+                    <Link to={ROUTES.FORGOT}>{t("auth.forgotPassword")}</Link>
                   </div>
                 </div>
 
                 <div className="mt-5">
                   <Button className="auth_btn" type="submit" disabled={form.isSubmitting || isAuthLoading}>
-                    {form.isSubmitting || isAuthLoading ? <ButtonLoader /> : "Login"}
+                    {form.isSubmitting || isAuthLoading ? <ButtonLoader /> : t("auth.login")}
                   </Button>
                 </div>
               </Form>

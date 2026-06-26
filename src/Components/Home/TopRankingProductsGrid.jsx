@@ -7,6 +7,7 @@ import { apiGetHomeTopRankingProducts } from "../../store/products/actions";
 import ROUTES from "../../helpers/routesHelper";
 import { amountConversion, getProductImageUrl } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/gurfive.jpg";
+import TranslatedProductName from "../Common/TranslatedProductName";
 
 const TopRankingProductsGrid = ({ withContainer = true }) => {
   const dispatch = useDispatch();
@@ -68,7 +69,7 @@ const TopRankingProductsGrid = ({ withContainer = true }) => {
                 />
               </div>
               <div className="home_product_card_body px-1 pt-2">
-                <p className="home_product_title mb-1">{item?.name}</p>
+                <TranslatedProductName product={item} className="home_product_title mb-1" as="p" />
                 <p className="home_product_price mb-1">
                   {currentCurrency?.symbol} {amountConversion(item?.price, appConfig)}
                 </p>

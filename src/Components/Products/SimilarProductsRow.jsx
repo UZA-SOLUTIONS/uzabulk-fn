@@ -12,6 +12,7 @@ import {
 import { PRODUCTS } from "../../helpers/urlHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
+import TranslatedProductName from "../Common/TranslatedProductName";
 
 export default function SimilarProductsRow({
   productId,
@@ -116,7 +117,9 @@ export default function SimilarProductsRow({
                 alt={item?.name || "Similar product"}
                 loading="lazy"
               />
-              <span className="similar_products_row__name">{item?.name}</span>
+              <span className="similar_products_row__name">
+                <TranslatedProductName product={item} />
+              </span>
             </button>
           ))}
         </div>
