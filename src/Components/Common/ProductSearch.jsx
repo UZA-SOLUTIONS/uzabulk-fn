@@ -7,9 +7,8 @@ import { uploadImageForSearchBar, buildSearchBarImageListingUrl, persistImageSea
 import { PRODUCTS } from "../../helpers/urlHelper";
 import {
     logger,
-    resolveCatalogProductId,
-    buildProductDetailUrlFromResolved,
     buildProductDetailUrl,
+    isRestrictedCatalogProduct,
     resolveMediaUrl,
 } from "../../helpers/commonHelper";
 import ROUTES from "../../helpers/routesHelper";
@@ -80,12 +79,9 @@ export default function ProductSearch({
         }
         return "";
     };
-    const openSuggestion = async (item) => {
+    const openSuggestion = (item) => {
         const searchLabel = item?.name || item?.title || "";
-        const resolved = await resolveCatalogProductId(item);
-        let path = resolved
-            ? buildProductDetailUrlFromResolved(resolved)
-            : buildProductDetailUrl(item);
+        const path = buildProductDetailUrl(item);
         if (!path) return;
         const joiner = path.includes("?") ? "&" : "?";
         navigate(`${path}${joiner}search=${encodeURIComponent(searchLabel)}`);
@@ -183,7 +179,8 @@ export default function ProductSearch({
                     })
                     .filter((item) =>
                         !!(item?.name || item?.title || item?._id || item?.offerId)
-                    );
+                    )
+                    .filter((item) => !isRestrictedCatalogProduct(item));
                 setCachedSuggestions(cacheKey, nextItems);
                 setItems(nextItems);
                 setIsLoading(false);

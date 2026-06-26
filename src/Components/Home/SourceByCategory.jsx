@@ -88,7 +88,7 @@ function SourceCategoryCard({ category, imageUrl, onRequestImage, onImageError, 
             alt={displayName}
             decoding="async"
             loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : "auto"}
+            fetchpriority={priority ? "high" : "auto"}
             onLoad={() => setImgReady(true)}
             onError={() => {
               if (displaySrc !== fallbackIcon && fallbackIcon) {
@@ -120,10 +120,6 @@ export default function SourceByCategory() {
   const trackRef = useRef(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
-
-  useEffect(() => {
-    setFeedRefresh(getHomeFeedRefreshToken());
-  }, []);
 
   useEffect(() => {
     if (!level1Categories?.length) {

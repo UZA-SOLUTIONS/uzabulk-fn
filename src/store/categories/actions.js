@@ -1,5 +1,10 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { apiGet } from "../../helpers/apiHelper";
+import {
+  buildFetchCacheKey,
+  getFetchCacheEntry,
+  setFetchCacheEntry,
+} from "../../helpers/fetchCacheHelper";
 import { CATEGORIES } from "../../helpers/urlHelper";
 import { SOURCE_APPLICATION, TOP_CATEGORIES } from "../../helpers/storeHelper";
 
@@ -27,12 +32,17 @@ export const apiGetCategories = createAsyncThunk(
   "apiGetCategories",
   async ({ level = 1 }, Thunk) => {
     try {
+      const cacheKey = `categories:${buildFetchCacheKey(CATEGORIES.LIST_BY_LEVEL, { level })}`;
+      const cached = getFetchCacheEntry(cacheKey);
+      if (cached) return cached;
+
       const res = await apiGet(CATEGORIES.LIST_BY_LEVEL, { level });
       if (res.status === "success") {
-        return [level, res.data];
-      } else {
-        throw new Error(res.message);
+        const payload = [level, res.data];
+        setFetchCacheEntry(cacheKey, payload);
+        return payload;
       }
+      throw new Error(res.message);
     } catch (error) {
       return Thunk.rejectWithValue(
         error.message || "Something went wrong, please try again later."

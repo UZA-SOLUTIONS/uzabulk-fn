@@ -36,7 +36,7 @@ function Level2Section({ level2, children }) {
         <Link
           to={`${ROUTES.PRODUCT_LISTING}?category=${level2._id}&name=${encodeURIComponent(displayName)}`}
         >
-          Browse featured selections
+          {t("home.browseFeaturedSelections")}
         </Link>
       </div>
       <ul className="home_categories_section_items">{children}</ul>
@@ -64,6 +64,7 @@ function Level3CategoryLink({ item }) {
 
 const HomeCategoriesSidebar = () => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const level1Categories = useSelector((s) => s.categories.categories.level1 || []);
   const level2Categories = useSelector((s) => s.categories.categories.level2 || []);
   const level3Categories = useSelector((s) => s.categories.categories.level3 || []);
@@ -108,7 +109,7 @@ const HomeCategoriesSidebar = () => {
       className="home_categories_sidebar_wrap"
       onMouseLeave={() => setIsMegaOpen(false)}
     >
-      <h5 className="home_categories_title">Categories for you</h5>
+      <h5 className="home_categories_title">{t("home.categoriesForYou")}</h5>
       <div className={`home_categories_shell ${isMegaOpen && level2ByParent?.length ? "is-open" : ""}`}>
         <div className="alibaba_category_panel home_categories_sidebar h-100">
           <ul>

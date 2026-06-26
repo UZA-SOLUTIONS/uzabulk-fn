@@ -21,6 +21,32 @@ const LANG_OPTIONS = [
   { code: "rw", label: "RW" },
 ];
 
+const DESKTOP_DOCK_MQ = "(min-width: 992px)";
+const DOCK_WIDTH_KEY = "uza-assistant-dock-width";
+const DEFAULT_DOCK_WIDTH = 328;
+const MIN_DOCK_WIDTH = 280;
+const MAX_DOCK_WIDTH = 560;
+
+const readDockWidth = () => {
+  try {
+    const raw = Number(sessionStorage.getItem(DOCK_WIDTH_KEY));
+    if (Number.isFinite(raw) && raw >= MIN_DOCK_WIDTH && raw <= MAX_DOCK_WIDTH) {
+      return raw;
+    }
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_DOCK_WIDTH;
+};
+
+const persistDockWidth = (value) => {
+  try {
+    sessionStorage.setItem(DOCK_WIDTH_KEY, String(value));
+  } catch {
+    /* ignore */
+  }
+};
+
 const resolveAssistantProductId = (location) => {
   const path = location?.pathname || "";
   const search = new URLSearchParams(location?.search || "");
@@ -61,10 +87,27 @@ function ChatIcon() {
   );
 }
 
+function useDesktopDock() {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(DESKTOP_DOCK_MQ).matches
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_DOCK_MQ);
+    const onChange = (event) => setIsDesktop(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return isDesktop;
+}
+
 export default function FloatingBuyerAssistant() {
   const { t, i18n } = useTranslation();
   const location = useLocation();
+  const isDesktop = useDesktopDock();
   const [open, setOpen] = useState(false);
+  const [dockWidth, setDockWidth] = useState(() => readDockWidth());
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState(() => getAssistantSessionId());
@@ -72,8 +115,12 @@ export default function FloatingBuyerAssistant() {
   const [loading, setLoading] = useState(false);
   const [disputeFlag, setDisputeFlag] = useState(false);
   const [escalated, setEscalated] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const resizeRef = useRef({ startX: 0, startWidth: DEFAULT_DOCK_WIDTH });
+
+  const isDocked = open && isDesktop;
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -82,16 +129,6 @@ export default function FloatingBuyerAssistant() {
       }
     });
   }, []);
-
-  useEffect(() => {
-    const onLanguageChanged = (code) => {
-      const next = code === "fr" ? "fr" : "en";
-      setLanguage(next);
-      setMessages([]);
-    };
-    i18n.on("languageChanged", onLanguageChanged);
-    return () => i18n.off("languageChanged", onLanguageChanged);
-  }, [i18n]);
 
   useEffect(() => {
     const onLanguageChanged = (lng) => {
@@ -138,6 +175,71 @@ export default function FloatingBuyerAssistant() {
       window.setTimeout(() => inputRef.current?.focus(), 120);
     }
   }, [open]);
+
+  useEffect(() => {
+    persistDockWidth(dockWidth);
+  }, [dockWidth]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    body.classList.toggle("assistant-side-dock", isDocked);
+    body.classList.toggle("assistant-side-dock--resizing", isDocked && isResizing);
+    if (isDocked) {
+      root.style.setProperty("--assistant-dock-width", `${dockWidth}px`);
+    } else {
+      root.style.removeProperty("--assistant-dock-width");
+    }
+    return () => {
+      body.classList.remove("assistant-side-dock");
+      body.classList.remove("assistant-side-dock--resizing");
+      root.style.removeProperty("--assistant-dock-width");
+    };
+  }, [isDocked, dockWidth, isResizing]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
+  const clampDockWidth = useCallback((width) => {
+    const maxWidth = Math.min(MAX_DOCK_WIDTH, Math.floor(window.innerWidth * 0.5));
+    return Math.min(Math.max(width, MIN_DOCK_WIDTH), maxWidth);
+  }, []);
+
+  const startResize = useCallback((event) => {
+    if (!isDocked) return;
+    event.preventDefault();
+    resizeRef.current = {
+      startX: event.clientX,
+      startWidth: dockWidth,
+    };
+    setIsResizing(true);
+  }, [dockWidth, isDocked]);
+
+  useEffect(() => {
+    if (!isResizing) return undefined;
+
+    const onMove = (event) => {
+      const delta = resizeRef.current.startX - event.clientX;
+      setDockWidth(clampDockWidth(resizeRef.current.startWidth + delta));
+    };
+
+    const onEnd = () => setIsResizing(false);
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onEnd);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+    };
+  }, [clampDockWidth, isResizing]);
 
   const productIdFromContext = resolveAssistantProductId(location);
   const orderIdFromContext = resolveAssistantOrderId(location);
@@ -214,9 +316,24 @@ export default function FloatingBuyerAssistant() {
   };
 
   return (
-    <div className={`floating-buyer-assistant ${open ? "is-open" : ""}`}>
+    <div className={`floating-buyer-assistant ${open ? "is-open" : ""} ${isDocked ? "is-docked" : ""}`}>
       {open ? (
         <div className="floating-buyer-assistant__panel" role="dialog" aria-label={t("assistant.dialogLabel")}>
+          {isDocked ? (
+            <>
+              <div
+                className={`floating-buyer-assistant__resize_handle${isResizing ? " is-active" : ""}`}
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={t("assistant.resize")}
+                onMouseDown={startResize}
+              />
+              <div className="floating-buyer-assistant__dock_tab" aria-hidden>
+                <span className="floating-buyer-assistant__dock_tab_dot" />
+                <span>{t("assistant.dockTab")}</span>
+              </div>
+            </>
+          ) : null}
           <header className="floating-buyer-assistant__header">
             <div>
               <p className="floating-buyer-assistant__eyebrow">{t("assistant.eyebrow")}</p>
@@ -317,7 +434,7 @@ export default function FloatingBuyerAssistant() {
       <button
         type="button"
         className="floating-buyer-assistant__launcher"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-label={open ? "Close buyer assistant" : "Open buyer assistant"}
       >

@@ -24,9 +24,10 @@ i18n
     supportedLngs: ["en", "fr"],
     interpolation: { escapeValue: false },
     detection: {
-      order: ["localStorage", "navigator"],
+      order: ["localStorage", "cookie", "navigator", "htmlTag"],
       lookupLocalStorage: LANGUAGE_STORAGE_KEY,
-      caches: ["localStorage"],
+      lookupCookie: "lang",
+      caches: ["localStorage", "cookie"],
     },
   });
 

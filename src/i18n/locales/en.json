@@ -131,6 +131,25 @@
     "viewMore": "View More",
     "viewDetails": "View details",
     "categoriesForYou": "Categories for you",
+    "browseFeaturedSelections": "Browse featured selections",
+    "noProductsFound": "No products found.",
+    "filters": {
+      "recommended": "Recommended",
+      "popular": "Most Popular",
+      "newest": "New Arrivals",
+      "topRated": "Top Rated",
+      "priceLow": "Lowest Price",
+      "priceHigh": "Highest Price",
+      "bestValue": "Best Value",
+      "budget": "Budget Picks",
+      "premium": "Premium Picks",
+      "recentlyUpdated": "Recently Updated",
+      "bestReviewed": "Best Reviewed",
+      "fastMoving": "Fast Moving",
+      "nameAZ": "Name: A to Z",
+      "nameZA": "Name: Z to A",
+      "inStock": "In Stock First"
+    },
     "topRanking": "Top Ranking",
     "mostPopular": "Most Popular",
     "explore": "Explore",
@@ -147,6 +166,12 @@
     "categoriesLoadError": "Categories could not be loaded. Check that the API is running and MongoDB is reachable, then refresh.",
     "noCategoriesAvailable": "No categories available to display.",
     "categoryFallback": "Category",
+    "recentlyViewed": "Recently viewed",
+    "recentlyViewedHint": "Pick up where you left off",
+    "clearRecentlyViewed": "Clear history",
+    "recentBadge": "Recent",
+    "exploreMore": "Explore more",
+    "exploreMoreHint": "Mixed picks from many categories — not only what you searched",
     "hero": {
       "slide1Title": "Source smarter, buy in bulk",
       "slide1Cta": "Browse catalogs",
@@ -161,6 +186,11 @@
     "qty": "Qty",
     "change": "Change",
     "productDescription": "Product description",
+    "description": "Product description",
+    "attributes": "Product attributes",
+    "variations": "Variations",
+    "totalOptions": "Total options:",
+    "showMore": "Show more",
     "customerReviews": "Customer reviews",
     "noReviewsYet": "No reviews yet",
     "chatSupport": "Chat with support about this product",
@@ -194,7 +224,120 @@
     "welcomeFallback": "Hi! I'm your UZA Bulk buyer assistant. Ask about products, delivery, or your order.",
     "relatedProducts": "Related products",
     "suggestedActions": "Suggested actions",
-    "dialogLabel": "UZA buyer assistant"
+    "dialogLabel": "UZA buyer assistant",
+    "dockTab": "UZA Assistant",
+    "resize": "Drag to resize assistant panel"
+  },
+  "seo": {
+    "siteKeywords": "{{appName}}, wholesale marketplace, bulk sourcing, B2B ecommerce, global suppliers, Rwanda, East Africa, Francophone Africa, France, Belgium, Canada, Senegal, Cameroon, Côte d'Ivoire, DRC, import export, factory direct, new arrivals, top ranking products",
+    "pages": {
+      "home": {
+        "title": "{{appName}} | Global Wholesale Marketplace",
+        "description": "Source wholesale products from trusted global suppliers on {{appName}}. Browse categories, new arrivals, and bulk deals in English and French — serving Rwanda, Francophone Africa, and worldwide buyers.",
+        "keywords": "wholesale marketplace, bulk buying, global suppliers, B2B ecommerce, Rwanda wholesale, Africa sourcing, import products, factory prices, new arrivals, trusted suppliers"
+      },
+      "products": {
+        "title": "All Products | {{appName}}",
+        "description": "Browse all wholesale products by category, price, and popularity on {{appName}}. Compare suppliers and source in bulk for your business.",
+        "keywords": "wholesale products, bulk catalog, B2B products, supplier listings, wholesale prices, buy in bulk"
+      },
+      "categories": {
+        "title": "Product Categories | {{appName}}",
+        "description": "Explore wholesale product categories and discover trusted suppliers on {{appName}} for your sourcing needs.",
+        "keywords": "wholesale categories, product categories, supplier categories, bulk sourcing categories"
+      },
+      "newArrivals": {
+        "title": "New Arrivals | {{appName}}",
+        "description": "Find the latest wholesale products and trending new arrivals on {{appName}} from verified suppliers worldwide.",
+        "keywords": "new arrivals, latest wholesale products, trending products, new stock, fresh inventory"
+      },
+      "topRanking": {
+        "title": "Top Ranking Products | {{appName}}",
+        "description": "Discover top-ranking wholesale products selected by customer demand, ratings, and sales on {{appName}}.",
+        "keywords": "top ranking products, best sellers, popular wholesale, highly rated products"
+      },
+      "bestDeals": {
+        "title": "Best Deals | {{appName}}",
+        "description": "Compare competitive wholesale prices and featured best-seller deals on {{appName}} for smart bulk sourcing.",
+        "keywords": "best deals, wholesale deals, bulk discounts, best seller prices, B2B offers"
+      },
+      "savingSpotlight": {
+        "title": "Saving Spotlight | {{appName}}",
+        "description": "Find spotlight savings and time-sensitive wholesale offers on {{appName}} for cost-effective bulk buying.",
+        "keywords": "wholesale savings, spotlight deals, limited offers, bulk savings"
+      },
+      "productDetail": {
+        "title": "Product Details | {{appName}}",
+        "description": "View wholesale product details, pricing, specifications, and supplier information on {{appName}}.",
+        "keywords": "product details, wholesale product, bulk price, supplier info, specifications"
+      },
+      "blog": {
+        "title": "Blog | {{appName}}",
+        "description": "Read sourcing tips, marketplace updates, and e-commerce insights from {{appName}} for global buyers.",
+        "keywords": "wholesale blog, sourcing tips, ecommerce insights, B2B news"
+      },
+      "aboutUs": {
+        "title": "About Us | {{appName}}",
+        "description": "Learn about {{appName}} and our mission to connect global buyers with trusted wholesale suppliers.",
+        "keywords": "about UZA Store, wholesale platform, global ecommerce, company mission"
+      },
+      "contactUs": {
+        "title": "Contact Us | {{appName}}",
+        "description": "Contact {{appName}} support and sales teams for wholesale sourcing help in English and French.",
+        "keywords": "contact support, wholesale help, customer service, sales inquiry"
+      },
+      "privacyPolicy": {
+        "title": "Privacy Policy | {{appName}}",
+        "description": "Read {{appName}} privacy policy and data protection practices for our global marketplace.",
+        "keywords": "privacy policy, data protection, user privacy"
+      },
+      "terms": {
+        "title": "Terms and Conditions | {{appName}}",
+        "description": "Read the terms and conditions for using {{appName}} wholesale marketplace services.",
+        "keywords": "terms and conditions, marketplace terms, user agreement"
+      },
+      "cart": {
+        "title": "Shopping Cart | {{appName}}",
+        "description": "Review products in your wholesale cart on {{appName}} before checkout.",
+        "keywords": "shopping cart, wholesale cart"
+      },
+      "checkout": {
+        "title": "Checkout | {{appName}}",
+        "description": "Secure checkout for your {{appName}} wholesale order.",
+        "keywords": "checkout, wholesale order"
+      },
+      "profile": {
+        "title": "My Profile | {{appName}}",
+        "description": "Manage your {{appName}} account profile and preferences.",
+        "keywords": "user profile, account settings"
+      },
+      "myOrders": {
+        "title": "My Orders | {{appName}}",
+        "description": "Track your wholesale orders and purchase history on {{appName}}.",
+        "keywords": "my orders, order history"
+      },
+      "orderDetail": {
+        "title": "Order Details | {{appName}}",
+        "description": "View details for your selected {{appName}} order.",
+        "keywords": "order details, order tracking"
+      },
+      "addresses": {
+        "title": "Address Book | {{appName}}",
+        "description": "Manage shipping and billing addresses for your {{appName}} account.",
+        "keywords": "address book, shipping address"
+      },
+      "changePassword": {
+        "title": "Change Password | {{appName}}",
+        "description": "Update your {{appName}} account password securely.",
+        "keywords": "change password, account security"
+      },
+      "forgotPassword": {
+        "title": "Forgot Password | {{appName}}",
+        "description": "Reset your {{appName}} account password.",
+        "keywords": "forgot password, password reset"
+      }
+    },
+    "productKeywords": "{{name}}, wholesale, bulk price, buy in bulk, {{appName}}, B2B product"
   },
   "common": {
     "loading": "Loading",

@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Slider from "react-slick";
-import { Helmet } from "react-helmet";
 import { useDispatch, useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 
+import PageSeo from "../../Components/Common/PageSeo";
 import { ProductVariations } from "./ProductVariations";
 import FeatureAttributes from "./FeatureAttributes";
 import LoadingContent from "../../Components/Common/LoadingContent";
@@ -17,12 +18,20 @@ import { formatNumber, parseText } from "../../helpers/commonHelper";
 import { openProductSupportChat } from "../../helpers/supportChatHelper";
 import { apiGet } from "../../helpers/apiHelper";
 import ROUTES from "../../helpers/routesHelper";
+import {
+  buildLocalizedUrl,
+  buildProductJsonLd,
+  getSiteBaseUrl,
+  resolveAbsoluteImage,
+  truncateMeta,
+} from "../../helpers/seoHelper";
+import { getLanguageCode } from "../../helpers/languageHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import { apiGetProductDetail } from "../../store/products/actions";
 import { manageProductForCart } from "../../store/products/slice";
 import useProductViewTracker from "../../hooks/useProductViewTracker";
 import useProductDisplayName from "../../hooks/useProductDisplayName";
-import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
+import useProductDetailTranslation from "../../hooks/useProductDetailTranslation";
 
 import placeholder from "../../assets/images/sousix.jpg";
 import SlideImage from "./SlideImage";
@@ -77,6 +86,7 @@ function SamplePrevArrow(props) {
 
 const Singleview = () => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const { currentCurrency } = useSelector(s => s.config);
   const { isLoading, detail, message, outOfStock } = useSelector((s) => s.products.productDetail);
   const { isLogin } = useSelector(s => s.auth);
@@ -92,7 +102,8 @@ const Singleview = () => {
         ? `simple:${detail._id}`
         : "";
 
-  const productDisplayName = useProductDisplayName(detail || {});
+  const displayDetail = useProductDetailTranslation(detail);
+  const productDisplayName = useProductDisplayName(displayDetail || detail || {});
 
   const minQty = useMemo(() => {
     if (!detail) return 1;
@@ -352,12 +363,47 @@ const Singleview = () => {
     };
   }, [outOfStock, search]);
 
-  const productImages = getProductImages(detail);
+  const productImages = getProductImages();
+  const primaryImage = resolveAbsoluteImage(
+    productImages?.[0]?.link || productImages?.[0] || detail?.featured_image?.link || detail?.featured_image
+  );
+  const productSeoDescription = truncateMeta(
+    displayDetail?.short_description
+      || displayDetail?.description
+      || detail?.short_description
+      || detail?.description
+      || productDisplayName,
+    165
+  );
+  const productCanonicalPath = `${ROUTES.PRODUCT_DETAIL}/${resolvedProductId}`;
+  const productUrl = buildLocalizedUrl(productCanonicalPath, getLanguageCode(), {
+    baseUrl: getSiteBaseUrl(),
+  });
+  const productJsonLd = detail
+    ? buildProductJsonLd({
+      name: productDisplayName,
+      description: productSeoDescription,
+      image: primaryImage,
+      url: productUrl,
+      price: price || detail?.price,
+      currency: currentCurrency?.code || "RWF",
+      inStock: !outOfStock,
+      sku: detail?.offerId || detail?.sku || resolvedProductId,
+    })
+    : null;
+
   return (
     <section className="single_view single_view--pdp my-4 my-lg-5" style={{ backgroundColor: "white" }}>
-      <Helmet>
-        <title>{APP_NAME} | Product details</title>
-      </Helmet>
+      {detail ? (
+        <PageSeo
+          title={`${productDisplayName} | ${APP_NAME}`}
+          description={productSeoDescription}
+          keywords={t("seo.productKeywords", { name: productDisplayName, appName: APP_NAME })}
+          image={primaryImage}
+          type="product"
+          jsonLd={productJsonLd}
+        />
+      ) : null}
       <Container>
         {isLoading || resolving1688OfferId ? (
           <LoadingContent />
@@ -372,9 +418,6 @@ const Singleview = () => {
         ) : detail ? (
           <>
             <Row className="g-4 align-items-start">
-              <Helmet>
-                <title>{APP_NAME} | {outOfStock ? "Out of stock" : productDisplayName}</title>
-              </Helmet>
               {outOfStock ? (
                 <>
                   <NoRecordFound message={message} />
@@ -441,6 +484,7 @@ const Singleview = () => {
                       {detail?.variations?.length ? (
                         <ProductVariations
                           detail={detail}
+                          displayDetail={displayDetail}
                           show={show}
                           setShow={setShow}
                           handlerAddToCart={handlerAddToCart}
@@ -516,33 +560,24 @@ const Singleview = () => {
             </Row>
 
 
-            <FeatureAttributes details={detail?.featureAttribute} />
+            <FeatureAttributes detail={detail} displayDetail={displayDetail} />
 
             <div className="mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
               <ProductReviews reviews={detail?.reviews} />
             </div>
 
-            {detail?.description ?
+            {(displayDetail?.description || detail?.description) ?
               <div className="product_description mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
                 <Row className="text-start mt-5 ">
                   <Col lg="12">
-                    <h3 className="pb-3">Product description</h3>
+                    <h3 className="pb-3">{t("product.description")}</h3>
                   </Col>
-                  <Col lg="12" className="uza-product-description" dangerouslySetInnerHTML={{ __html: parseText(detail?.description) }}>
+                  <Col lg="12" className="uza-product-description" dangerouslySetInnerHTML={{ __html: parseText(displayDetail?.description || detail?.description) }}>
 
                   </Col>
                 </Row>
               </div>
               : null}
-
-            {detail?._id ? (
-              <SimilarProductsRow
-                productId={detail._id}
-                title="You may also like"
-                limit={6}
-                className="mt-5"
-              />
-            ) : null}
           </>
         ) : (
           <NoRecordFound message={message || "Product not found! Please open a product from the list."} />

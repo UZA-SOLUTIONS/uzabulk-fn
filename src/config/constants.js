@@ -1,5 +1,8 @@
 export const APP_NAME = "UZA Store";
 
+/** Public site URL for SEO canonical links, sitemap, and Open Graph */
+export const SITE_URL = (process.env.REACT_APP_SITE_URL || "https://uzabulk.com").replace(/\/+$/, "");
+
 /** Brand mark from `public/newlogo.png` */
 export const BRAND_LOGO_PNG = `${process.env.PUBLIC_URL || ""}/newlogo.png`;
 

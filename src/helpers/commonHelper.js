@@ -9,7 +9,7 @@ export const ENVIRONMENT = process.env.REACT_APP_ENVIORNMENT || "production";
 const COUPON_CODE = "uza-retail-coupon";
 
 export { generateUUID, getDeviceId } from "./deviceHelper";
-export { bumpHomeFeedRefreshToken, getHomeFeedRefreshToken } from "./homeFeedHelper";
+export { bumpHomeFeedRefreshToken, bumpHomeFeedRefreshTokenOnReload, getHomeFeedRefreshToken } from "./homeFeedHelper";
 
 export const logger = (...params) => {
   if (ENVIRONMENT === "development")
@@ -63,9 +63,31 @@ export const getProductDedupeKey = (item) => {
   return "";
 };
 
+const RESTRICTED_CATALOG_RE = /\b(underwear|underwears|lingerie|panties|panty|briefs|thong|boxer\s*briefs?|bras?\b|nightwear|nightgown|nightdress|intimate|qqny|sexy\s*underwear|sexy\s*lingerie|underpants|undergarment|crotch|pajamas?\s*sexy|sex\s*underwear|passion\s+clothes|bunny\s+christmas\s+clothes)\b/i;
+const RESTRICTED_CATALOG_CJK_RE = /(内裤|内衣裤|内衣|胸罩|文胸|丁字裤|情趣内衣|情趣套装|性感内衣|女士内裤|男士内裤|开裆)/;
+
+export const isRestrictedCatalogProduct = (item) => {
+  if (!item) return true;
+  const combined = [
+    item?.name,
+    item?.title,
+    item?.short_description,
+    item?.category?.name,
+    item?.category?.catName,
+  ]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+    .join(" ");
+  if (!combined || /\btest\b/i.test(combined)) return true;
+  if (RESTRICTED_CATALOG_RE.test(combined)) return true;
+  if (RESTRICTED_CATALOG_CJK_RE.test(combined)) return true;
+  return false;
+};
+
 export const isValidHomeCatalogProduct = (item) => {
   if (!item) return false;
   if (!getProductDedupeKey(item)) return false;
+  if (isRestrictedCatalogProduct(item)) return false;
   const name = (item?.name || "").trim();
   if (!name || name.toLowerCase().includes("test")) return false;
   return true;
@@ -283,6 +305,18 @@ export const buildProductDetailUrlFromResolved = ({ mongoId, offerId } = {}, opt
   if (options.redirectUrl) params.set("redirectUrl", options.redirectUrl);
   const qs = params.toString();
   return `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(mongoId)}${qs ? `?${qs}` : ""}`;
+};
+
+/** Navigate to product detail immediately (no pre-fetch). Offer IDs resolve on the PDP. */
+export const openProductDetail = (navigate, item, options = {}) => {
+  if (typeof navigate !== "function" || !item) return false;
+  const path = buildProductDetailUrl(item, options);
+  if (!path) return false;
+  navigate(path);
+  if (options.scrollTop !== false) {
+    smoothScrollToTop();
+  }
+  return true;
 };
 
 export const getProductImageUrl = (product, fallback = "") => {

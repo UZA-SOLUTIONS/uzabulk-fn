@@ -42,8 +42,9 @@ export const PRODUCTS = {
   ANALYZE_IMAGE: "products/ai/analyze-image",
   IMAGE_SEARCH_KEYWORDS: "products/ai/image-search-keywords",
   IMAGE_SEARCH: "products/ai/image-search",
-  RECOMMENDATIONS: {
+    RECOMMENDATIONS: {
     HOMEPAGE_FEED: "recommendations/homepage-feed",
+    RECENTLY_VIEWED: "recommendations/recently-viewed",
     SIMILAR: "recommendations/similar-products",
     CROSS_SELL: "recommendations/cross-sell",
     EMAIL_DIGEST: "recommendations/email-digest",

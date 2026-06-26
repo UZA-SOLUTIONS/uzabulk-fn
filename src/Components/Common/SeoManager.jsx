@@ -1,73 +1,68 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 
 import { APP_NAME, BRAND_LOGO_PNG } from "../../config/constants";
+import { DEFAULT_OG_IMAGE, ORGANIZATION_SCHEMA, SITE_URL } from "../../config/seoConfig";
+import {
+  buildHreflangLinks,
+  buildLocalizedUrl,
+  getSiteBaseUrl,
+  resolveRouteSeoKey,
+  truncateMeta,
+} from "../../helpers/seoHelper";
+import { getLanguageCode, setSiteLanguage } from "../../helpers/languageHelper";
 import ROUTES from "../../helpers/routesHelper";
 import { QUICK_LINKS } from "../../helpers/seoLinks";
 
-const DEFAULT_DESCRIPTION =
-  "Shop wholesale products, new arrivals, and top-rated deals on UZA Store.";
-
-const routeMeta = [
-  { startsWith: ROUTES.PRODUCT_DETAIL, title: `Product Details | ${APP_NAME}`, description: "View product details, pricing, and supplier information on UZA Store." },
-  { startsWith: ROUTES.PRODUCT_LISTING, title: `All Products | ${APP_NAME}`, description: "Browse all products by category, price, and popularity on UZA Store." },
-  { startsWith: ROUTES.CATEGORIES, title: `Categories | ${APP_NAME}`, description: "Explore product categories and discover trusted suppliers on UZA Store." },
-  { startsWith: ROUTES.NEW_ARRIVALS_PRODUCT_LISTING, title: `New Arrivals | ${APP_NAME}`, description: "Find the latest products and trending new arrivals on UZA Store." },
-  { startsWith: ROUTES.TOP_RANKING_PRODUCT_LISTING, title: `Top Ranking Products | ${APP_NAME}`, description: "Discover top-ranking products selected by customer demand and ratings." },
-  { startsWith: ROUTES.BEST_DEAL_PRODUCT_LISTING, title: `Best Deals | ${APP_NAME}`, description: "Compare competitive wholesale prices and featured best-seller deals." },
-  { startsWith: ROUTES.SAVING_SPOTLIGHT_PRODUCT_LISTING, title: `Saving Spotlight | ${APP_NAME}`, description: "Find spotlight savings and time-sensitive product offers." },
-  { startsWith: ROUTES.BLOG, title: `Blog | ${APP_NAME}`, description: "Read updates, sourcing tips, and e-commerce insights from UZA Store." },
-  { startsWith: ROUTES.ABOUT_US, title: `About Us | ${APP_NAME}`, description: "Learn about UZA Store and our global e-commerce platform vision." },
-  { startsWith: ROUTES.CONTACT_US, title: `Contact Us | ${APP_NAME}`, description: "Get in touch with UZA Store support and sales teams." },
-  { startsWith: ROUTES.PRIVACY_POLICY, title: `Privacy Policy | ${APP_NAME}`, description: "Read UZA Store's privacy policy and data protection practices." },
-  { startsWith: ROUTES.T_AND_C, title: `Terms and Conditions | ${APP_NAME}`, description: "Read the terms and conditions for using UZA Store services." },
-  { startsWith: ROUTES.CART, title: `Shopping Cart | ${APP_NAME}`, description: "Review products added to your cart before checkout.", noindex: true },
-  { startsWith: ROUTES.CHECKOUT, title: `Checkout | ${APP_NAME}`, description: "Secure checkout for your UZA Store order.", noindex: true },
-  { startsWith: ROUTES.PROFILE, title: `My Profile | ${APP_NAME}`, description: "Manage your account profile and preferences.", noindex: true },
-  { startsWith: ROUTES.MY_ORDERS, title: `My Orders | ${APP_NAME}`, description: "Track your orders and purchase history.", noindex: true },
-  { startsWith: ROUTES.ORDER_DETAIL, title: `Order Details | ${APP_NAME}`, description: "View details for your selected order.", noindex: true },
-  { startsWith: ROUTES.ORDER_ADDRESS, title: `Address Book | ${APP_NAME}`, description: "Manage shipping and billing addresses.", noindex: true },
-  { startsWith: ROUTES.CHANGE_PASSWORD, title: `Change Password | ${APP_NAME}`, description: "Update your account password securely.", noindex: true },
-  { startsWith: ROUTES.FORGOT, title: `Forgot Password | ${APP_NAME}`, description: "Reset your UZA Store account password.", noindex: true },
-  { startsWith: ROUTES.HOME, title: `${APP_NAME} | Wholesale Marketplace`, description: "UZA Store is a global e-commerce marketplace for wholesale sourcing and trusted suppliers." },
-];
-
-const baseUrlFromEnv = (process.env.REACT_APP_SITE_URL || "https://uzabulk.com").replace(/\/+$/, "");
-
-function getBaseUrl() {
-  if (baseUrlFromEnv) return baseUrlFromEnv;
-  if (typeof window !== "undefined" && window.location?.origin) return window.location.origin;
-  return "";
-}
-
 export default function SeoManager() {
+  const { t, i18n } = useTranslation();
   const { pathname, search } = useLocation();
-  const baseUrl = getBaseUrl();
-  const canonicalPath = `${pathname || "/"}`.replace(/\/+$/, "") || "/";
-  const canonicalUrl = `${baseUrl}${canonicalPath}${search || ""}`;
+  const lang = getLanguageCode();
+  const baseUrl = getSiteBaseUrl();
+  const routeSeo = useMemo(() => resolveRouteSeoKey(pathname), [pathname]);
+  const pageKey = routeSeo.key;
 
-  const meta = useMemo(() => {
-    const found = routeMeta.find((item) => pathname.startsWith(item.startsWith));
-    return found || routeMeta[routeMeta.length - 1];
-  }, [pathname]);
+  useEffect(() => {
+    const langParam = new URLSearchParams(search).get("lang");
+    if (langParam === "fr" || langParam === "en") {
+      if (getLanguageCode() !== langParam) {
+        setSiteLanguage(langParam);
+      }
+    }
+  }, [search]);
 
-  const robots = meta.noindex ? "noindex, nofollow" : "index, follow";
-  const ogImage = `${baseUrl}${BRAND_LOGO_PNG}`;
+  const title = t(`seo.pages.${pageKey}.title`, { appName: APP_NAME });
+  const description = truncateMeta(
+    t(`seo.pages.${pageKey}.description`, { appName: APP_NAME }),
+    165
+  );
+  const keywords = t(`seo.pages.${pageKey}.keywords`, { appName: APP_NAME });
+  const siteKeywords = t("seo.siteKeywords", { appName: APP_NAME });
+  const combinedKeywords = [keywords, siteKeywords].filter(Boolean).join(", ");
+
+  const canonicalUrl = buildLocalizedUrl(pathname, lang, { baseUrl, search });
+  const hreflangLinks = buildHreflangLinks(pathname, search);
+  const robots = routeSeo.noindex ? "noindex, nofollow" : "index, follow";
+  const ogImage = DEFAULT_OG_IMAGE || `${baseUrl}${BRAND_LOGO_PNG}`;
+  const ogLocale = lang === "fr" ? "fr_FR" : "en_US";
+  const ogLocaleAlt = lang === "fr" ? "en_US" : "fr_FR";
 
   const organizationJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    name: APP_NAME,
-    url: baseUrl || undefined,
+    ...ORGANIZATION_SCHEMA,
+    url: baseUrl || SITE_URL,
     logo: ogImage,
+    inLanguage: ["en", "fr"],
   };
 
   const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: APP_NAME,
-    url: baseUrl || undefined,
+    url: baseUrl || SITE_URL,
+    inLanguage: ["en", "fr"],
     potentialAction: {
       "@type": "SearchAction",
       target: `${baseUrl}${ROUTES.PRODUCT_LISTING}?search={search_term_string}`,
@@ -81,29 +76,51 @@ export default function SeoManager() {
     itemListElement: QUICK_LINKS.map((item, index) => ({
       "@type": "SiteNavigationElement",
       position: index + 1,
-      name: item.label,
-      url: `${baseUrl}${item.to}`,
+      name: t(item.labelKey),
+      url: buildLocalizedUrl(item.to, lang, { baseUrl }),
     })),
   };
 
   return (
-    <Helmet>
-      <title>{meta.title}</title>
-      <meta name="description" content={meta.description || DEFAULT_DESCRIPTION} />
+    <Helmet prioritizeSeoTags htmlAttributes={{ lang: i18n.language || lang }}>
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      <meta name="keywords" content={combinedKeywords} />
       <meta name="robots" content={robots} />
       <meta name="googlebot" content={robots} />
+      <meta name="language" content={lang === "fr" ? "French" : "English"} />
+      <meta httpEquiv="content-language" content={lang} />
+      <meta name="author" content={APP_NAME} />
+      <meta name="distribution" content="global" />
+      <meta name="rating" content="general" />
+      <meta name="revisit-after" content="7 days" />
+      <meta name="geo.region" content="RW" />
+      <meta name="geo.placename" content="Rwanda, East Africa, Francophone Africa" />
+      <meta name="target" content="all" />
+      <meta name="audience" content="all" />
       <link rel="canonical" href={canonicalUrl} />
+      {hreflangLinks.map((link) => (
+        <link key={link.hreflang} rel="alternate" hrefLang={link.hreflang} href={link.href} />
+      ))}
+      <link
+        rel="alternate"
+        hrefLang="x-default"
+        href={buildLocalizedUrl(pathname, "en", { baseUrl, search })}
+      />
 
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={APP_NAME} />
-      <meta property="og:title" content={meta.title} />
-      <meta property="og:description" content={meta.description || DEFAULT_DESCRIPTION} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:image" content={ogImage} />
+      <meta property="og:image:alt" content={APP_NAME} />
+      <meta property="og:locale" content={ogLocale} />
+      <meta property="og:locale:alternate" content={ogLocaleAlt} />
 
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={meta.title} />
-      <meta name="twitter:description" content={meta.description || DEFAULT_DESCRIPTION} />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
 
       <script type="application/ld+json">{JSON.stringify(organizationJsonLd)}</script>

@@ -6507,8 +6507,19 @@ table.order-table tr td {
 
 .home_main_split .container {
   max-width: 100% !important;
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.home_main_split > .container > .row {
+  --bs-gutter-x: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.home_main_split > .container > .row > [class*="col-"] {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .home_main_right .home_alibaba_hero {
@@ -6536,7 +6547,7 @@ table.order-table tr td {
 .home_alibaba_hero {
   background: transparent;
   border-top: none;
-  padding: 0 0 18px;
+  padding: 0;
   position: relative;
   z-index: 80;
 }
@@ -7764,10 +7775,98 @@ body.products-catstrip-pinned .site-header.site-header--mockup.is-scrolled {
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 6px;
   min-height: 28px;
+}
+
+.home_discover_browse__personalized_head {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.home_discover_browse__personalized_title {
+  margin: 0 0 2px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111;
+  line-height: 1.25;
+}
+
+.home_discover_browse__personalized_hint {
+  margin: 0;
+  font-size: 13px;
+  color: #5c5c5c;
+  line-height: 1.35;
+}
+
+.home_recently_viewed_section {
+  margin-top: 1.75rem;
+}
+
+.home_recently_viewed_panel .home_new_arrivals_panel__head,
+.home_recently_viewed_panel__head {
+  align-items: center;
+  gap: 12px;
+}
+
+.home_recently_viewed_panel__titles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.home_recently_viewed_panel__hint {
+  font-size: 13px;
+  color: #5c5c5c;
+  white-space: nowrap;
+}
+
+.home_recently_viewed_clear_btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: #111;
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.home_recently_viewed_clear_btn:hover:not(:disabled) {
+  color: #111;
+}
+
+.home_recently_viewed_clear_btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.home_recently_viewed_card .new_arrival_media {
+  position: relative;
+}
+
+.home_recently_viewed_badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(17, 17, 17, 0.82);
+  pointer-events: none;
 }
 
 .home_discover_browse__see_all {
@@ -8721,7 +8820,14 @@ body.products-catstrip-pinned .site-header.site-header--mockup.is-scrolled {
 }
 
 .home_feed_section_offset {
-  padding-right: 16px !important;
+  padding-right: 0 !important;
+}
+
+.home_main_right .home_feed_section_offset.px-3,
+.home_main_right .home_discover_browse_outer.px-3,
+.home_main_right .discover_group_block.px-3 {
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 @media (max-width: 991.98px) {
@@ -8973,12 +9079,18 @@ body.products-catstrip-pinned .site-header.site-header--mockup.is-scrolled {
 
 @media (min-width: 1400px) {
   .home_main_split .container,
-  .home_alibaba_hero .container,
+  .home_alibaba_hero .container {
+    max-width: 100% !important;
+    width: 100%;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
   .discover_alibaba {
     max-width: 100% !important;
     width: 100%;
-    padding-left: 12px !important;
-    padding-right: 12px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 
   .home_alibaba_hero_inner,

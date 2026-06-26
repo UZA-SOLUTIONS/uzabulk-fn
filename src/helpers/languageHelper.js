@@ -1,4 +1,5 @@
 import i18n, { LANGUAGE_STORAGE_KEY, SUPPORTED_LANGUAGES } from "../i18n";
+import { activateFrenchTranslations } from "./productNameTranslationHelper";
 
 const COOKIE_MAX_AGE_DAYS = 365;
 
@@ -22,6 +23,9 @@ export const setSiteLanguage = async (code) => {
     /* ignore */
   }
   await i18n.changeLanguage(next);
+  if (next === "fr") {
+    activateFrenchTranslations();
+  }
   return next;
 };
 

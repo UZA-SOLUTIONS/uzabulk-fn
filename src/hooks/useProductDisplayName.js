@@ -19,17 +19,20 @@ export default function useProductDisplayName(product) {
   );
 
   const [displayName, setDisplayName] = useState(() =>
-    getCachedProductName(item, lang) || sourceName
+    lang === "fr" ? (getCachedProductName(item, "fr") || sourceName) : sourceName
   );
 
   useEffect(() => {
+    if (!sourceName) return undefined;
+
+    requestProductNameTranslation(item);
+
     if (lang !== "fr") {
       setDisplayName(sourceName);
       return undefined;
     }
 
     setDisplayName(getCachedProductName(item, "fr") || sourceName);
-    requestProductNameTranslation(item);
 
     return subscribeProductNameTranslations(() => {
       setDisplayName(getCachedProductName(item, "fr") || sourceName);

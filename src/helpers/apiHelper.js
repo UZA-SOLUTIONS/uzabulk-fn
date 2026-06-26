@@ -114,16 +114,16 @@ export const apiGet = async (url, params = {}) => {
   });
 };
 
-export const apiPost = async (url, data = {}) => {
-  return apiClient.post(url, data);
+export const apiPost = async (url, data = {}, config = {}) => {
+  return apiClient.post(url, data, config);
 };
 
 export const apiPut = async (url, data = {}) => {
   return apiClient.put(url, data);
 };
 
-export const apiDelete = async (url) => {
-  return apiClient.delete(url);
+export const apiDelete = async (url, config = {}) => {
+  return apiClient.delete(url, config);
 };
 
 // Export the apiClient if you need to use it directly for advanced use cases

@@ -30,9 +30,9 @@ export default function useCategoryDisplayNames(categories = []) {
   useEffect(() => {
     setNames(buildNameMap(categories, lang));
 
-    if (lang !== "fr") return undefined;
-
     requestCategoryNamesTranslation(categories);
+
+    if (lang !== "fr") return undefined;
 
     return subscribeCategoryNameTranslations(() => {
       setNames(buildNameMap(categories, "fr"));

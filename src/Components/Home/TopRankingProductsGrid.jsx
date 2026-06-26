@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { apiGetHomeTopRankingProducts } from "../../store/products/actions";
 import ROUTES from "../../helpers/routesHelper";
-import { amountConversion, getProductImageUrl } from "../../helpers/commonHelper";
+import { amountConversion, buildProductDetailUrl, getProductImageUrl } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/gurfive.jpg";
 import TranslatedProductName from "../Common/TranslatedProductName";
 
@@ -45,14 +45,11 @@ const TopRankingProductsGrid = ({ withContainer = true }) => {
 
       <div className="new_Arrivals product_square_grid top_ranking_grid_compact mt-3">
         {(items || []).slice(0, 12).map((item) => {
-          const fallbackOfferId = item?.offerId || item?.topIds || "";
-          const resolvedId = item?._id || item?.id || item?.productId || fallbackOfferId;
-          const productLink = resolvedId
-            ? `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(resolvedId)}${fallbackOfferId ? `?offerId=${encodeURIComponent(fallbackOfferId)}` : ""}`
-            : "#";
+          const productLink = buildProductDetailUrl(item) || "#";
+          const resolvedId = Boolean(productLink && productLink !== "#");
           return (
             <Link
-              key={item._id || resolvedId}
+              key={item._id || item?.id || item?.offerId}
               to={productLink}
               className="new_arrival_img new_arrival_product_card top_ranking_card_compact cursor-pointer text-start"
               style={{

@@ -12,12 +12,13 @@ import {
   amountConversion,
   buildProductDetailUrl,
   getProductImageUrl,
-  smoothScrollToTop,
+  openProductDetail,
 } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
 import TranslatedProductName from "../Common/TranslatedProductName";
 import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
+import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefetch";
 
 const MAX_CATEGORIES = 12;
 const PRODUCTS_PER_CATEGORY = 4;
@@ -52,7 +53,7 @@ function OftenCategoryColumn({
           <Link
             to={`${ROUTES.PRODUCT_LISTING}?skip=1&category=${category?._id}&name=${encodeURIComponent(displayName)}`}
           >
-            View more
+            {t("home.viewMore")}
           </Link>
         </div>
 
@@ -74,40 +75,41 @@ function OftenCategoryColumn({
                 </p>
                 <div className="home_product_footer">
                   <p className="home_product_meta mb-0">{resolveTrustText(item) || "\u00A0"}</p>
-                  <span className="home_product_cta">View details</span>
+                  <span className="home_product_cta">{t("home.viewDetails")}</span>
                 </div>
               </div>
             </button>
           ))}
           {!loading && !items.length ? (
-            <p className="often_empty_text mb-0">No products found.</p>
+            <p className="often_empty_text mb-0">{t("home.noProductsFound")}</p>
           ) : null}
         </div>
       </div>
     </div>
   );
 }
-const FILTER_OPTIONS = [
-  { id: "recommended", label: "Recommended" },
-  { id: "popular", label: "Most Popular" },
-  { id: "newest", label: "New Arrivals" },
-  { id: "topRated", label: "Top Rated" },
-  { id: "priceLow", label: "Lowest Price" },
-  { id: "priceHigh", label: "Highest Price" },
-  { id: "bestValue", label: "Best Value" },
-  { id: "budget", label: "Budget Picks" },
-  { id: "premium", label: "Premium Picks" },
-  { id: "recentlyUpdated", label: "Recently Updated" },
-  { id: "bestReviewed", label: "Best Reviewed" },
-  { id: "fastMoving", label: "Fast Moving" },
-  { id: "nameAZ", label: "Name: A to Z" },
-  { id: "nameZA", label: "Name: Z to A" },
-  { id: "inStock", label: "In Stock First" },
+const FILTER_OPTION_IDS = [
+  "recommended",
+  "popular",
+  "newest",
+  "topRated",
+  "priceLow",
+  "priceHigh",
+  "bestValue",
+  "budget",
+  "premium",
+  "recentlyUpdated",
+  "bestReviewed",
+  "fastMoving",
+  "nameAZ",
+  "nameZA",
+  "inStock",
 ];
 
 export default function OftenPurchasedCategories() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const level1 = useSelector((s) => s.categories.categories.level1 || []);
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
@@ -136,20 +138,27 @@ export default function OftenPurchasedCategories() {
     if (sold) return `${sold} sold`;
     return "";
   };
-  const handleOpenProduct = async (item) => {
-    smoothScrollToTop();
-    const resolved = await resolveCatalogProductId(item);
-    const path = resolved
-      ? buildProductDetailUrlFromResolved(resolved)
-      : buildProductDetailUrl(item);
-    if (!path) return;
-    navigate(path);
+  const handleOpenProduct = (item) => {
+    openProductDetail(navigate, item);
   };
+
+  const filterOptions = useMemo(
+    () => FILTER_OPTION_IDS.map((id) => ({
+      id,
+      label: t(`home.filters.${id}`),
+    })),
+    [t]
+  );
 
   const selectedCategories = useMemo(
     () => (level1 || []).slice(0, MAX_CATEGORIES),
     [level1]
   );
+  const visibleProducts = useMemo(
+    () => Object.values(categoryProducts).flat(),
+    [categoryProducts]
+  );
+  useFrenchTranslationPrefetch(visibleProducts, selectedCategories);
   const getItemTimestamp = (item) => {
     const raw = item?.date_created_utc || item?.createdAt || item?.date_created || item?.updatedAt;
     const ts = raw ? new Date(raw).getTime() : 0;
@@ -420,7 +429,7 @@ export default function OftenPurchasedCategories() {
       <div className="often_category_controls d-flex align-items-center gap-2 mb-2">
         <div className="often_filter_scroll_outer flex-grow-1 min-w-0">
           <div className="often_filter_nav d-flex flex-nowrap flex-md-wrap align-items-center gap-3 gap-md-4">
-            {FILTER_OPTIONS.map((option) => (
+            {filterOptions.map((option) => (
               <span
                 key={option.id}
                 role="button"
@@ -447,7 +456,7 @@ export default function OftenPurchasedCategories() {
           <button
             type="button"
             className="often_category_chevron"
-            aria-label="Previous categories"
+            aria-label={t("home.previousCategories")}
             onClick={() => handleSlide("prev")}
             disabled={!sortedCategories.length}
           >
@@ -456,7 +465,7 @@ export default function OftenPurchasedCategories() {
           <button
             type="button"
             className="often_category_chevron"
-            aria-label="Next categories"
+            aria-label={t("home.nextCategories")}
             onClick={() => handleSlide("next")}
             disabled={!sortedCategories.length}
           >

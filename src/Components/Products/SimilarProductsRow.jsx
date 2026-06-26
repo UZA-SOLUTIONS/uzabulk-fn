@@ -3,11 +3,8 @@ import { useNavigate } from "react-router-dom";
 
 import { apiGet } from "../../helpers/apiHelper";
 import {
-  buildProductDetailUrl,
-  buildProductDetailUrlFromResolved,
   getProductImageUrl,
-  resolveCatalogProductId,
-  smoothScrollToTop,
+  openProductDetail,
 } from "../../helpers/commonHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import placeholder from "../../assets/images/default_name.webp";
@@ -76,17 +73,10 @@ export default function SimilarProductsRow({
     };
   }, [productId, limit, presetItems, usePersonalized]);
 
-  const openProduct = async (item) => {
-    smoothScrollToTop();
-    const resolved = await resolveCatalogProductId(item);
-    const path = resolved
-      ? buildProductDetailUrlFromResolved(resolved, {
-          redirectUrl: btoa(window.location.href),
-        })
-      : buildProductDetailUrl(item, {
-          redirectUrl: btoa(window.location.href),
-        });
-    if (path) navigate(path);
+  const openProduct = (item) => {
+    openProductDetail(navigate, item, {
+      redirectUrl: btoa(window.location.href),
+    });
   };
 
   if (!presetItems && !productId) return null;

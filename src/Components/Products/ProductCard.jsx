@@ -1,15 +1,16 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 
 import {
   amountConversion,
-  extractMongoProductId,
+  buildProductDetailUrl,
   getProductImageUrl,
 } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import SupplierVerificationBadge from "./SupplierVerificationBadge";
-import TranslatedProductName from "../Common/TranslatedProductName";
+import useProductDisplayName from "../../hooks/useProductDisplayName";
 
 export default function ProductCard({ item, onOpen }) {
   const { t } = useTranslation();
@@ -23,30 +24,20 @@ export default function ProductCard({ item, onOpen }) {
   else if (moq) trust = t("product.moqOnly", { moq });
   else if (sold) trust = t("product.soldOnly", { sold });
 
-  const resolvedId =
-    extractMongoProductId(item)
-    || String(item?.offerId || item?.topIds || "").trim();
+  const productLink = buildProductDetailUrl(item);
   const isOut =
     (!item?.manage_stock && item?.stock_status === "outofstock")
     || (item?.manage_stock && Number(item?.stock_quantity) === 0);
 
-  return (
-    <div
-      className="new_arrival_img new_arrival_product_card cursor-pointer text-start"
-      role="button"
-      tabIndex={0}
-      onClick={() => resolvedId && onOpen?.(item)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          if (resolvedId) onOpen?.(item);
-        }
-      }}
-    >
+  const displayName = useProductDisplayName(item);
+  const className = "new_arrival_img new_arrival_product_card cursor-pointer text-start";
+
+  const content = (
+    <>
       <div className="new_arrival_media position-relative">
         <img
           src={getProductImageUrl(item, placeholder)}
-          alt={item?.name || t("home.viewDetails")}
+          alt={displayName || t("home.viewDetails")}
           className="img-fluid"
           loading="lazy"
         />
@@ -55,7 +46,7 @@ export default function ProductCard({ item, onOpen }) {
         ) : null}
       </div>
       <div className="home_product_card_body px-1 pt-2">
-        <TranslatedProductName product={item} className="home_product_title mb-1" as="p" />
+        <p className="home_product_title mb-1">{displayName}</p>
         <p className="home_product_price mb-1">
           {currentCurrency?.symbol}{" "}
           {amountConversion(item?.price, appConfig)}
@@ -69,6 +60,20 @@ export default function ProductCard({ item, onOpen }) {
           <span className="home_product_cta">{t("home.viewDetails")}</span>
         </div>
       </div>
-    </div>
+    </>
+  );
+
+  if (!productLink) {
+    return <div className={className}>{content}</div>;
+  }
+
+  return (
+    <Link
+      to={productLink}
+      className={`${className} text-decoration-none text-reset d-block`}
+      onClick={() => onOpen?.(item)}
+    >
+      {content}
+    </Link>
   );
 }

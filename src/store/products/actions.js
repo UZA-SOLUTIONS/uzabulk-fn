@@ -1,5 +1,12 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import apiClient, { apiGet } from "../../helpers/apiHelper";
+import {
+  buildListCacheKey,
+  getCachedListPage,
+  getProductDetailCache,
+  saveListPage,
+  setProductDetailCache,
+} from "../../helpers/fetchCacheHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 
 const hasNetworkConnection = () =>
@@ -25,20 +32,40 @@ const getProducts = (url) => async (query, Thunk) => {
 
 export const apiGetProducts = createAsyncThunk(
   "apiGetProducts",
-  async ({ query, signal = null }, Thunk) => {
+  async ({ query, signal = null, skipCache = false }, Thunk) => {
     try {
       if (!hasNetworkConnection()) {
         return Thunk.rejectWithValue("No internet connection. Please reconnect and try again.");
       }
+
+      const listKey = buildListCacheKey(PRODUCTS.LIST, query || {});
+      const pageSkip = Number(query?.skip) || 1;
+
+      if (!skipCache) {
+        const cachedPage = getCachedListPage(listKey, pageSkip);
+        if (cachedPage) {
+          return {
+            items: cachedPage.items || [],
+            skip: cachedPage.skip ?? pageSkip,
+            limit: cachedPage.limit,
+            hasMore: cachedPage.hasMore,
+            others: cachedPage.others ?? null,
+            total: cachedPage.total,
+            fromCache: true,
+          };
+        }
+      }
+
       const res = await apiClient.get(PRODUCTS.LIST, {
         params: query,
         signal,
       });
       if (res.status === "success") {
-        return res?.data;
-      } else {
-        throw new Error(res.message);
+        const data = res?.data || {};
+        saveListPage(listKey, pageSkip, data);
+        return data;
       }
+      throw new Error(res.message);
     } catch (error) {
       const isCanceled = error?.code === "ERR_CANCELED"
         || error?.name === "CanceledError"
@@ -134,8 +161,14 @@ export const apiGetProductDetail = createAsyncThunk(
         normalizedId = fromOffer;
       }
 
+      const cachedDetail = getProductDetailCache(normalizedId);
+      if (cachedDetail && !query?.skipCache) {
+        return cachedDetail;
+      }
+
       const res = await apiGet(`${PRODUCTS.DETAIL}/${encodeURIComponent(normalizedId)}`, restQuery);
       if (res.status === "success") {
+        setProductDetailCache(normalizedId, res);
         return res;
       } else {
         throw new Error(res.message);

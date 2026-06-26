@@ -131,6 +131,25 @@
     "viewMore": "Voir plus",
     "viewDetails": "Voir les détails",
     "categoriesForYou": "Catégories pour vous",
+    "browseFeaturedSelections": "Parcourir les sélections en vedette",
+    "noProductsFound": "Aucun produit trouvé.",
+    "filters": {
+      "recommended": "Recommandé",
+      "popular": "Les plus populaires",
+      "newest": "Nouveautés",
+      "topRated": "Mieux notés",
+      "priceLow": "Prix le plus bas",
+      "priceHigh": "Prix le plus élevé",
+      "bestValue": "Meilleur rapport qualité-prix",
+      "budget": "Petits budgets",
+      "premium": "Sélection premium",
+      "recentlyUpdated": "Récemment mis à jour",
+      "bestReviewed": "Mieux commentés",
+      "fastMoving": "Les plus vendus",
+      "nameAZ": "Nom : A à Z",
+      "nameZA": "Nom : Z à A",
+      "inStock": "En stock en premier"
+    },
     "topRanking": "Meilleures ventes",
     "mostPopular": "Les plus populaires",
     "explore": "Explorer",
@@ -147,6 +166,12 @@
     "categoriesLoadError": "Impossible de charger les catégories. Vérifiez que l'API est en cours d'exécution et que MongoDB est accessible, puis actualisez.",
     "noCategoriesAvailable": "Aucune catégorie à afficher.",
     "categoryFallback": "Catégorie",
+    "recentlyViewed": "Récemment consultés",
+    "recentlyViewedHint": "Reprenez là où vous vous êtes arrêté",
+    "clearRecentlyViewed": "Effacer l'historique",
+    "recentBadge": "Récent",
+    "exploreMore": "Explorer davantage",
+    "exploreMoreHint": "Sélection variée dans plusieurs catégories — pas seulement vos recherches",
     "hero": {
       "slide1Title": "Approvisionnez-vous plus intelligemment, achetez en gros",
       "slide1Cta": "Parcourir les catalogues",
@@ -161,6 +186,11 @@
     "qty": "Qté",
     "change": "Modifier",
     "productDescription": "Description du produit",
+    "description": "Description du produit",
+    "attributes": "Caractéristiques du produit",
+    "variations": "Variantes",
+    "totalOptions": "Options au total :",
+    "showMore": "Voir plus",
     "customerReviews": "Avis clients",
     "noReviewsYet": "Pas encore d'avis",
     "chatSupport": "Discuter avec le support à propos de ce produit",
@@ -194,7 +224,120 @@
     "welcomeFallback": "Bonjour ! Je suis votre assistant acheteur UZA Bulk. Posez des questions sur les produits, la livraison ou votre commande.",
     "relatedProducts": "Produits associés",
     "suggestedActions": "Actions suggérées",
-    "dialogLabel": "Assistant acheteur UZA"
+    "dialogLabel": "Assistant acheteur UZA",
+    "dockTab": "Assistant UZA",
+    "resize": "Glisser pour redimensionner le panneau"
+  },
+  "seo": {
+    "siteKeywords": "{{appName}}, marketplace de gros, approvisionnement en vrac, ecommerce B2B, fournisseurs mondiaux, Rwanda, Afrique de l'Est, Afrique francophone, France, Belgique, Canada, Sénégal, Cameroun, Côte d'Ivoire, RDC, import export, usine directe, nouveautés, produits les mieux notés",
+    "pages": {
+      "home": {
+        "title": "{{appName}} | Marketplace de gros mondiale",
+        "description": "Approvisionnez-vous en produits de gros auprès de fournisseurs mondiaux de confiance sur {{appName}}. Parcourez catégories, nouveautés et offres en vrac en français et en anglais — pour le Rwanda, l'Afrique francophone et les acheteurs du monde entier.",
+        "keywords": "marketplace de gros, achat en vrac, fournisseurs mondiaux, ecommerce B2B, gros Rwanda, sourcing Afrique, import produits, prix usine, nouveautés, fournisseurs fiables"
+      },
+      "products": {
+        "title": "Tous les produits | {{appName}}",
+        "description": "Parcourez tous les produits de gros par catégorie, prix et popularité sur {{appName}}. Comparez les fournisseurs et achetez en vrac pour votre entreprise.",
+        "keywords": "produits de gros, catalogue en vrac, produits B2B, listes fournisseurs, prix de gros, achat en gros"
+      },
+      "categories": {
+        "title": "Catégories de produits | {{appName}}",
+        "description": "Explorez les catégories de produits de gros et découvrez des fournisseurs de confiance sur {{appName}}.",
+        "keywords": "catégories de gros, catégories produits, fournisseurs par catégorie, sourcing en vrac"
+      },
+      "newArrivals": {
+        "title": "Nouveautés | {{appName}}",
+        "description": "Découvrez les derniers produits de gros et nouveautés tendance sur {{appName}} auprès de fournisseurs vérifiés.",
+        "keywords": "nouveautés, derniers produits de gros, produits tendance, nouveau stock"
+      },
+      "topRanking": {
+        "title": "Produits les mieux classés | {{appName}}",
+        "description": "Découvrez les produits de gros les mieux classés selon la demande, les avis et les ventes sur {{appName}}.",
+        "keywords": "produits les mieux classés, meilleures ventes, gros populaire, produits bien notés"
+      },
+      "bestDeals": {
+        "title": "Meilleures offres | {{appName}}",
+        "description": "Comparez les prix de gros compétitifs et les meilleures offres sur {{appName}} pour un sourcing intelligent.",
+        "keywords": "meilleures offres, offres de gros, remises en vrac, prix best-seller, offres B2B"
+      },
+      "savingSpotlight": {
+        "title": "Économies en vedette | {{appName}}",
+        "description": "Trouvez des économies en vedette et des offres de gros limitées dans le temps sur {{appName}}.",
+        "keywords": "économies de gros, offres vedette, promotions limitées, achats en vrac"
+      },
+      "productDetail": {
+        "title": "Détails du produit | {{appName}}",
+        "description": "Consultez les détails, prix, spécifications et informations fournisseur des produits de gros sur {{appName}}.",
+        "keywords": "détails produit, produit de gros, prix en vrac, info fournisseur, spécifications"
+      },
+      "blog": {
+        "title": "Blog | {{appName}}",
+        "description": "Lisez conseils de sourcing, actualités marketplace et insights ecommerce de {{appName}} pour acheteurs internationaux.",
+        "keywords": "blog de gros, conseils sourcing, actualités ecommerce, infos B2B"
+      },
+      "aboutUs": {
+        "title": "À propos | {{appName}}",
+        "description": "Découvrez {{appName}} et notre mission de connecter les acheteurs mondiaux à des fournisseurs de gros de confiance.",
+        "keywords": "à propos UZA Store, plateforme de gros, ecommerce mondial, mission entreprise"
+      },
+      "contactUs": {
+        "title": "Contactez-nous | {{appName}}",
+        "description": "Contactez le support et les ventes {{appName}} pour l'aide au sourcing en gros en français et en anglais.",
+        "keywords": "contact support, aide gros, service client, demande commerciale"
+      },
+      "privacyPolicy": {
+        "title": "Politique de confidentialité | {{appName}}",
+        "description": "Consultez la politique de confidentialité et les pratiques de protection des données de {{appName}}.",
+        "keywords": "politique confidentialité, protection données, vie privée"
+      },
+      "terms": {
+        "title": "Conditions générales | {{appName}}",
+        "description": "Consultez les conditions générales d'utilisation des services marketplace de gros {{appName}}.",
+        "keywords": "conditions générales, termes marketplace, accord utilisateur"
+      },
+      "cart": {
+        "title": "Panier | {{appName}}",
+        "description": "Vérifiez les produits dans votre panier de gros sur {{appName}} avant le paiement.",
+        "keywords": "panier, panier de gros"
+      },
+      "checkout": {
+        "title": "Paiement | {{appName}}",
+        "description": "Paiement sécurisé pour votre commande de gros {{appName}}.",
+        "keywords": "paiement, commande de gros"
+      },
+      "profile": {
+        "title": "Mon profil | {{appName}}",
+        "description": "Gérez votre profil et préférences de compte {{appName}}.",
+        "keywords": "profil utilisateur, paramètres compte"
+      },
+      "myOrders": {
+        "title": "Mes commandes | {{appName}}",
+        "description": "Suivez vos commandes de gros et historique d'achats sur {{appName}}.",
+        "keywords": "mes commandes, historique commandes"
+      },
+      "orderDetail": {
+        "title": "Détails de commande | {{appName}}",
+        "description": "Consultez les détails de votre commande {{appName}} sélectionnée.",
+        "keywords": "détails commande, suivi commande"
+      },
+      "addresses": {
+        "title": "Carnet d'adresses | {{appName}}",
+        "description": "Gérez les adresses de livraison et de facturation de votre compte {{appName}}.",
+        "keywords": "carnet adresses, adresse livraison"
+      },
+      "changePassword": {
+        "title": "Changer le mot de passe | {{appName}}",
+        "description": "Mettez à jour votre mot de passe de compte {{appName}} en toute sécurité.",
+        "keywords": "changer mot de passe, sécurité compte"
+      },
+      "forgotPassword": {
+        "title": "Mot de passe oublié | {{appName}}",
+        "description": "Réinitialisez le mot de passe de votre compte {{appName}}.",
+        "keywords": "mot de passe oublié, réinitialisation mot de passe"
+      }
+    },
+    "productKeywords": "{{name}}, gros, prix en vrac, achat en gros, {{appName}}, produit B2B"
   },
   "common": {
     "loading": "Chargement",

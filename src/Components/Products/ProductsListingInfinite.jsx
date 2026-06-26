@@ -1,17 +1,11 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
-import { useNavigate } from "react-router-dom";
 
 import LoadingContent from "../../Components/Common/LoadingContent";
 import CommingSoon from "../Common/CommingSoon";
 import ProductCard from "./ProductCard";
 
-import {
-  buildProductDetailUrl,
-  buildProductDetailUrlFromResolved,
-  resolveCatalogProductId,
-  smoothScrollToTop,
-} from "../../helpers/commonHelper";
+import { smoothScrollToTop } from "../../helpers/commonHelper";
 
 const ProductsListingInfinite = ({
   items,
@@ -21,22 +15,11 @@ const ProductsListingInfinite = ({
   fetchRecords,
   gridClassName = "",
 }) => {
-  const navigate = useNavigate();
   const lastAutoFetchAtRef = useRef(0);
 
-  const handleOpenProduct = useCallback(async (item) => {
+  const handleOpenProduct = useCallback(() => {
     smoothScrollToTop();
-    const resolved = await resolveCatalogProductId(item);
-    const path = resolved
-      ? buildProductDetailUrlFromResolved(resolved, {
-          redirectUrl: btoa(window.location.href),
-        })
-      : buildProductDetailUrl(item, {
-          redirectUrl: btoa(window.location.href),
-        });
-    if (!path) return;
-    navigate(path);
-  }, [navigate]);
+  }, []);
 
   useEffect(() => {
     if (!hasMore || isLoading || typeof fetchRecords !== "function") {
@@ -63,7 +46,7 @@ const ProductsListingInfinite = ({
         dataLength={items?.length || 0}
         next={() => fetchRecords?.()}
         hasMore={Boolean(hasMore)}
-        scrollThreshold={0.85}
+        scrollThreshold={0.75}
         loader={
           items?.length > 0 ? (
             <div className="px-0 uza-infinite-scroll">

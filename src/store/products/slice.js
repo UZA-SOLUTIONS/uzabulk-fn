@@ -48,6 +48,15 @@ export const slice = createSlice({
             state.homeNewArrivalProducts = { ...paginationInitialState, isLoading: true };
             state.homeRecommendedProducts = { ...paginationInitialState, isLoading: true };
         },
+        hydrateProductList: (state, action) => {
+            const { items = [], hasMore = true, skip = 1, others = null } = action.payload || {};
+            state.products.isLoading = false;
+            state.products.message = "";
+            state.products.items = items;
+            state.products.hasMore = hasMore;
+            state.products.skip = skip;
+            state.products.others = others;
+        },
     },
     extraReducers: (builder) => {
         // Get products
@@ -161,9 +170,11 @@ export const slice = createSlice({
                 state.productDetail.detail = action.payload?.data;
                 state.productDetail.outOfStock = action.payload?.outOfStock;
             })
-            .addCase(apiGetProductDetail.pending, (state, action) => {
+            .addCase(apiGetProductDetail.pending, (state) => {
                 state.productDetail.isLoading = true;
                 state.productDetail.message = "";
+                state.productDetail.detail = null;
+                state.productDetail.outOfStock = false;
             })
             .addCase(apiGetProductDetail.rejected, (state, action) => {
                 state.productDetail.isLoading = false;
@@ -174,6 +185,6 @@ export const slice = createSlice({
     },
 })
 
-export const { manageProductForCart, clearProductList, clearHomeFeedProducts, setAddedInCart } = slice.actions
+export const { manageProductForCart, clearProductList, clearHomeFeedProducts, setAddedInCart, hydrateProductList } = slice.actions
 
 export default slice.reducer

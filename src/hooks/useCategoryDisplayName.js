@@ -21,17 +21,20 @@ export default function useCategoryDisplayName(category) {
   );
 
   const [displayName, setDisplayName] = useState(() =>
-    getCachedCategoryName(category, lang) || sourceName
+    lang === "fr" ? (getCachedCategoryName(category, "fr") || sourceName) : sourceName
   );
 
   useEffect(() => {
+    if (!sourceName) return undefined;
+
+    if (item) requestCategoryNameTranslation(category);
+
     if (lang !== "fr") {
       setDisplayName(sourceName);
       return undefined;
     }
 
     setDisplayName(getCachedCategoryName(category, "fr") || sourceName);
-    if (item) requestCategoryNameTranslation(category);
 
     return subscribeCategoryNameTranslations(() => {
       setDisplayName(getCachedCategoryName(category, "fr") || sourceName);

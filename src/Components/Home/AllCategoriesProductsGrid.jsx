@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 
 import { apiGetHomeProducts } from "../../store/products/actions";
 import ROUTES from "../../helpers/routesHelper";
-import { amountConversion, getProductImageUrl } from "../../helpers/commonHelper";
+import { amountConversion, buildProductDetailUrl, getProductImageUrl } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/gurfive.jpg";
 import TranslatedProductName from "../Common/TranslatedProductName";
 
@@ -35,13 +35,10 @@ const AllCategoriesProductsGrid = ({ withContainer = true }) => {
 
       <Row className="g-3 products_compact_row">
         {(items || []).slice(0, 24).map((item) => {
-          const fallbackOfferId = item?.offerId || item?.topIds || "";
-          const resolvedId = item?._id || item?.id || item?.productId || fallbackOfferId;
-          const productLink = resolvedId
-            ? `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(resolvedId)}${fallbackOfferId ? `?offerId=${encodeURIComponent(fallbackOfferId)}` : ""}`
-            : "#";
+          const productLink = buildProductDetailUrl(item) || "#";
+          const resolvedId = Boolean(productLink && productLink !== "#");
           return (
-          <Col xl={2} lg={3} md={4} sm={6} xs={6} key={item._id || resolvedId}>
+          <Col xl={2} lg={3} md={4} sm={6} xs={6} key={item._id || item?.id || item?.offerId}>
             <Link
               to={productLink}
               className="card_comnon-product cursor-pointer h-100 d-block"

@@ -1,7 +1,7 @@
 const HOME_FEED_REFRESH_KEY = "uza-home-feed-refresh";
 let pageLoadFeedToken = null;
 
-/** New token each app load / home visit so product pools rotate. */
+/** Force a new rotation token (browser reload or explicit refresh). */
 export const bumpHomeFeedRefreshToken = () => {
   pageLoadFeedToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   if (typeof sessionStorage !== "undefined") {
@@ -10,6 +10,7 @@ export const bumpHomeFeedRefreshToken = () => {
   return pageLoadFeedToken;
 };
 
+/** Stable token for the current tab session — reused when navigating back to home. */
 export const getHomeFeedRefreshToken = () => {
   if (pageLoadFeedToken) return pageLoadFeedToken;
   if (typeof sessionStorage !== "undefined") {
@@ -20,4 +21,14 @@ export const getHomeFeedRefreshToken = () => {
     }
   }
   return bumpHomeFeedRefreshToken();
+};
+
+/** Rotate home feeds only on full page reload, not SPA route changes. */
+export const bumpHomeFeedRefreshTokenOnReload = () => {
+  if (typeof window === "undefined") return getHomeFeedRefreshToken();
+  const nav = performance.getEntriesByType?.("navigation")?.[0];
+  if (nav?.type === "reload") {
+    return bumpHomeFeedRefreshToken();
+  }
+  return getHomeFeedRefreshToken();
 };

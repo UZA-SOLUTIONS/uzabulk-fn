@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
@@ -8,6 +8,16 @@ import ProductsListingInfinite from "../Products/ProductsListingInfinite";
 import UXSkeleton from "../Common/UXSkeleton";
 import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
 import { apiGet } from "../../helpers/apiHelper";
+import {
+  buildListCacheKey,
+  getCachedListPage,
+  getListSessionSnapshot,
+  hasCachedListPage,
+  restorePageScroll,
+  saveListPage,
+  saveListSnapshot,
+  savePageScroll,
+} from "../../helpers/fetchCacheHelper";
 import {
   getHomeFeedRefreshToken,
   getProductDedupeKey,
@@ -19,12 +29,10 @@ import ROUTES from "../../helpers/routesHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import { apiGetCategories } from "../../store/categories/actions";
 import useCategoryDisplayNames from "../../hooks/useCategoryDisplayNames";
+import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefetch";
 
-const PAGE_LIMIT_CATEGORY = 32;
-const ALL_PRODUCTS_CHUNK = 48;
-/** Prefetch pages on first paint until at least this many cards (or catalog ends). */
-const MIN_HOME_VISIBLE_PRODUCTS = 24;
-const MAX_INITIAL_PREFETCH_PAGES = 8;
+const PAGE_LIMIT_CATEGORY = 24;
+const ALL_PRODUCTS_CHUNK = 24;
 
 function categoryLabel(category) {
   return (category?.catName || category?.name || "").trim();
@@ -34,6 +42,15 @@ function listingLink(categoryId, categoryName) {
   if (!categoryId) return ROUTES.PRODUCT_LISTING;
   const name = categoryName ? `&name=${encodeURIComponent(categoryName)}` : "";
   return `${ROUTES.PRODUCT_LISTING}?category=${encodeURIComponent(categoryId)}${name}`;
+}
+
+function buildDiscoverCacheKey(categoryId, feedRefreshToken) {
+  return buildListCacheKey(PRODUCTS.LIST, {
+    limit: categoryId ? PAGE_LIMIT_CATEGORY : ALL_PRODUCTS_CHUNK,
+    category: categoryId || undefined,
+    refresh: categoryId ? undefined : feedRefreshToken,
+    homeBrowse: categoryId ? undefined : true,
+  });
 }
 
 export default function DiscoverBrowseProducts() {
@@ -61,15 +78,19 @@ export default function DiscoverBrowseProducts() {
     [categoriesAll, categoryDisplayNames, t]
   );
 
+  const [feedRefresh] = useState(() => getHomeFeedRefreshToken());
+
   const [activeCategoryId, setActiveCategoryId] = useState("");
   const [items, setItems] = useState([]);
   const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
   const [message, setMessage] = useState("");
   const nextSkipRef = useRef(1);
   const inFlightRef = useRef(false);
   const abortRef = useRef(null);
+  const loadGenRef = useRef(0);
+  const newArrivalExcludeKeysRef = useRef(null);
   const activeCategoryRef = useRef(activeCategoryId);
   activeCategoryRef.current = activeCategoryId;
 
@@ -80,13 +101,63 @@ export default function DiscoverBrowseProducts() {
     ) || t("home.categoryFallback");
   }, [activeCategoryId, categoriesAll, categoryDisplayNames, t]);
 
+  useFrenchTranslationPrefetch(items, categoriesAll);
+
   const {
     catstripSentinelRef,
     catstripNavRef,
     catstripPinned,
     catstripSpacerHeight,
   } = useCategoryStripPin({ enabled: tabs.length > 0, bodyClass: "home-catstrip-pinned" });
-  const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
+
+  const listCacheKey = useMemo(
+    () => buildDiscoverCacheKey(activeCategoryId, feedRefresh),
+    [activeCategoryId, feedRefresh]
+  );
+
+  const browseStateRef = useRef({ items: [], hasMore: true, skip: 1, listKey: listCacheKey });
+  browseStateRef.current = {
+    items,
+    hasMore,
+    skip: nextSkipRef.current,
+    listKey: listCacheKey,
+  };
+
+  useLayoutEffect(() => {
+    const snapshot = getListSessionSnapshot(listCacheKey);
+    if (snapshot?.items?.length) {
+      setItems(snapshot.items);
+      setHasMore(snapshot.hasMore);
+      nextSkipRef.current = snapshot.skip;
+      setInitialLoad(false);
+      setIsLoading(false);
+      restorePageScroll(listCacheKey);
+    }
+  }, [listCacheKey]);
+
+  useEffect(() => {
+    if (!listCacheKey || !items.length) return;
+    saveListSnapshot(listCacheKey, {
+      items,
+      hasMore,
+      skip: nextSkipRef.current,
+    });
+  }, [items, hasMore, listCacheKey]);
+
+  useEffect(() => {
+    const cacheKeyAtMount = listCacheKey;
+    return () => {
+      const { items: cachedItems, hasMore: cachedHasMore, skip } = browseStateRef.current;
+      if (cacheKeyAtMount && cachedItems?.length) {
+        saveListSnapshot(cacheKeyAtMount, {
+          items: cachedItems,
+          hasMore: cachedHasMore,
+          skip,
+        });
+      }
+      if (cacheKeyAtMount) savePageScroll(cacheKeyAtMount, window.scrollY);
+    };
+  }, [listCacheKey]);
 
   const newArrivalExcludeKeys = useMemo(() => {
     if (activeCategoryId) return null;
@@ -98,13 +169,25 @@ export default function DiscoverBrowseProducts() {
     return keys.size ? keys : null;
   }, [activeCategoryId, newArrivalItems]);
 
+  newArrivalExcludeKeysRef.current = newArrivalExcludeKeys;
+
+  useEffect(() => {
+    if (activeCategoryId || !newArrivalExcludeKeys?.size) return;
+    setItems((prev) => {
+      if (!prev?.length) return prev;
+      const filtered = normalizeHomeCatalogProducts(prev, { excludeKeys: newArrivalExcludeKeys });
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [activeCategoryId, newArrivalExcludeKeys]);
+
   const sanitizeBatch = useCallback((batch) => {
-    const cleaned = normalizeHomeCatalogProducts(batch, { excludeKeys: newArrivalExcludeKeys });
-    if (cleaned.length > 0 || !newArrivalExcludeKeys?.size) {
+    const excludeKeys = newArrivalExcludeKeysRef.current;
+    const cleaned = normalizeHomeCatalogProducts(batch, { excludeKeys });
+    if (cleaned.length > 0 || !excludeKeys?.size) {
       return cleaned;
     }
     return normalizeHomeCatalogProducts(batch);
-  }, [newArrivalExcludeKeys]);
+  }, []);
 
   useEffect(() => {
     inFlightRef.current = false;
@@ -116,10 +199,6 @@ export default function DiscoverBrowseProducts() {
       });
     }
   }, [activeCategoryId]);
-
-  useEffect(() => {
-    setFeedRefresh(getHomeFeedRefreshToken());
-  }, []);
 
   useEffect(() => {
     if (level1?.length) return;
@@ -146,12 +225,24 @@ export default function DiscoverBrowseProducts() {
       query.homeBrowse = true;
     }
 
+    const cacheKey = buildDiscoverCacheKey(categoryId, feedRefresh);
+    if (hasCachedListPage(cacheKey, skip)) {
+      const cached = getCachedListPage(cacheKey, skip);
+      return {
+        batch: cached.items || [],
+        hasMore: cached.hasMore ?? true,
+        skip: Number(cached.skip ?? skip) || skip,
+        fromCache: true,
+      };
+    }
+
     const res = await apiGet(PRODUCTS.LIST, query);
     if (signal?.aborted) return null;
     if (!res || res.status !== "success") {
       throw new Error(res?.message || "Could not load products.");
     }
     const data = res.data || {};
+    saveListPage(cacheKey, skip, data);
     const batch = Array.isArray(data.items) ? data.items : [];
     const has =
       typeof data.hasMore === "boolean"
@@ -160,55 +251,62 @@ export default function DiscoverBrowseProducts() {
     return { batch, hasMore: has, skip: Number(data.skip ?? skip) || skip };
   }, [feedRefresh]);
 
-  const loadUntilFilled = useCallback(
-    async (startSkip, categoryId, signal, minCount = MIN_HOME_VISIBLE_PRODUCTS) => {
-      let merged = [];
-      let pageSkip = startSkip;
-      let has = true;
-      let lastSkip = startSkip;
-      let attempts = 0;
-
-      while (merged.length < minCount && has && attempts < MAX_INITIAL_PREFETCH_PAGES) {
-        const result = await loadPage(pageSkip, categoryId, signal);
-        if (!result) break;
-        lastSkip = result.skip;
-        has = result.hasMore;
-        merged = mergeUniqueProducts(merged, sanitizeBatch(result.batch));
-        pageSkip = lastSkip + 1;
-        attempts += 1;
-        if (!result.batch.length && !has) break;
-      }
-
-      return { items: merged, hasMore: has, skip: lastSkip };
-    },
-    [loadPage, sanitizeBatch]
-  );
+  const loadPageRef = useRef(loadPage);
+  loadPageRef.current = loadPage;
 
   useEffect(() => {
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
+    const generation = loadGenRef.current + 1;
+    loadGenRef.current = generation;
+    const isActive = () => loadGenRef.current === generation && !ac.signal.aborted;
 
     (async () => {
-      setInitialLoad(true);
-      setIsLoading(true);
-      setMessage("");
-      nextSkipRef.current = 1;
-      setItems([]);
-      setHasMore(true);
-      try {
-        const filled = await loadUntilFilled(1, activeCategoryId, ac.signal);
-        if (ac.signal.aborted || !filled) return;
-        setItems(filled.items);
-        nextSkipRef.current = filled.skip;
-        setHasMore(filled.hasMore);
-      } catch (e) {
-        if (ac.signal.aborted || e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
+      const snapshot = getListSessionSnapshot(listCacheKey);
+      const hasCachedList = Boolean(snapshot?.items?.length);
+
+      if (hasCachedList) {
+        setItems(snapshot.items);
+        nextSkipRef.current = snapshot.skip;
+        setHasMore(snapshot.hasMore);
+        setInitialLoad(false);
+        setIsLoading(false);
+        return;
+      } else {
+        setInitialLoad(true);
+        setIsLoading(true);
+        setMessage("");
+        nextSkipRef.current = 1;
         setItems([]);
-        setHasMore(false);
-        setMessage(e?.message || "Could not load products.");
+        setHasMore(true);
+      }
+
+      try {
+        const first = await loadPageRef.current(1, activeCategoryId, ac.signal);
+        if (!isActive()) return;
+        if (first) {
+          const firstItems = sanitizeBatch(first.batch);
+          nextSkipRef.current = first.skip;
+          setHasMore(first.hasMore);
+          setItems(firstItems);
+          if (!firstItems.length && !first.hasMore) {
+            setMessage("No products found.");
+          }
+        } else {
+          setItems([]);
+          setHasMore(false);
+        }
+      } catch (e) {
+        if (!isActive()) return;
+        if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
+        if (!hasCachedList) {
+          setItems([]);
+          setHasMore(false);
+          setMessage(e?.message || "Could not load products.");
+        }
       } finally {
-        if (!ac.signal.aborted) {
+        if (isActive()) {
           setIsLoading(false);
           setInitialLoad(false);
         }
@@ -218,7 +316,7 @@ export default function DiscoverBrowseProducts() {
     return () => {
       ac.abort();
     };
-  }, [activeCategoryId, feedRefresh, loadUntilFilled]);
+  }, [activeCategoryId, feedRefresh, listCacheKey, sanitizeBatch]);
 
   const fetchRecords = useCallback(async () => {
     if (inFlightRef.current || !hasMore) return;
@@ -231,31 +329,27 @@ export default function DiscoverBrowseProducts() {
       let has = true;
       let lastSkip = pageSkip;
       let attempts = 0;
-      const minBatch = 12;
 
-      while (merged.length < minBatch && has && attempts < 6) {
+      while (merged.length < 1 && has && attempts < 8) {
         const result = await loadPage(pageSkip, categorySnapshot, null);
         if (!result) return;
         if (categorySnapshot !== activeCategoryRef.current) return;
         lastSkip = result.skip;
         has = result.hasMore;
-        merged = mergeUniqueProducts(merged, sanitizeBatch(result.batch));
+        const sanitized = sanitizeBatch(result.batch);
+        if (sanitized.length) {
+          merged = mergeUniqueProducts(merged, sanitized);
+        }
         pageSkip = lastSkip + 1;
         attempts += 1;
         if (!result.batch.length && !has) break;
       }
 
-      if (!merged.length) {
-        if (attempts > 0) {
-          nextSkipRef.current = lastSkip;
-        }
-        setHasMore(has);
-        return;
-      }
-
-      setItems((prev) => mergeUniqueProducts(prev, merged));
       nextSkipRef.current = lastSkip;
       setHasMore(has);
+      if (merged.length) {
+        setItems((prev) => mergeUniqueProducts(prev, merged));
+      }
     } catch (e) {
       if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
       setHasMore(false);
