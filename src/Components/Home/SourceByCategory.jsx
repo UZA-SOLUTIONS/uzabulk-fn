@@ -21,7 +21,8 @@ import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import UXSkeleton from "../Common/UXSkeleton";
 
 const MAX_CATEGORIES = 16;
-const IMAGE_FETCH_CONCURRENCY = 8;
+const IMAGE_FETCH_CONCURRENCY = 2;
+const PREFETCH_DELAY_MS = 2000;
 const SKELETON_CARD_COUNT = 6;
 
 const Chevron = ({ dir }) => (
@@ -192,7 +193,7 @@ export default function SourceByCategory() {
   );
 
   useEffect(() => {
-    if (!categoryIdsKey) return;
+    if (!categoryIdsKey) return undefined;
     let cancelled = false;
 
     const prefetchMissing = async () => {
@@ -229,9 +230,13 @@ export default function SourceByCategory() {
       }
     };
 
-    prefetchMissing();
+    const timer = window.setTimeout(() => {
+      void prefetchMissing();
+    }, PREFETCH_DELAY_MS);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [categoryIdsKey, requestCategoryImage]);
 

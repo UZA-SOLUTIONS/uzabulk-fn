@@ -16,16 +16,7 @@ import ROUTES from "../../helpers/routesHelper";
 import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
 import { apiGetCategories } from "../../store/categories/actions";
 import { apiGetProductDetail, apiGetProducts } from "../../store/products/actions";
-import { clearProductList, hydrateProductList } from "../../store/products/slice";
-import {
-  buildListCacheKey,
-  getListSessionSnapshot,
-  isFetchCacheStale,
-  restorePageScroll,
-  saveListSnapshot,
-  savePageScroll,
-} from "../../helpers/fetchCacheHelper";
-import { readScrollY } from "../../helpers/scrollRootHelper";
+import { clearProductList } from "../../store/products/slice";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import useCategoryDisplayNames from "../../hooks/useCategoryDisplayNames";
@@ -43,8 +34,6 @@ const Productlist = () => {
   const { isLoading, items, hasMore, message, skip, others } = useSelector((s) => s.products.products);
   const cancelToken = useRef(null);
   const fetchLockRef = useRef(false);
-  const listStateRef = useRef({ items: [], hasMore: true, skip: 1, others: null, listKey: "" });
-  listStateRef.current = { items, hasMore, skip, others, listKey: listStateRef.current.listKey };
 
   const limit = 32;
   const searchQuery = searchParams.get("search") || "";
@@ -234,45 +223,9 @@ const Productlist = () => {
     [hasMore, isLoading, searchParams.toString(), skip]
   );
 
-  useEffect(() => () => {
-    const { items: cachedItems, hasMore: cachedHasMore, skip: cachedSkip, others: cachedOthers, listKey } = listStateRef.current;
-    if (listKey && cachedItems?.length) {
-      saveListSnapshot(listKey, {
-        items: cachedItems,
-        hasMore: cachedHasMore,
-        skip: cachedSkip,
-        others: cachedOthers,
-      });
-    }
-    if (listKey) savePageScroll(listKey, readScrollY());
-  }, []);
-
   useEffect(() => {
     const searchTerm = searchParams.get("search") || "";
     const imageTerm = searchParams.get("image") || "";
-    const listQuery = {
-      limit,
-      skip: 1,
-      category: searchParams.get("category") ? String(searchParams.get("category")) : undefined,
-      search: searchTerm || undefined,
-      image: imageTerm || undefined,
-      country: searchParams.get("country") || "en",
-      ...getSortQuery(selectedSort || (searchTerm || imageTerm ? "relevance" : "newest")),
-    };
-    const listKey = buildListCacheKey(PRODUCTS.LIST, listQuery);
-    listStateRef.current.listKey = listKey;
-    const snapshot = getListSessionSnapshot(listKey);
-
-    if (snapshot?.items?.length) {
-      dispatch(hydrateProductList(snapshot));
-      restorePageScroll(listKey);
-      if (!isFetchCacheStale(`list:${listKey}`, 5 * 60 * 1000)) {
-        return;
-      }
-      fetchProducts(true, 1);
-      return;
-    }
-
     smoothScrollToTop();
     dispatch(clearProductList("products"));
     fetchProducts(true, 1);

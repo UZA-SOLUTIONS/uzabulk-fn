@@ -2,6 +2,8 @@ import { mergeUniqueProducts } from "./commonHelper";
 import { readScrollY, writeScrollY } from "./scrollRootHelper";
 
 const STORAGE_PREFIX = "uzabulk_fetch_cache_v1:";
+/** Set false to always fetch fresh data (no session/memory list or detail cache). */
+export const CLIENT_FETCH_CACHE_ENABLED = false;
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
 const LIST_TTL_MS = 25 * 60 * 1000;
 const DETAIL_TTL_MS = 45 * 60 * 1000;
@@ -81,7 +83,23 @@ function isExpired(entry, ttlMs = DEFAULT_TTL_MS) {
   return Date.now() - entry.fetchedAt > ttlMs;
 }
 
+export function clearClientFetchCache() {
+  memory.clear();
+  if (!isBrowser()) return;
+  try {
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith(STORAGE_PREFIX)) keys.push(key);
+    }
+    keys.forEach((key) => sessionStorage.removeItem(key));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function getFetchCacheEntry(key, { ttlMs = DEFAULT_TTL_MS } = {}) {
+  if (!CLIENT_FETCH_CACHE_ENABLED) return null;
   const fromMemory = memory.get(key);
   if (fromMemory && !isExpired(fromMemory, ttlMs)) return fromMemory.data;
 
@@ -94,6 +112,7 @@ export function getFetchCacheEntry(key, { ttlMs = DEFAULT_TTL_MS } = {}) {
 }
 
 export function setFetchCacheEntry(key, data, { ttlMs = DEFAULT_TTL_MS } = {}) {
+  if (!CLIENT_FETCH_CACHE_ENABLED) return;
   const entry = { data, fetchedAt: Date.now(), ttlMs };
   pruneMemory();
   memory.set(key, entry);
@@ -185,6 +204,39 @@ export function saveListPage(listKey, skip, pageData = {}) {
   return session;
 }
 
+const HOME_BROWSE_SNAPSHOT_KEY = "home-browse:last-snapshot";
+const HOME_NEW_ARRIVALS_SNAPSHOT_KEY = "home-new-arrivals:last-snapshot";
+
+export function saveHomeBrowseSnapshot({ items = [], hasMore = true, skip = 1 } = {}) {
+  if (!items?.length) return;
+  setFetchCacheEntry(
+    HOME_BROWSE_SNAPSHOT_KEY,
+    { items, hasMore, skip },
+    { ttlMs: LIST_TTL_MS }
+  );
+}
+
+export function getHomeBrowseSnapshot() {
+  const data = getFetchCacheEntry(HOME_BROWSE_SNAPSHOT_KEY, { ttlMs: LIST_TTL_MS });
+  if (!data?.items?.length) return null;
+  return {
+    items: data.items,
+    hasMore: data.hasMore ?? true,
+    skip: data.skip || 1,
+  };
+}
+
+export function saveHomeNewArrivalsSnapshot({ items = [] } = {}) {
+  if (!items?.length) return;
+  setFetchCacheEntry(HOME_NEW_ARRIVALS_SNAPSHOT_KEY, { items }, { ttlMs: LIST_TTL_MS });
+}
+
+export function getHomeNewArrivalsSnapshot() {
+  const data = getFetchCacheEntry(HOME_NEW_ARRIVALS_SNAPSHOT_KEY, { ttlMs: LIST_TTL_MS });
+  if (!data?.items?.length) return null;
+  return data.items;
+}
+
 export function saveListSnapshot(listKey, { items = [], hasMore = true, skip = 1, others = null } = {}) {
   if (!listKey || !items?.length) return;
   const session = getListSession(listKey) || {
@@ -202,6 +254,7 @@ export function saveListSnapshot(listKey, { items = [], hasMore = true, skip = 1
 }
 
 export function savePageScroll(listKey, scrollY) {
+  if (!CLIENT_FETCH_CACHE_ENABLED) return;
   if (!isBrowser() || !listKey) return;
   try {
     const y = Number(scrollY);
@@ -213,6 +266,7 @@ export function savePageScroll(listKey, scrollY) {
 }
 
 export function restorePageScroll(listKey) {
+  if (!CLIENT_FETCH_CACHE_ENABLED) return;
   if (!isBrowser() || !listKey) return;
   try {
     const raw = sessionStorage.getItem(`${STORAGE_PREFIX}scroll:${listKey}`);

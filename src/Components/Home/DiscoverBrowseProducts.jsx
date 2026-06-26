@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
@@ -8,17 +8,6 @@ import ProductsListingInfinite from "../Products/ProductsListingInfinite";
 import UXSkeleton from "../Common/UXSkeleton";
 import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
 import { apiGet } from "../../helpers/apiHelper";
-import {
-  buildListCacheKey,
-  getCachedListPage,
-  getListSessionSnapshot,
-  hasCachedListPage,
-  restorePageScroll,
-  saveListPage,
-  saveListSnapshot,
-  savePageScroll,
-} from "../../helpers/fetchCacheHelper";
-import { readScrollY } from "../../helpers/scrollRootHelper";
 import {
   getHomeFeedRefreshToken,
   getProductDedupeKey,
@@ -43,15 +32,6 @@ function listingLink(categoryId, categoryName) {
   if (!categoryId) return ROUTES.PRODUCT_LISTING;
   const name = categoryName ? `&name=${encodeURIComponent(categoryName)}` : "";
   return `${ROUTES.PRODUCT_LISTING}?category=${encodeURIComponent(categoryId)}${name}`;
-}
-
-function buildDiscoverCacheKey(categoryId, feedRefreshToken) {
-  return buildListCacheKey(PRODUCTS.LIST, {
-    limit: categoryId ? PAGE_LIMIT_CATEGORY : ALL_PRODUCTS_CHUNK,
-    category: categoryId || undefined,
-    refresh: categoryId ? undefined : feedRefreshToken,
-    homeBrowse: categoryId ? undefined : true,
-  });
 }
 
 export default function DiscoverBrowseProducts() {
@@ -90,7 +70,6 @@ export default function DiscoverBrowseProducts() {
   const nextSkipRef = useRef(1);
   const inFlightRef = useRef(false);
   const abortRef = useRef(null);
-  const loadGenRef = useRef(0);
   const newArrivalExcludeKeysRef = useRef(null);
   const activeCategoryRef = useRef(activeCategoryId);
   activeCategoryRef.current = activeCategoryId;
@@ -106,55 +85,6 @@ export default function DiscoverBrowseProducts() {
 
   const { catstripNavRef } = useCategoryStripPin({ enabled: tabs.length > 0 });
 
-  const listCacheKey = useMemo(
-    () => buildDiscoverCacheKey(activeCategoryId, feedRefresh),
-    [activeCategoryId, feedRefresh]
-  );
-
-  const browseStateRef = useRef({ items: [], hasMore: true, skip: 1, listKey: listCacheKey });
-  browseStateRef.current = {
-    items,
-    hasMore,
-    skip: nextSkipRef.current,
-    listKey: listCacheKey,
-  };
-
-  useLayoutEffect(() => {
-    const snapshot = getListSessionSnapshot(listCacheKey);
-    if (snapshot?.items?.length) {
-      setItems(snapshot.items);
-      setHasMore(snapshot.hasMore);
-      nextSkipRef.current = snapshot.skip;
-      setInitialLoad(false);
-      setIsLoading(false);
-      restorePageScroll(listCacheKey);
-    }
-  }, [listCacheKey]);
-
-  useEffect(() => {
-    if (!listCacheKey || !items.length) return;
-    saveListSnapshot(listCacheKey, {
-      items,
-      hasMore,
-      skip: nextSkipRef.current,
-    });
-  }, [items, hasMore, listCacheKey]);
-
-  useEffect(() => {
-    const cacheKeyAtMount = listCacheKey;
-    return () => {
-      const { items: cachedItems, hasMore: cachedHasMore, skip } = browseStateRef.current;
-      if (cacheKeyAtMount && cachedItems?.length) {
-        saveListSnapshot(cacheKeyAtMount, {
-          items: cachedItems,
-          hasMore: cachedHasMore,
-          skip,
-        });
-      }
-      if (cacheKeyAtMount) savePageScroll(cacheKeyAtMount, readScrollY());
-    };
-  }, [listCacheKey]);
-
   const newArrivalExcludeKeys = useMemo(() => {
     if (activeCategoryId) return null;
     const keys = new Set();
@@ -167,15 +97,6 @@ export default function DiscoverBrowseProducts() {
 
   newArrivalExcludeKeysRef.current = newArrivalExcludeKeys;
 
-  useEffect(() => {
-    if (activeCategoryId || !newArrivalExcludeKeys?.size) return;
-    setItems((prev) => {
-      if (!prev?.length) return prev;
-      const filtered = normalizeHomeCatalogProducts(prev, { excludeKeys: newArrivalExcludeKeys });
-      return filtered.length === prev.length ? prev : filtered;
-    });
-  }, [activeCategoryId, newArrivalExcludeKeys]);
-
   const sanitizeBatch = useCallback((batch) => {
     const excludeKeys = newArrivalExcludeKeysRef.current;
     const cleaned = normalizeHomeCatalogProducts(batch, { excludeKeys });
@@ -184,6 +105,23 @@ export default function DiscoverBrowseProducts() {
     }
     return normalizeHomeCatalogProducts(batch);
   }, []);
+
+  const sanitizeBatchRef = useRef(sanitizeBatch);
+  sanitizeBatchRef.current = sanitizeBatch;
+  const pendingBrowseBackfillRef = useRef(false);
+
+  useEffect(() => {
+    if (activeCategoryId || !newArrivalExcludeKeys?.size) return;
+    setItems((prev) => {
+      if (!prev?.length) return prev;
+      const filtered = normalizeHomeCatalogProducts(prev, { excludeKeys: newArrivalExcludeKeys });
+      if (!filtered.length) {
+        pendingBrowseBackfillRef.current = true;
+        return [];
+      }
+      return filtered.length === prev.length ? prev : filtered;
+    });
+  }, [activeCategoryId, newArrivalExcludeKeys]);
 
   useEffect(() => {
     inFlightRef.current = false;
@@ -221,24 +159,12 @@ export default function DiscoverBrowseProducts() {
       query.homeBrowse = true;
     }
 
-    const cacheKey = buildDiscoverCacheKey(categoryId, feedRefresh);
-    if (hasCachedListPage(cacheKey, skip)) {
-      const cached = getCachedListPage(cacheKey, skip);
-      return {
-        batch: cached.items || [],
-        hasMore: cached.hasMore ?? true,
-        skip: Number(cached.skip ?? skip) || skip,
-        fromCache: true,
-      };
-    }
-
     const res = await apiGet(PRODUCTS.LIST, query);
     if (signal?.aborted) return null;
     if (!res || res.status !== "success") {
       throw new Error(res?.message || "Could not load products.");
     }
     const data = res.data || {};
-    saveListPage(cacheKey, skip, data);
     const batch = Array.isArray(data.items) ? data.items : [];
     const has =
       typeof data.hasMore === "boolean"
@@ -251,41 +177,30 @@ export default function DiscoverBrowseProducts() {
   loadPageRef.current = loadPage;
 
   useEffect(() => {
+    let ignore = false;
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
-    const generation = loadGenRef.current + 1;
-    loadGenRef.current = generation;
-    const isActive = () => loadGenRef.current === generation && !ac.signal.aborted;
+
+    setInitialLoad(true);
+    setIsLoading(true);
+    setMessage("");
+    nextSkipRef.current = 1;
+    setItems([]);
+    setHasMore(true);
 
     (async () => {
-      const snapshot = getListSessionSnapshot(listCacheKey);
-      const hasCachedList = Boolean(snapshot?.items?.length);
-
-      if (hasCachedList) {
-        setItems(snapshot.items);
-        nextSkipRef.current = snapshot.skip;
-        setHasMore(snapshot.hasMore);
-        setInitialLoad(false);
-        setIsLoading(false);
-        return;
-      } else {
-        setInitialLoad(true);
-        setIsLoading(true);
-        setMessage("");
-        nextSkipRef.current = 1;
-        setItems([]);
-        setHasMore(true);
-      }
-
       try {
         const first = await loadPageRef.current(1, activeCategoryId, ac.signal);
-        if (!isActive()) return;
+        if (ignore) return;
         if (first) {
-          const firstItems = sanitizeBatch(first.batch);
+          const firstItems = sanitizeBatchRef.current(first.batch);
           nextSkipRef.current = first.skip;
           setHasMore(first.hasMore);
           setItems(firstItems);
+          if (!firstItems.length && first.hasMore) {
+            pendingBrowseBackfillRef.current = true;
+          }
           if (!firstItems.length && !first.hasMore) {
             setMessage("No products found.");
           }
@@ -294,15 +209,13 @@ export default function DiscoverBrowseProducts() {
           setHasMore(false);
         }
       } catch (e) {
-        if (!isActive()) return;
+        if (ignore) return;
         if (e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
-        if (!hasCachedList) {
-          setItems([]);
-          setHasMore(false);
-          setMessage(e?.message || "Could not load products.");
-        }
+        setItems([]);
+        setHasMore(false);
+        setMessage(e?.message || "Could not load products.");
       } finally {
-        if (isActive()) {
+        if (!ignore) {
           setIsLoading(false);
           setInitialLoad(false);
         }
@@ -310,9 +223,10 @@ export default function DiscoverBrowseProducts() {
     })();
 
     return () => {
+      ignore = true;
       ac.abort();
     };
-  }, [activeCategoryId, feedRefresh, listCacheKey, sanitizeBatch]);
+  }, [activeCategoryId, feedRefresh]);
 
   const fetchRecords = useCallback(async () => {
     if (inFlightRef.current || !hasMore) return;
@@ -355,6 +269,29 @@ export default function DiscoverBrowseProducts() {
       inFlightRef.current = false;
     }
   }, [hasMore, loadPage, sanitizeBatch]);
+
+  useEffect(() => {
+    if (!pendingBrowseBackfillRef.current) return;
+    if (activeCategoryId || initialLoad || isLoading || inFlightRef.current) return;
+    if (items.length > 0) {
+      pendingBrowseBackfillRef.current = false;
+      return;
+    }
+    if (!hasMore) {
+      pendingBrowseBackfillRef.current = false;
+      return;
+    }
+    pendingBrowseBackfillRef.current = false;
+    void fetchRecords();
+  }, [
+    activeCategoryId,
+    fetchRecords,
+    hasMore,
+    initialLoad,
+    isLoading,
+    items.length,
+    newArrivalExcludeKeys,
+  ]);
 
   const selectTab = useCallback((tabId) => {
     setActiveCategoryId(tabId ? String(tabId) : "");

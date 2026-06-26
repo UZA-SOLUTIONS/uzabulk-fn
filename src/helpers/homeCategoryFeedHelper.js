@@ -90,9 +90,10 @@ export async function fetchCategoryProductThumbnail(category, feedRefresh, poolS
   if (!category?._id) return "";
 
   const primary = getCategoryRepresentativeSkip(category._id, feedRefresh, poolSize);
+  const maxTries = Math.min(poolSize, 3);
   const candidates = [...new Set([
     primary,
-    ...Array.from({ length: Math.min(poolSize, 8) }, (_, i) => i + 1),
+    ...Array.from({ length: maxTries }, (_, i) => i + 1),
   ])];
 
   for (let i = 0; i < candidates.length; i += 1) {

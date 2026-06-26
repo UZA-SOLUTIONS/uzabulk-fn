@@ -16,10 +16,12 @@ const logger = (...params) => {
   }
 };
 
+const API_REQUEST_TIMEOUT_MS = Number(process.env.REACT_APP_API_TIMEOUT_MS) || 0;
+
 // Create an instance of axios with default settings
 const apiClient = axios.create({
   baseURL: `${API_URL}/api/v1`,
-  timeout: 0,
+  ...(API_REQUEST_TIMEOUT_MS > 0 ? { timeout: API_REQUEST_TIMEOUT_MS } : {}),
   headers: {
     "Content-Type": "application/json",
   },
