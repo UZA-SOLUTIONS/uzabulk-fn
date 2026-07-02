@@ -625,6 +625,43 @@ body.assistant-side-dock .floating-buyer-assistant.is-docked {
   align-items: center;
 }
 
+.floating-buyer-assistant__confirm_block {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+}
+
+.floating-buyer-assistant__confirm_prompt {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #78350f;
+}
+
+.floating-buyer-assistant__confirm_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.floating-buyer-assistant__action_btn--confirm {
+  border-color: var(--theme-yellow, #f6a532);
+  background: var(--theme-yellow, #f6a532);
+  color: #1f2937;
+}
+
+.floating-buyer-assistant__action_btn--confirm:hover {
+  background: #e8941f;
+  border-color: #e8941f;
+}
+
+.floating-buyer-assistant__action_btn--cancel {
+  background: #fff;
+  color: #64748b;
+}
+
 .floating-buyer-assistant__bubble {
   max-width: 88%;
   padding: 10px 12px;

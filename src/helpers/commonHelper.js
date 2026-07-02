@@ -63,31 +63,50 @@ export const getProductDedupeKey = (item) => {
   return "";
 };
 
-const RESTRICTED_CATALOG_RE = /\b(underwear|underwears|lingerie|panties|panty|briefs|thong|boxer\s*briefs?|bras?\b|nightwear|nightgown|nightdress|intimate|qqny|sexy\s*underwear|sexy\s*lingerie|underpants|undergarment|crotch|pajamas?\s*sexy|sex\s*underwear|passion\s+clothes|bunny\s+christmas\s+clothes)\b/i;
-const RESTRICTED_CATALOG_CJK_RE = /(内裤|内衣裤|内衣|胸罩|文胸|丁字裤|情趣内衣|情趣套装|性感内衣|女士内裤|男士内裤|开裆)/;
+const collectCatalogText = (item) => {
+  if (!item) return "";
+  const categoryNames = []
+    .concat(item?.category?.name, item?.category?.catName)
+    .concat(
+      Array.isArray(item?.categories)
+        ? item.categories.map((cat) => (typeof cat === "string" ? "" : cat?.name || cat?.catName))
+        : []
+    )
+    .filter(Boolean)
+    .join(" ");
 
-export const isRestrictedCatalogProduct = (item) => {
-  if (!item) return true;
-  const combined = [
+  return [
     item?.name,
     item?.title,
     item?.short_description,
-    item?.category?.name,
-    item?.category?.catName,
+    categoryNames,
   ]
     .map((part) => String(part || "").trim())
     .filter(Boolean)
     .join(" ");
+};
+
+export const isBlockedCatalogProduct = (item) => {
+  if (!item) return true;
+  const combined = collectCatalogText(item);
   if (!combined || /\btest\b/i.test(combined)) return true;
-  if (RESTRICTED_CATALOG_RE.test(combined)) return true;
-  if (RESTRICTED_CATALOG_CJK_RE.test(combined)) return true;
   return false;
+};
+
+/** No category-based catalog restrictions (underwear etc. are allowed). */
+export const isSensitiveCatalogProduct = () => false;
+
+export const isRestrictedCatalogProduct = (item) => isBlockedCatalogProduct(item);
+
+export const balanceCatalogProducts = (items = []) => {
+  if (!Array.isArray(items) || !items.length) return [];
+  return items.filter((item) => !isBlockedCatalogProduct(item));
 };
 
 export const isValidHomeCatalogProduct = (item) => {
   if (!item) return false;
   if (!getProductDedupeKey(item)) return false;
-  if (isRestrictedCatalogProduct(item)) return false;
+  if (isBlockedCatalogProduct(item)) return false;
   const name = (item?.name || "").trim();
   if (!name || name.toLowerCase().includes("test")) return false;
   return true;
@@ -119,7 +138,8 @@ export const mergeUniqueProducts = (existing = [], incoming = []) => {
 
 export const normalizeHomeCatalogProducts = (items = [], { excludeKeys = null } = {}) => {
   const exclude = excludeKeys instanceof Set ? excludeKeys : null;
-  return dedupeProducts(items).filter((item) => {
+  const balanced = balanceCatalogProducts(dedupeProducts(items));
+  return balanced.filter((item) => {
     if (!isValidHomeCatalogProduct(item)) return false;
     if (!exclude?.size) return true;
     const key = getProductDedupeKey(item);
@@ -141,7 +161,83 @@ export const parseText = (text) => {
   const formattedDescription = (text || "").replace(/(?:\\r\n|\\r|\\n)/g, ' ');
 
   return DOMPurify.sanitize(formattedDescription);
-}
+};
+
+const DESCRIPTION_API_BASE = (
+  process.env.REACT_APP_API_URL || "http://localhost:1302"
+).replace(/\/+$/, "");
+
+const EXTERNAL_DESCRIPTION_IMAGE_RE = /alicdn\.com|alibaba\.com|1688\.com/i;
+const PROXIED_DESCRIPTION_IMAGE_RE = /\/products\/description-image(?:\/|\?url=)/i;
+
+const normalizeExternalImageUrl = (raw = "") => {
+  let value = String(raw || "").trim().replace(/^['"]+|['"]+$/g, "");
+  if (!value) return "";
+  if (value.startsWith("//")) return `https:${value}`;
+  return value;
+};
+
+const encodeImageUrlParam = (url = "") => {
+  const bytes = new TextEncoder().encode(String(url || ""));
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+};
+
+const buildDescriptionImageProxyUrl = (rawUrl = "") => {
+  const imageUrl = normalizeExternalImageUrl(rawUrl);
+  if (!imageUrl || !EXTERNAL_DESCRIPTION_IMAGE_RE.test(imageUrl)) return imageUrl;
+  if (PROXIED_DESCRIPTION_IMAGE_RE.test(imageUrl)) return imageUrl;
+  if (!DESCRIPTION_API_BASE) return imageUrl;
+  return `${DESCRIPTION_API_BASE}/api/v1/products/description-image/${encodeImageUrlParam(imageUrl)}`;
+};
+
+const stripEmptyDescriptionTemplates = (html = "") => (
+  String(html || "")
+    .replace(/<div[^>]*id=["']offer-template-0["'][^>]*>\s*<\/div>/gi, "")
+);
+
+const rewriteDescriptionImages = (html = "") => {
+  if (!html) return html;
+
+  return html.replace(/<img\b([^>]*?)>/gi, (match, attrs) => {
+    const srcMatch = attrs.match(/\bsrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const rawSrc = srcMatch ? (srcMatch[2] || srcMatch[3] || srcMatch[4] || "") : "";
+    const proxied = buildDescriptionImageProxyUrl(rawSrc);
+
+    let next = attrs;
+    if (proxied && proxied !== normalizeExternalImageUrl(rawSrc)) {
+      next = attrs.replace(
+        /\bsrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i,
+        `src="${proxied}"`
+      );
+    }
+    if (!/referrerpolicy\s*=/i.test(next)) {
+      next += ' referrerpolicy="no-referrer"';
+    }
+    if (!/loading\s*=/i.test(next)) {
+      next += ' loading="lazy"';
+    }
+    if (!/decoding\s*=/i.test(next)) {
+      next += ' decoding="async"';
+    }
+    return `<img${next}>`;
+  });
+};
+
+export const parseProductDescription = (text) => {
+  const formatted = String(text || "").replace(/(?:\\r\n|\\r|\\n)/g, " ");
+  if (!formatted.trim()) return "";
+
+  const proxied = rewriteDescriptionImages(formatted);
+  const cleaned = stripEmptyDescriptionTemplates(proxied);
+  if (!cleaned.trim()) return "";
+
+  // Catalog HTML is trusted API content — DOMPurify was stripping 1688 image markup.
+  return cleaned;
+};
 
 /** Browser-only; safe when this module is evaluated in Node during tests. */
 function getBrowserLocation() {

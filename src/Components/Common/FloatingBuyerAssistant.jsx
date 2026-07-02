@@ -1,12 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
+import { apiGetCartCount } from "../../store/cart/actions";
+import { store } from "../../store/store";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import ROUTES from "../../helpers/routesHelper";
 import { getLanguageCode } from "../../helpers/languageHelper";
 import {
+  ASSISTANT_OPEN_EVENT,
   QUICK_PROMPTS,
+  applyAssistantResponse,
+  confirmAssistantAction,
   escalateAssistantChat,
+  fetchAssistantHistory,
   fetchAssistantWelcome,
   getAssistantSessionId,
   sendAssistantMessage,
@@ -115,9 +122,11 @@ export default function FloatingBuyerAssistant() {
   const [loading, setLoading] = useState(false);
   const [disputeFlag, setDisputeFlag] = useState(false);
   const [escalated, setEscalated] = useState(false);
+  const [confirmingId, setConfirmingId] = useState("");
   const [isResizing, setIsResizing] = useState(false);
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const openLoadedRef = useRef(false);
   const resizeRef = useRef({ startX: 0, startWidth: DEFAULT_DOCK_WIDTH });
 
   const isDocked = open && isDesktop;
@@ -135,22 +144,49 @@ export default function FloatingBuyerAssistant() {
       const next = lng === "fr" ? "fr" : "en";
       setLanguage(next);
       setMessages([]);
+      openLoadedRef.current = false;
     };
     i18n.on("languageChanged", onLanguageChanged);
     return () => i18n.off("languageChanged", onLanguageChanged);
   }, [i18n]);
 
   useEffect(() => {
-    if (!open || messages.length) return undefined;
-    let cancelled = false;
+    if (!open) {
+      openLoadedRef.current = false;
+      return undefined;
+    }
+    if (openLoadedRef.current) return undefined;
+    openLoadedRef.current = true;
 
-    fetchAssistantWelcome(language)
-      .then((data) => {
+    let cancelled = false;
+    const storedSessionId = getAssistantSessionId() || sessionId;
+
+    const loadSession = async () => {
+      if (storedSessionId) {
+        try {
+          const history = await fetchAssistantHistory(storedSessionId);
+          if (cancelled) return;
+          if (history?.messages?.length) {
+            setSessionId(String(history.sessionId || storedSessionId));
+            setAssistantSessionId(String(history.sessionId || storedSessionId));
+            setMessages(history.messages);
+            if (history.dispute_flag) setDisputeFlag(true);
+            if (history.escalated) setEscalated(true);
+            return;
+          }
+        } catch {
+          /* fall through to welcome */
+        }
+      }
+
+      if (cancelled) return;
+
+      try {
+        const data = await fetchAssistantWelcome(language);
         if (cancelled) return;
         const welcome = data?.message || t("assistant.welcomeFallback");
         setMessages([{ role: "assistant", content: welcome, id: "welcome" }]);
-      })
-      .catch(() => {
+      } catch {
         if (cancelled) return;
         setMessages([
           {
@@ -159,12 +195,32 @@ export default function FloatingBuyerAssistant() {
             id: "welcome-fallback",
           },
         ]);
-      });
+      }
+    };
+
+    loadSession();
 
     return () => {
       cancelled = true;
     };
-  }, [open, language, messages.length, t]);
+  }, [open, language, t]);
+
+  useEffect(() => {
+    const onOpenAssistant = (event) => {
+      const detail = event?.detail || {};
+      if (detail.message) {
+        openLoadedRef.current = true;
+      }
+      setOpen(true);
+      if (detail.message) {
+        window.setTimeout(() => {
+          handleSendRef.current?.(detail.message);
+        }, 300);
+      }
+    };
+    window.addEventListener(ASSISTANT_OPEN_EVENT, onOpenAssistant);
+    return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, onOpenAssistant);
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -243,6 +299,7 @@ export default function FloatingBuyerAssistant() {
 
   const productIdFromContext = resolveAssistantProductId(location);
   const orderIdFromContext = resolveAssistantOrderId(location);
+  const handleSendRef = useRef(null);
 
   const pushMessage = (role, content, extra = {}) => {
     setMessages((prev) => [
@@ -267,28 +324,71 @@ export default function FloatingBuyerAssistant() {
         orderId: orderIdFromContext || undefined,
       });
 
-      if (data?.sessionId) {
-        setSessionId(data.sessionId);
-        setAssistantSessionId(data.sessionId);
-      }
-      if (data?.language) setLanguage(data.language);
-      if (data?.dispute_flag) setDisputeFlag(true);
-      if (data?.escalated) setEscalated(true);
+      const assistantMessage = applyAssistantResponse(data, {
+        setSessionId,
+        setLanguage,
+        setDisputeFlag,
+        setEscalated,
+      });
 
-      pushMessage("assistant", data?.answer || "Sorry, I could not generate a reply.", {
-        dispute_flag: data?.dispute_flag,
-        status: data?.status,
-        products: data?.products || [],
-        actions: data?.actions || [],
+      pushMessage("assistant", assistantMessage.content, {
+        dispute_flag: assistantMessage.dispute_flag,
+        status: assistantMessage.status,
+        products: assistantMessage.products,
+        actions: assistantMessage.actions,
       });
     } catch (error) {
       pushMessage(
         "assistant",
-        "I'm having trouble connecting right now. Please try again or visit Contact Us for help.",
+        t("assistant.connectionError"),
         { status: "EXCEPTION" }
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  handleSendRef.current = handleSend;
+
+  const handleConfirm = async (action, confirmed) => {
+    if (!action?.confirmationId || loading) return;
+    setConfirmingId(action.confirmationId);
+    setLoading(true);
+    try {
+      const data = await confirmAssistantAction({
+        sessionId,
+        confirmationId: action.confirmationId,
+        confirmed,
+      });
+
+      const assistantMessage = applyAssistantResponse(data, {
+        setSessionId,
+        setLanguage,
+        setDisputeFlag,
+        setEscalated,
+      });
+
+      pushMessage("assistant", assistantMessage.content, {
+        status: assistantMessage.status,
+        products: assistantMessage.products,
+        actions: assistantMessage.actions,
+      });
+
+      if (confirmed && action.actionType === "add_to_cart") {
+        store.dispatch(apiGetCartCount());
+        toast.success(t("cart.cartUpdated"));
+      }
+    } catch {
+      pushMessage("assistant", t("assistant.actionFailed"), { status: "EXCEPTION" });
+    } finally {
+      setConfirmingId("");
+      setLoading(false);
+    }
+  };
+
+  const handleNavigate = (action = {}) => {
+    if (action?.closeAssistant) {
+      window.setTimeout(() => setOpen(false), 120);
     }
   };
 
@@ -392,7 +492,14 @@ export default function FloatingBuyerAssistant() {
 
           <div className="floating-buyer-assistant__messages" ref={listRef}>
             {messages.map((msg) => (
-              <AssistantMessage key={msg.id} message={msg} onAction={handleAction} />
+              <AssistantMessage
+                key={msg.id}
+                message={msg}
+                onAction={handleAction}
+                onNavigate={handleNavigate}
+                onConfirm={handleConfirm}
+                confirmingId={confirmingId}
+              />
             ))}
             {loading ? (
               <div className="floating-buyer-assistant__typing" aria-live="polite">

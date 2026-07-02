@@ -96,6 +96,7 @@ export const BUYER_ASSISTANT = {
   STATUS: "buyer-assistant/status",
   WELCOME: "buyer-assistant/welcome",
   CHAT: "buyer-assistant/chat",
+  CONFIRM: "buyer-assistant/confirm",
   HISTORY: "buyer-assistant/history",
   ESCALATE: "buyer-assistant/escalate",
 };

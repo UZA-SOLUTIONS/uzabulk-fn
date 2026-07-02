@@ -35,6 +35,15 @@
     "imageSearchFailed": "Could not search by image. Try again.",
     "imageUrlSearchFailed": "Could not search by image URL. Try again.",
     "clearImageSearch": "Clear image search",
+    "imageSearchTitle": "Find product inspiration with Image Search",
+    "visualMatchTitle": "Visual match: {{name}}",
+    "visualMatchResults": "Visual match results",
+    "imageSearchTitleWithTerm": "Image search: {{term}}",
+    "imageSearchResults": "Image search results",
+    "closeImageSearch": "Close image search",
+    "pasteImageHint": "Paste an image you copied with",
+    "dragDropHint": "Drag and drop an image here or upload a file",
+    "uploadImage": "Upload",
     "suggestions": "Suggestions",
     "noProductsFound": "No products found",
     "viewProductDetails": "View product details",
@@ -200,7 +209,8 @@
     "similarWholesale": "Similar wholesale items from our catalog",
     "moqSold": "MOQ {{moq}} • {{sold}} sold",
     "moqOnly": "MOQ {{moq}}",
-    "soldOnly": "{{sold}} sold"
+    "soldOnly": "{{sold}} sold",
+    "visualMatch": "{{percent}}% visual match"
   },
   "account": {
     "myOrders": "My Orders",
@@ -228,7 +238,10 @@
     "suggestedActions": "Suggested actions",
     "dialogLabel": "UZA buyer assistant",
     "dockTab": "UZA Assistant",
-    "resize": "Drag to resize assistant panel"
+    "resize": "Drag to resize assistant panel",
+    "connectionError": "I'm having trouble connecting right now. Please try again or visit Contact Us for help.",
+    "actionFailed": "I couldn't complete that action. Please try again or use the cart page directly.",
+    "confirmPrompt": "Please confirm this action"
   },
   "seo": {
     "siteKeywords": "{{appName}}, wholesale marketplace, bulk sourcing, B2B ecommerce, global suppliers, Rwanda, East Africa, Francophone Africa, France, Belgium, Canada, Senegal, Cameroon, Côte d'Ivoire, DRC, import export, factory direct, new arrivals, top ranking products",
