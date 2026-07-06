@@ -8,7 +8,7 @@ import { getCurrencySymbol } from "./currencyHelper";
 import { getLanguageCode } from "./languageHelper";
 import i18n from "../i18n";
 
-const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:1302").replace(/\/+$/, "");
+const API_URL = (process.env.REACT_APP_API_URL || (process.env.NODE_ENV === "production" ? "" : "http://localhost:1302")).replace(/\/+$/, "");
 
 const logger = (...params) => {
   if (process.env.REACT_APP_ENVIORNMENT === "development") {
