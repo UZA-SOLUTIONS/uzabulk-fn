@@ -35,6 +35,15 @@
     "imageSearchFailed": "Impossible de rechercher par image. Réessayez.",
     "imageUrlSearchFailed": "Impossible de rechercher par URL d'image. Réessayez.",
     "clearImageSearch": "Effacer la recherche par image",
+    "imageSearchTitle": "Trouvez l'inspiration produit avec la recherche par image",
+    "visualMatchTitle": "Correspondance visuelle : {{name}}",
+    "visualMatchResults": "Résultats de correspondance visuelle",
+    "imageSearchTitleWithTerm": "Recherche par image : {{term}}",
+    "imageSearchResults": "Résultats de recherche par image",
+    "closeImageSearch": "Fermer la recherche par image",
+    "pasteImageHint": "Collez une image copiée avec",
+    "dragDropHint": "Glissez-déposez une image ici ou téléchargez un fichier",
+    "uploadImage": "Télécharger",
     "suggestions": "Suggestions",
     "noProductsFound": "Aucun produit trouvé",
     "viewProductDetails": "Voir les détails du produit",
@@ -200,7 +209,8 @@
     "similarWholesale": "Articles similaires de notre catalogue",
     "moqSold": "CMD min. {{moq}} • {{sold}} vendus",
     "moqOnly": "CMD min. {{moq}}",
-    "soldOnly": "{{sold}} vendus"
+    "soldOnly": "{{sold}} vendus",
+    "visualMatch": "{{percent}} % correspondance visuelle"
   },
   "account": {
     "myOrders": "Mes commandes",
@@ -228,7 +238,9 @@
     "suggestedActions": "Actions suggérées",
     "dialogLabel": "Assistant acheteur UZA",
     "dockTab": "Assistant UZA",
-    "resize": "Glisser pour redimensionner le panneau"
+    "resize": "Glisser pour redimensionner le panneau",
+    "connectionError": "Connexion impossible pour le moment. Réessayez ou contactez-nous.",
+    "actionFailed": "Impossible d'effectuer cette action. Réessayez ou utilisez le panier directement."
   },
   "seo": {
     "siteKeywords": "{{appName}}, marketplace de gros, approvisionnement en vrac, ecommerce B2B, fournisseurs mondiaux, Rwanda, Afrique de l'Est, Afrique francophone, France, Belgique, Canada, Sénégal, Cameroun, Côte d'Ivoire, RDC, import export, usine directe, nouveautés, produits les mieux notés",

@@ -1,4 +1,6 @@
-import ImageSearchIcon from "./ImageSearchIcon";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import ImageSearchDropdown, { ImageSearchTriggerButton } from "./ImageSearchDropdown";
 
 export default function ImageSearchTray({
     previewUrl = "",
@@ -7,8 +9,12 @@ export default function ImageSearchTray({
     inputId = "header-mockup-image-search-input",
     inputRef = null,
     onFileSelect = () => {},
+    onImageUrl = () => {},
     onClear = () => {},
 }) {
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const triggerRef = useRef(null);
+
     if (previewUrl) {
         return (
             <div
@@ -43,30 +49,38 @@ export default function ImageSearchTray({
         );
     }
 
+    const searchShell = inputRef?.current?.closest?.(".header-mockup-search-shell")
+        || document.querySelector(".header-mockup-search-shell");
+
     return (
-        <label
-            className={`header-mockup-img-search${isLoading ? " is-loading" : ""}`}
-            htmlFor={inputId}
-            title={isLoading ? loadingLabel : "Search by image (paste or upload)"}
-            aria-busy={isLoading}
-        >
-            <input
-                id={inputId}
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                className="visually-hidden"
-                tabIndex={-1}
-                disabled={isLoading}
-                onChange={onFileSelect}
+        <div className="header-mockup-img-search-wrap">
+            <ImageSearchTriggerButton
+                buttonRef={triggerRef}
+                onClick={() => setDropdownOpen((open) => !open)}
+                isLoading={isLoading}
+                loadingLabel={loadingLabel}
             />
-            {isLoading ? (
-                <span className="header-mockup-img-search__spinner header-mockup-img-search__spinner--solo" aria-hidden />
-            ) : (
-                <span className="header-mockup-img-search__icon">
-                    <ImageSearchIcon />
-                </span>
-            )}
-        </label>
+            {dropdownOpen && searchShell
+                ? createPortal(
+                    <ImageSearchDropdown
+                        isOpen={dropdownOpen}
+                        onClose={() => setDropdownOpen(false)}
+                        excludeRef={triggerRef}
+                        onFileSelect={(file) => {
+                            setDropdownOpen(false);
+                            onFileSelect({ target: { files: [file] } });
+                        }}
+                        onImageUrl={(url) => {
+                            setDropdownOpen(false);
+                            onImageUrl(url);
+                        }}
+                        isLoading={isLoading}
+                        inputId={inputId}
+                        inputRef={inputRef}
+                    />,
+                    searchShell
+                )
+                : null}
+        </div>
     );
 }

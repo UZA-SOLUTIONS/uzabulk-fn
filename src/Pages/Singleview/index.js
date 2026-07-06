@@ -14,8 +14,8 @@ import AddToCart from "../../Components/Common/AddToCart";
 
 import { APP_NAME } from "../../config/constants";
 import { addToCart, getProductInfo } from "../../helpers/cartHelper";
-import { formatNumber, parseText } from "../../helpers/commonHelper";
-import { openProductSupportChat } from "../../helpers/supportChatHelper";
+import { formatNumber, parseProductDescription } from "../../helpers/commonHelper";
+import { openBuyerAssistant } from "../../helpers/buyerAssistantHelper";
 import { apiGet } from "../../helpers/apiHelper";
 import ROUTES from "../../helpers/routesHelper";
 import {
@@ -104,6 +104,19 @@ const Singleview = () => {
 
   const displayDetail = useProductDetailTranslation(detail);
   const productDisplayName = useProductDisplayName(displayDetail || detail || {});
+
+  const productDescriptionHtml = useMemo(
+    () => parseProductDescription(detail?.description || displayDetail?.description),
+    [detail?.description, displayDetail?.description]
+  );
+
+  const hasVariationOptions = useMemo(() => {
+    if (!detail) return false;
+    if (detail.variations?.length) return true;
+    return Boolean(
+      detail.attributes?.some((attr) => Array.isArray(attr?.terms) && attr.terms.length > 0)
+    );
+  }, [detail]);
 
   const minQty = useMemo(() => {
     if (!detail) return 1;
@@ -210,7 +223,10 @@ const Singleview = () => {
 
   const handleProductChat = () => {
     if (!detail) return;
-    openProductSupportChat({ detail, navigate });
+    openBuyerAssistant({
+      productId: detail._id,
+      message: `Tell me about ${detail.name || "this product"}. Can you help me add it to my cart?`,
+    });
   };
 
   const getProductImages = () => {
@@ -481,7 +497,7 @@ const Singleview = () => {
 
                       <hr />
 
-                      {detail?.variations?.length ? (
+                      {hasVariationOptions ? (
                         <ProductVariations
                           detail={detail}
                           displayDetail={displayDetail}
@@ -566,18 +582,20 @@ const Singleview = () => {
               <ProductReviews reviews={detail?.reviews} />
             </div>
 
-            {(displayDetail?.description || detail?.description) ?
+            {productDescriptionHtml ? (
               <div className="product_description mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
                 <Row className="text-start mt-5 ">
                   <Col lg="12">
                     <h3 className="pb-3">{t("product.description")}</h3>
                   </Col>
-                  <Col lg="12" className="uza-product-description" dangerouslySetInnerHTML={{ __html: parseText(displayDetail?.description || detail?.description) }}>
-
-                  </Col>
+                  <Col
+                    lg="12"
+                    className="uza-product-description"
+                    dangerouslySetInnerHTML={{ __html: productDescriptionHtml }}
+                  />
                 </Row>
               </div>
-              : null}
+            ) : null}
           </>
         ) : (
           <NoRecordFound message={message || "Product not found! Please open a product from the list."} />

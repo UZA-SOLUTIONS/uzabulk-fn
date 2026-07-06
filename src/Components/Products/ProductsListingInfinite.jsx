@@ -7,6 +7,18 @@ import ProductCard from "./ProductCard";
 
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 
+const visualMatchSort = (items = []) => {
+  const visual = [];
+  const rest = [];
+  (items || []).forEach((item) => {
+    const pct = Number(item?.similarity_score || 0);
+    if (pct >= 0.38) visual.push(item);
+    else rest.push(item);
+  });
+  visual.sort((a, b) => Number(b?.similarity_score || 0) - Number(a?.similarity_score || 0));
+  return [...visual, ...rest];
+};
+
 const ProductsListingInfinite = ({
   items,
   isLoading,
@@ -14,6 +26,7 @@ const ProductsListingInfinite = ({
   hasMore,
   fetchRecords,
   gridClassName = "",
+  showVisualMatch = false,
 }) => {
   const lastAutoFetchAtRef = useRef(0);
 
@@ -40,10 +53,12 @@ const ProductsListingInfinite = ({
     return () => window.removeEventListener("resize", fillShortPage);
   }, [items?.length, hasMore, isLoading, fetchRecords]);
 
+  const displayItems = showVisualMatch ? visualMatchSort(items) : items;
+
   return (
     <section className="products_card products_listing_square position-relative">
       <InfiniteScroll
-        dataLength={items?.length || 0}
+        dataLength={displayItems?.length || 0}
         next={() => fetchRecords?.()}
         hasMore={Boolean(hasMore)}
         scrollThreshold={0.75}
@@ -60,8 +75,8 @@ const ProductsListingInfinite = ({
         <div
           className={`new_Arrivals new_Arrivals_many product_square_grid products_infinite_grid${gridClassName ? ` ${gridClassName}` : ""}`}
         >
-          {items?.length ? (
-            items.map((item, idx) => (
+          {displayItems?.length ? (
+            displayItems.map((item, idx) => (
               <ProductCard
                 key={item?._id || item?.offerId || idx}
                 item={item}

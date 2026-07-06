@@ -17,6 +17,9 @@ function resolveActionPath(action = {}) {
       offerId: action.offerId,
     });
   }
+  if (action.type === "search" && action.query) {
+    return `${ROUTES.PRODUCT_LISTING}?search=${encodeURIComponent(action.query)}`;
+  }
   if (action.route === "ORDER_DETAIL" && action.orderId) {
     return `${ROUTES.ORDER_DETAIL}/${encodeURIComponent(action.orderId)}`;
   }
@@ -26,7 +29,7 @@ function resolveActionPath(action = {}) {
   return action.path || "";
 }
 
-function AssistantProductCard({ product }) {
+function AssistantProductCard({ product, onNavigate }) {
   const detailUrl = buildProductDetailUrlFromResolved({
     mongoId: product?.id,
     offerId: product?.offerId,
@@ -39,6 +42,7 @@ function AssistantProductCard({ product }) {
     <Link
       to={detailUrl || ROUTES.PRODUCT_LISTING}
       className="floating-buyer-assistant__product_card"
+      onClick={() => onNavigate?.({ closeAssistant: false })}
     >
       <img
         src={imageUrl || placeholder}
@@ -54,7 +58,7 @@ function AssistantProductCard({ product }) {
           <p className="floating-buyer-assistant__product_price">
             <strong>{product.price}</strong>
             {product.moq ? <span> · MOQ {product.moq}</span> : null}
-        {product.quantityOrdered ? <span> · Qty {product.quantityOrdered}</span> : null}
+            {product.quantityOrdered ? <span> · Qty {product.quantityOrdered}</span> : null}
           </p>
         ) : null}
         {product.shortDescription ? (
@@ -66,7 +70,7 @@ function AssistantProductCard({ product }) {
   );
 }
 
-function AssistantMessage({ message, onAction }) {
+function AssistantMessage({ message, onAction, onNavigate, onConfirm, confirmingId }) {
   const isUser = message.role === "user";
   const html = !isUser ? formatAssistantMessageHtml(message.content) : "";
   const products = message.products || [];
@@ -88,7 +92,7 @@ function AssistantMessage({ message, onAction }) {
       {!isUser && products.length > 0 ? (
         <div className="floating-buyer-assistant__products" aria-label="Related products">
           {products.map((product) => (
-            <AssistantProductCard key={product.id} product={product} />
+            <AssistantProductCard key={product.id} product={product} onNavigate={onNavigate} />
           ))}
         </div>
       ) : null}
@@ -96,6 +100,38 @@ function AssistantMessage({ message, onAction }) {
       {!isUser && actions.length > 0 ? (
         <div className="floating-buyer-assistant__actions" aria-label="Suggested actions">
           {actions.map((action) => {
+            if (action.type === "confirm" && action.confirmationId) {
+              const busy = confirmingId === action.confirmationId;
+              return (
+                <div
+                  key={`confirm-${action.confirmationId}`}
+                  className="floating-buyer-assistant__confirm_block"
+                >
+                  {action.label ? (
+                    <p className="floating-buyer-assistant__confirm_prompt">{action.label}</p>
+                  ) : null}
+                  <div className="floating-buyer-assistant__confirm_actions">
+                    <button
+                      type="button"
+                      className="floating-buyer-assistant__action_btn floating-buyer-assistant__action_btn--confirm"
+                      disabled={busy}
+                      onClick={() => onConfirm?.(action, true)}
+                    >
+                      {action.confirmLabel || "Confirm"}
+                    </button>
+                    <button
+                      type="button"
+                      className="floating-buyer-assistant__action_btn floating-buyer-assistant__action_btn--cancel"
+                      disabled={busy}
+                      onClick={() => onConfirm?.(action, false)}
+                    >
+                      {action.cancelLabel || "Cancel"}
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
             const path = resolveActionPath(action);
             if (action.type === "chat") {
               return (
@@ -115,6 +151,7 @@ function AssistantMessage({ message, onAction }) {
                   key={`${action.label}-${path}`}
                   to={path}
                   className="floating-buyer-assistant__action_btn floating-buyer-assistant__action_btn--link"
+                  onClick={() => onNavigate?.(action)}
                 >
                   {action.label}
                 </Link>

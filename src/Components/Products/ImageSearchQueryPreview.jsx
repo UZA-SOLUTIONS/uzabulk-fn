@@ -1,35 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  readImageSearchBlobPreview,
-  readImageSearchPreview,
-  resolveImageSearchDisplayUrl,
-} from "../../helpers/imageSearchHelper";
+import React, { useEffect, useState } from "react";
+import { resolveImageSearchPreviewSource } from "../../helpers/imageSearchHelper";
 
 export default function ImageSearchQueryPreview({
-  imageQuery = "",
-  imageUrl = "",
   isLoading = false,
   keyword = "",
 }) {
   const [failed, setFailed] = useState(false);
 
-  const displayUrl = useMemo(() => {
-    const candidates = [
-      imageQuery,
-      imageUrl,
-      readImageSearchBlobPreview(),
-      readImageSearchPreview(),
-    ];
-    for (const raw of candidates) {
-      const resolved = resolveImageSearchDisplayUrl(raw);
-      if (resolved) return resolved;
-    }
-    return "";
-  }, [imageQuery, imageUrl]);
+  const displayUrl = resolveImageSearchPreviewSource();
 
   useEffect(() => {
     setFailed(false);
   }, [displayUrl]);
+
+  if (!displayUrl) return null;
 
   const altText = keyword
     ? `Image you searched for: ${keyword}`
@@ -41,7 +25,7 @@ export default function ImageSearchQueryPreview({
         className={`products_list_image_search_query${isLoading ? " is-loading" : ""}`}
         aria-label={altText}
       >
-        {displayUrl && !failed ? (
+        {!failed ? (
           <img
             src={displayUrl}
             alt={altText}

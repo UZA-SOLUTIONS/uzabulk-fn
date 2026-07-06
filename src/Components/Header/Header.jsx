@@ -14,7 +14,6 @@ import {
   persistImageSearchPreview,
   readImageFromClipboard,
   readImageSearchBlobPreview,
-  resolveImageSearchDisplayUrl,
   uploadImageForSearchBar,
   buildSearchBarImageListingUrl,
   clearImageSearchPreview,
@@ -41,10 +40,7 @@ export default function Header() {
   const localPreviewRef = useRef("");
 
   const imageFromQuery = searchParams.get("image") || "";
-  const activeImagePreview =
-    resolveImageSearchDisplayUrl(imageFromQuery)
-    || readImageSearchBlobPreview()
-    || localImagePreview;
+  const activeImagePreview = localImagePreview || readImageSearchBlobPreview() || "";
 
   useLayoutEffect(() => {
     const readY = () => window.scrollY ?? document.documentElement.scrollTop ?? 0;
@@ -72,12 +68,6 @@ export default function Header() {
     setSearchText(searchParams.get("search") || "");
   }, [searchParams]);
 
-  useEffect(() => () => {
-    if (localPreviewRef.current) {
-      URL.revokeObjectURL(localPreviewRef.current);
-    }
-  }, []);
-
   const revokeLocalPreview = () => {
     if (localPreviewRef.current) {
       URL.revokeObjectURL(localPreviewRef.current);
@@ -85,6 +75,18 @@ export default function Header() {
     }
     setLocalImagePreview("");
   };
+
+  useEffect(() => {
+    if (imageFromQuery || imageSearchLoading) return;
+    revokeLocalPreview();
+    clearImageSearchPreview();
+  }, [imageFromQuery, imageSearchLoading]);
+
+  useEffect(() => () => {
+    if (localPreviewRef.current) {
+      URL.revokeObjectURL(localPreviewRef.current);
+    }
+  }, []);
 
   const handleHeaderSearch = (event) => {
     event.preventDefault();
@@ -137,7 +139,6 @@ export default function Header() {
 
     try {
       const imageUrl = await uploadImageForSearchBar(file);
-      persistImageSearchPreview(imageUrl);
       const params = buildSearchBarImageListingUrl({ imageUrl });
       navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
     } catch (error) {
@@ -154,8 +155,6 @@ export default function Header() {
     if (!imageUrl || imageSearchLoading) return;
 
     revokeLocalPreview();
-    setLocalImagePreview(imageUrl);
-    persistImageSearchPreview(imageUrl);
     setImageSearchLoading(true);
 
     try {
@@ -228,6 +227,7 @@ export default function Header() {
                     inputId="header-mockup-image-search-input"
                     inputRef={imageSearchInputRef}
                     onFileSelect={handleImageSearch}
+                    onImageUrl={runImageUrlSearch}
                     onClear={handleClearImageSearch}
                   />
                   <button type="submit" className="header-mockup-search-submit" aria-label={t("search.submit")}>

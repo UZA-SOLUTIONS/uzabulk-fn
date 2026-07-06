@@ -8,7 +8,6 @@ import { PRODUCTS } from "../../helpers/urlHelper";
 import {
     logger,
     buildProductDetailUrl,
-    isRestrictedCatalogProduct,
     getProductImageUrl,
 } from "../../helpers/commonHelper";
 import ROUTES from "../../helpers/routesHelper";
@@ -60,6 +59,12 @@ export default function ProductSearch({
         if (!path) return;
         const joiner = path.includes("?") ? "&" : "?";
         navigate(`${path}${joiner}search=${encodeURIComponent(searchLabel)}`);
+    };
+
+    const openSuggestionFromClick = (item, event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        openSuggestion(item);
     };
 
     const getCachedSuggestions = (key) => {
@@ -150,8 +155,7 @@ export default function ProductSearch({
                     }))
                     .filter((item) =>
                         !!(item?.name || item?.title || item?._id || item?.offerId)
-                    )
-                    .filter((item) => !isRestrictedCatalogProduct(item));
+                    );
                 setCachedSuggestions(cacheKey, nextItems);
                 setItems(nextItems);
                 setIsLoading(false);
@@ -194,7 +198,6 @@ export default function ProductSearch({
             persistImageSearchPreview(blobUrl);
             const imageUrl = await uploadImageForSearchBar(file);
             const params = buildSearchBarImageListingUrl({ imageUrl });
-            persistImageSearchPreview(imageUrl);
             navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
         } catch (error) {
             toast.error(error?.message || "Could not search by image. Try again.");
@@ -221,6 +224,8 @@ export default function ProductSearch({
     return (
         <>
             <Autocomplete
+            autoHighlight={false}
+            selectOnBlur={false}
             getItemValue={(item) =>
                 String(item?.name || item?.title || item?._id || "").trim()
             }
@@ -267,7 +272,7 @@ export default function ProductSearch({
                 <div
                     key={item?._id || item?.id || item?.offerId || item?.name}
                     className={`search-suggestion-row ${isHighlighted ? "is-highlighted" : ""}`}
-                    onClick={() => openSuggestion(item)}
+                    onMouseDown={(event) => openSuggestionFromClick(item, event)}
                 >
                     <img
                         src={item?._suggestionImage || suggestionPlaceholder}
@@ -294,15 +299,18 @@ export default function ProductSearch({
                 setValue(e.target.value);
                 handleSearchCall({ value: e.target.value, category });
             }}
-            onSelect={(nextValue, item) => {
+            onSelect={(nextValue) => {
                 setValue(nextValue);
-                if (item) {
-                    openSuggestion(item);
-                } else {
-                    handleSearchCall({ value: nextValue, category });
-                }
             }}
-            inputProps={{ placeholder, className: "form-control" }}
+            inputProps={{
+                placeholder,
+                className: "form-control",
+                onKeyDown: (event) => {
+                    if (event.key === "Enter") {
+                        event.stopPropagation();
+                    }
+                },
+            }}
             wrapperProps={{
                 className: ["auto-complete-input", wrapperClassName].filter(Boolean).join(" "),
             }}

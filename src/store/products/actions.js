@@ -162,7 +162,18 @@ export const apiGetProductDetail = createAsyncThunk(
       }
 
       const cachedDetail = getProductDetailCache(normalizedId);
-      if (cachedDetail && !query?.skipCache) {
+      const cachedData = cachedDetail?.data;
+      const cacheMissingVariations = cachedData?.type === "variable"
+        && (
+          !cachedData?.attributes?.some((a) => a?.terms?.length)
+          || !cachedData?.variations?.length
+        );
+      const cacheStaleDescription = Boolean(
+        cachedData?.description
+        && /alicdn\.com|1688\.com/i.test(cachedData.description)
+        && !/\/products\/description-image(?:\/|\?url=)/i.test(cachedData.description)
+      );
+      if (cachedDetail && !query?.skipCache && !cacheMissingVariations && !cacheStaleDescription) {
         return cachedDetail;
       }
 

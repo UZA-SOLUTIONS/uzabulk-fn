@@ -89,12 +89,9 @@ const IMAGE_SEARCH_BLOB_KEY = "uza_image_search_preview_blob";
 export const persistImageSearchPreview = (url = "") => {
   const value = String(url || "").trim();
   if (!value || typeof sessionStorage === "undefined") return;
+  if (!/^blob:/i.test(value)) return;
   try {
-    if (/^blob:/i.test(value)) {
-      sessionStorage.setItem(IMAGE_SEARCH_BLOB_KEY, value);
-    } else {
-      sessionStorage.setItem(IMAGE_SEARCH_PREVIEW_KEY, value);
-    }
+    sessionStorage.setItem(IMAGE_SEARCH_BLOB_KEY, value);
   } catch {
     // quota / private mode
   }
@@ -121,6 +118,10 @@ export const readImageSearchBlobPreview = () => {
 export const clearImageSearchPreview = () => {
   if (typeof sessionStorage === "undefined") return;
   try {
+    const blob = sessionStorage.getItem(IMAGE_SEARCH_BLOB_KEY);
+    if (blob && /^blob:/i.test(blob)) {
+      URL.revokeObjectURL(blob);
+    }
     sessionStorage.removeItem(IMAGE_SEARCH_PREVIEW_KEY);
     sessionStorage.removeItem(IMAGE_SEARCH_BLOB_KEY);
   } catch {
@@ -151,27 +152,11 @@ const isApiImageUrl = (value = "") => {
   }
 };
 
-/** Pick the best URL to show for the current image search session. */
-export const resolveImageSearchPreviewSource = ({
-  imageQuery = "",
-  imageUrl = "",
-} = {}) => {
-  const candidates = [
-    readImageSearchBlobPreview(),
-    imageQuery,
-    imageUrl,
-    readImageSearchPreview(),
-  ];
-
-  const seen = new Set();
-  for (const raw of candidates) {
-    const value = String(raw || "").trim();
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-    const resolved = resolveImageSearchDisplayUrl(value);
-    if (resolved) return resolved;
-  }
-  return "";
+/** Local blob preview only — never the uploaded server URL. */
+export const resolveImageSearchPreviewSource = () => {
+  const blob = readImageSearchBlobPreview();
+  if (!blob) return "";
+  return resolveImageSearchDisplayUrl(blob) || "";
 };
 
 export const buildSearchBarImageListingUrl = ({ imageUrl, skip = 1 } = {}) => {

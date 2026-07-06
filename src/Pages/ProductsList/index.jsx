@@ -8,9 +8,9 @@ import AbortController from "abort-controller";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
-import { readImageSearchBlobPreview } from "../../helpers/imageSearchHelper";
+import { resolveImageSearchPreviewSource, clearImageSearchPreview } from "../../helpers/imageSearchHelper";
 import { APP_NAME } from "../../config/constants";
-import { isRestrictedCatalogProduct, smoothScrollToTop } from "../../helpers/commonHelper";
+import { balanceCatalogProducts, smoothScrollToTop } from "../../helpers/commonHelper";
 import { trackFilterEngagement, trackSearchEngagement } from "../../helpers/browsingBehaviorHelper";
 import ROUTES from "../../helpers/routesHelper";
 import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
@@ -68,8 +68,8 @@ const Productlist = () => {
     || searchMeta?.correctedQuery
     || searchQuery;
 
-  const recommendations = (others?.recommendations || []).filter((item) => !isRestrictedCatalogProduct(item));
-  const moreLikeThis = (others?.moreLikeThis || []).filter((item) => !isRestrictedCatalogProduct(item));
+  const recommendations = balanceCatalogProducts(others?.recommendations || []);
+  const moreLikeThis = balanceCatalogProducts(others?.moreLikeThis || []);
   const moreLikeThisSource = others?.moreLikeThisSource || null;
   const isFirstResultsPage = Number(searchParams.get("skip") || 1) <= 1;
   const showMoreLikeThis = isFirstResultsPage && (searchQuery || imageQuery) && moreLikeThis.length > 0;
@@ -80,8 +80,18 @@ const Productlist = () => {
 
   const pageTitle = useMemo(() => {
     if (imageQuery || others?.imageSearch) {
-      const kw = others?.imageSearchKeyword || others?.imageSearchPhrase || searchQuery;
-      return kw ? `Image search: ${kw}` : "Image search results";
+      const mode = others?.imageSearchMode || "";
+      const label = others?.imageSearchLabel
+        || others?.imageSearchTopMatch
+        || others?.imageSearchKeyword
+        || others?.imageSearchPhrase
+        || searchQuery;
+      if (mode === "visual" || mode === "visual+keyword") {
+        return label
+          ? t("search.visualMatchTitle", { name: label })
+          : t("search.visualMatchResults");
+      }
+      return label ? t("search.imageSearchTitleWithTerm", { term: label }) : t("search.imageSearchResults");
     }
     if (searchQuery) {
       return `Search: ${effectiveSearchLabel || searchQuery}`;
@@ -95,15 +105,15 @@ const Productlist = () => {
     if (others?.category?.catName || others?.category?.name) return selectedCategoryDisplayName;
     if (searchParams.get("name")) return searchParams.get("name");
     return isCategoriesHub ? t("nav.allCategories") : t("nav.allProducts");
-  }, [imageQuery, searchQuery, effectiveSearchLabel, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category, selectedCategory, selectedCategoryDisplayName, categoryDisplayNames, searchParams, isCategoriesHub, t]);
+  }, [imageQuery, searchQuery, effectiveSearchLabel, others?.imageSearchMode, others?.imageSearchLabel, others?.imageSearchTopMatch, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category, selectedCategory, selectedCategoryDisplayName, categoryDisplayNames, searchParams, isCategoriesHub, t]);
 
-  const imageSearchKeyword = others?.imageSearchKeyword || others?.imageSearchPhrase || searchQuery;
+  const imageSearchLabel = others?.imageSearchLabel
+    || others?.imageSearchTopMatch
+    || others?.imageSearchKeyword
+    || others?.imageSearchPhrase
+    || searchQuery;
   const isImageSearchSession = Boolean(imageQuery || others?.imageSearch);
-  const searchedImageSrc =
-    imageQuery
-    || others?.imageUrl
-    || readImageSearchBlobPreview()
-    || "";
+  const searchedImageSrc = resolveImageSearchPreviewSource();
 
   const { catstripNavRef } = useCategoryStripPin({
     enabled: categoryTabs.length > 0 && !searchQuery && !imageQuery,
@@ -177,6 +187,12 @@ const Productlist = () => {
   useEffect(() => {
     if (!level1Categories?.length) dispatch(apiGetCategories({ level: 1 }));
   }, [dispatch, level1Categories?.length]);
+
+  useEffect(() => {
+    if (!imageQuery && !others?.imageSearch) {
+      clearImageSearchPreview();
+    }
+  }, [imageQuery, others?.imageSearch]);
 
   useEffect(() => {
     if (level1Categories?.length || !level2Categories?.length) return;
@@ -307,7 +323,7 @@ const Productlist = () => {
                   <figure className="products_list_image_search_query" aria-label="Image you searched for">
                     <img
                       src={searchedImageSrc}
-                      alt={imageSearchKeyword ? `Image search: ${imageSearchKeyword}` : "Image you searched for"}
+                      alt={imageSearchLabel ? t("search.visualMatchTitle", { name: imageSearchLabel }) : t("search.imageSearchResults")}
                       className="products_list_image_search_query__img"
                       decoding="async"
                     />
@@ -340,6 +356,7 @@ const Productlist = () => {
                 hasMore={hasMore}
                 fetchRecords={handleFetchRequest}
                 gridClassName="home_discover_browse__product_grid"
+                showVisualMatch={isImageSearchSession}
               />
             </div>
           </section>
