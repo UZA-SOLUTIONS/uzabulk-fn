@@ -6,6 +6,7 @@ import {
   setFetchCacheEntry,
 } from "../../helpers/fetchCacheHelper";
 import { CATEGORIES } from "../../helpers/urlHelper";
+import { setCachedCategoriesByLevel } from "../../helpers/categoriesSessionCache";
 import { SOURCE_APPLICATION, TOP_CATEGORIES } from "../../helpers/storeHelper";
 
 const getCategories = (url, localQuery) => async (query, Thunk) => {
@@ -39,6 +40,7 @@ export const apiGetCategories = createAsyncThunk(
       const res = await apiGet(CATEGORIES.LIST_BY_LEVEL, { level });
       if (res.status === "success") {
         const payload = [level, res.data];
+        setCachedCategoriesByLevel(level, res.data);
         setFetchCacheEntry(cacheKey, payload);
         return payload;
       }

@@ -25,7 +25,16 @@ export const slice = createSlice({
     reducers: {
         clarLevel3: (state, action) => {
             state.categories.level3 = [];
-        }
+        },
+        hydrateCategoriesFromCache: (state, action) => {
+            const { level1, level2 } = action.payload || {};
+            if (Array.isArray(level1) && level1.length && !state.categories.level1.length) {
+                state.categories.level1 = level1;
+            }
+            if (Array.isArray(level2) && level2.length && !state.categories.level2.length) {
+                state.categories.level2 = level2;
+            }
+        },
     },
     extraReducers: (builder) => {
 
@@ -74,6 +83,6 @@ export const slice = createSlice({
     },
 })
 
-export const { clarLevel3 } = slice.actions;
+export const { clarLevel3, hydrateCategoriesFromCache } = slice.actions;
 
 export default slice.reducer

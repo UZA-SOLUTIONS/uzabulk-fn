@@ -1,5 +1,10 @@
 import { apiGet } from "./apiHelper";
 import { getProductImageUrl, resolveMediaUrl } from "./commonHelper";
+import {
+  getCachedCategoryThumbnails,
+  setCachedCategoryThumbnails,
+} from "./homeCategoryThumbnailsSessionCache";
+import { setHomeCategoryCircleImage } from "./homeCategoryCircleImageCache";
 import { PRODUCTS } from "./urlHelper";
 
 /** Category icon from API (populated file, plain URL, or legacy shapes). */
@@ -60,29 +65,67 @@ async function fetchListThumbnail(category, skip) {
 }
 
 /** One request for many category preview images (home "Source by category"). */
+let categoryThumbnailsBatchInFlight = null;
+
 export async function fetchCategoryThumbnailsBatch(categories = [], feedRefresh = "") {
   const ids = categories.map((c) => String(c?._id || "").trim()).filter(Boolean);
   if (!ids.length) return {};
 
-  try {
-    const res = await apiGet(PRODUCTS.CATEGORY_THUMBNAILS, {
-      ids: ids.join(","),
-      refresh: feedRefresh || "",
-      suppressGlobalErrorToast: true,
-    });
-    if (res?.status === "success" && res?.data && typeof res.data === "object") {
-      const normalized = {};
-      Object.entries(res.data).forEach(([id, url]) => {
-        const key = String(id || "").trim();
-        const resolved = resolveMediaUrl(url);
-        if (key && resolved) normalized[key] = resolved;
-      });
-      return normalized;
-    }
-  } catch {
-    /* fall through to per-category */
+  const cached = getCachedCategoryThumbnails(ids, feedRefresh);
+  if (cached) return cached;
+
+  if (categoryThumbnailsBatchInFlight) {
+    return categoryThumbnailsBatchInFlight;
   }
-  return {};
+
+  categoryThumbnailsBatchInFlight = (async () => {
+    try {
+      const res = await apiGet(PRODUCTS.CATEGORY_THUMBNAILS, {
+        ids: ids.join(","),
+        refresh: feedRefresh || "",
+        suppressGlobalErrorToast: true,
+      });
+      if (res?.status === "success" && res?.data && typeof res.data === "object") {
+        const normalized = {};
+        Object.entries(res.data).forEach(([id, url]) => {
+          const key = String(id || "").trim();
+          const resolved = resolveMediaUrl(url);
+          if (key && resolved) normalized[key] = resolved;
+        });
+        if (Object.keys(normalized).length) {
+          setCachedCategoryThumbnails(ids, feedRefresh, normalized);
+        }
+        return normalized;
+      }
+    } catch {
+      /* fall through */
+    }
+    return {};
+  })();
+
+  try {
+    return await categoryThumbnailsBatchInFlight;
+  } finally {
+    categoryThumbnailsBatchInFlight = null;
+  }
+}
+
+export function applyCategoryThumbnailBatch(batch = {}, feedRefresh = "") {
+  if (!batch || typeof batch !== "object") return false;
+  let changed = false;
+  Object.entries(batch).forEach(([id, url]) => {
+    const key = String(id || "").trim();
+    const resolved = resolveMediaUrl(url);
+    if (key && resolved) {
+      setHomeCategoryCircleImage(key, resolved, feedRefresh);
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+export function isCategoryThumbnailsBatchInFlight() {
+  return Boolean(categoryThumbnailsBatchInFlight);
 }
 
 /** Rotating product thumbnail for a category (changes per home visit via feedRefresh). */

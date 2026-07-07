@@ -63,6 +63,9 @@ export const getProductDedupeKey = (item) => {
   return "";
 };
 
+const normalizeCatalogText = (value = "") =>
+  String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+
 const collectCatalogText = (item) => {
   if (!item) return "";
   const categoryNames = []
@@ -79,11 +82,67 @@ const collectCatalogText = (item) => {
     item?.name,
     item?.title,
     item?.short_description,
+    item?.description,
     categoryNames,
   ]
     .map((part) => String(part || "").trim())
     .filter(Boolean)
     .join(" ");
+};
+
+const SENSITIVE_CATALOG_PATTERNS = [
+  /\bunderwear\b/i,
+  /\bunderwears\b/i,
+  /\blingerie\b/i,
+  /\bintimates?\b/i,
+  /\bpanties\b/i,
+  /\bpanty\b/i,
+  /\bbriefs\b/i,
+  /\bthong\b/i,
+  /\bthongs\b/i,
+  /\bunderpants\b/i,
+  /\bknickers\b/i,
+  /\bboxer\s+shorts\b/i,
+  /\bmen['']s\s+underwear\b/i,
+  /\bwomen['']s\s+underwear\b/i,
+  /\bladies['']?\s+underwear\b/i,
+  /\bsexy\s+lingerie\b/i,
+  /\bsexy\s+underwear\b/i,
+  /\blace\s+bra\b/i,
+  /\bbra\s+set\b/i,
+  /\bsports?\s+bra\b/i,
+  /\bbra\s+and\s+panty\b/i,
+  /\bqqny\b/i,
+  /\bphysiological\s+pants\b/i,
+  /\bperiod\s+panties\b/i,
+  /\bnightwear\b/i,
+  /\bsleepwear\b/i,
+  /内衣/u,
+  /内裤/u,
+  /文胸/u,
+  /情趣/u,
+  /生理裤/u,
+];
+
+const EXPLICIT_SENSITIVE_SEARCH_PATTERNS = [
+  /\bunderwear\b/i,
+  /\blingerie\b/i,
+  /\bintimates?\b/i,
+  /\bpanties\b/i,
+  /\bpanty\b/i,
+  /\bbriefs\b/i,
+  /\bthong\b/i,
+  /\bbra\b/i,
+  /\bboxers?\b/i,
+  /内衣/u,
+  /内裤/u,
+  /文胸/u,
+];
+
+const matchesSensitivePatterns = (text = "", patterns = SENSITIVE_CATALOG_PATTERNS) => {
+  const normalized = normalizeCatalogText(text);
+  if (!normalized) return false;
+  return patterns.some((pattern) => pattern.test(normalized) || pattern.test(text));
 };
 
 export const isBlockedCatalogProduct = (item) => {
@@ -93,20 +152,65 @@ export const isBlockedCatalogProduct = (item) => {
   return false;
 };
 
-/** No category-based catalog restrictions (underwear etc. are allowed). */
-export const isSensitiveCatalogProduct = () => false;
+export const isSensitiveCatalogProduct = (item) => {
+  if (!item) return false;
+  return matchesSensitivePatterns(collectCatalogText(item));
+};
+
+export const isExplicitSensitiveSearch = (search = "") => matchesSensitivePatterns(
+  String(search || ""),
+  EXPLICIT_SENSITIVE_SEARCH_PATTERNS
+);
 
 export const isRestrictedCatalogProduct = (item) => isBlockedCatalogProduct(item);
 
-export const balanceCatalogProducts = (items = []) => {
+const resolveCatalogVisibilityOptions = (options = {}) => {
+  const search = String(options?.search || "").trim();
+  const categoryLabels = [
+    options?.categoryName,
+    ...(Array.isArray(options?.categoryNames) ? options.categoryNames : []),
+  ]
+    .map((label) => String(label || "").trim())
+    .filter(Boolean);
+
+  if (isExplicitSensitiveSearch(search) || categoryLabels.some((label) => matchesSensitivePatterns(label))) {
+    return { ...options, search, maxSensitive: Number.MAX_SAFE_INTEGER };
+  }
+
+  const maxSensitive = Number.isFinite(Number(options?.maxSensitive))
+    ? Math.max(0, Number(options.maxSensitive))
+    : 0;
+
+  return { ...options, search, maxSensitive };
+};
+
+export const balanceCatalogProducts = (items = [], options = {}) => {
   if (!Array.isArray(items) || !items.length) return [];
-  return items.filter((item) => !isBlockedCatalogProduct(item));
+
+  const { maxSensitive } = resolveCatalogVisibilityOptions(options);
+  const usable = items.filter((item) => !isBlockedCatalogProduct(item));
+
+  if (maxSensitive === Number.MAX_SAFE_INTEGER) return usable;
+
+  const regular = [];
+  const sensitive = [];
+
+  usable.forEach((item) => {
+    if (isSensitiveCatalogProduct(item)) sensitive.push(item);
+    else regular.push(item);
+  });
+
+  const cap = Math.max(0, Number(maxSensitive) || 0);
+  if (!cap) return regular;
+
+  return [...regular, ...sensitive.slice(0, cap)];
 };
 
 export const isValidHomeCatalogProduct = (item) => {
   if (!item) return false;
   if (!getProductDedupeKey(item)) return false;
   if (isBlockedCatalogProduct(item)) return false;
+  if (isSensitiveCatalogProduct(item)) return false;
   const name = (item?.name || "").trim();
   if (!name || name.toLowerCase().includes("test")) return false;
   return true;

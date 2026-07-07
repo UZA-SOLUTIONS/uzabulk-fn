@@ -6,23 +6,28 @@ import { useTranslation } from "react-i18next";
 import ROUTES from "../../helpers/routesHelper";
 import { getHomeFeedRefreshToken } from "../../helpers/commonHelper";
 import {
+  applyCategoryThumbnailBatch,
   fetchCategoryRepresentativeImage,
   fetchCategoryThumbnailsBatch,
+  isCategoryThumbnailsBatchInFlight,
   resolveCategoryIconUrl,
   rotateHomeCategories,
 } from "../../helpers/homeCategoryFeedHelper";
+import { getCachedCategoryThumbnails } from "../../helpers/homeCategoryThumbnailsSessionCache";
+import { hydratePersistedCategoryImages } from "../../helpers/homeCategoryImagePersistCache";
+import { getCachedCategoriesByLevel } from "../../helpers/categoriesSessionCache";
 import { apiGetCategories } from "../../store/categories/actions";
 import {
   clearHomeCategoryCircleImage,
   getHomeCategoryCircleImage,
   setHomeCategoryCircleImage,
+  subscribeHomeCategoryCircleImages,
 } from "../../helpers/homeCategoryCircleImageCache";
 import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import UXSkeleton from "../Common/UXSkeleton";
 
 const MAX_CATEGORIES = 16;
 const IMAGE_FETCH_CONCURRENCY = 2;
-const PREFETCH_DELAY_MS = 2000;
 const SKELETON_CARD_COUNT = 6;
 
 const Chevron = ({ dir }) => (
@@ -37,18 +42,18 @@ const Chevron = ({ dir }) => (
   </svg>
 );
 
-function SourceCategoryCard({ category, imageUrl, onRequestImage, onImageError, priority = false }) {
+function SourceCategoryCard({ category, imageUrl, onImageError, priority = false }) {
   const { t } = useTranslation();
   const id = String(category?._id || "");
   const displayName = useCategoryDisplayName(category) || t("home.categoryFallback");
   const fallbackIcon = resolveCategoryIconUrl(category);
-  const [displaySrc, setDisplaySrc] = useState(() => imageUrl || fallbackIcon);
+  const [displaySrc, setDisplaySrc] = useState(() => imageUrl || fallbackIcon || "");
   const to = `${ROUTES.PRODUCT_LISTING}?skip=1&category=${encodeURIComponent(id)}&name=${encodeURIComponent(displayName)}`;
-  const [imgReady, setImgReady] = useState(() => Boolean((imageUrl || fallbackIcon) && !imageUrl));
+  const [imgReady, setImgReady] = useState(false);
   const imgRef = useRef(null);
 
   useEffect(() => {
-    setDisplaySrc(imageUrl || fallbackIcon);
+    setDisplaySrc(imageUrl || fallbackIcon || "");
   }, [imageUrl, fallbackIcon]);
 
   useEffect(() => {
@@ -56,7 +61,7 @@ function SourceCategoryCard({ category, imageUrl, onRequestImage, onImageError, 
       setImgReady(false);
       return;
     }
-    if (!imageUrl && fallbackIcon) {
+    if (displaySrc === fallbackIcon && fallbackIcon) {
       setImgReady(true);
       return;
     }
@@ -65,12 +70,7 @@ function SourceCategoryCard({ category, imageUrl, onRequestImage, onImageError, 
     if (img?.complete && img.naturalWidth > 0) {
       setImgReady(true);
     }
-  }, [displaySrc, imageUrl, fallbackIcon]);
-
-  useEffect(() => {
-    if (!id || imageUrl || fallbackIcon) return;
-    onRequestImage?.(category);
-  }, [category, id, imageUrl, fallbackIcon, onRequestImage]);
+  }, [displaySrc, fallbackIcon]);
 
   return (
     <Link to={to} className="home_source_category_card">
@@ -116,6 +116,10 @@ export default function SourceByCategory() {
   const level1Categories = useSelector((s) => s.categories.categories.level1 || []);
   const level2Categories = useSelector((s) => s.categories.categories.level2 || []);
   const categoriesLoading = useSelector((s) => s.categories.categories.isLoading);
+  const cachedLevel1 = useMemo(() => getCachedCategoriesByLevel(1) || [], []);
+  const cachedLevel2 = useMemo(() => getCachedCategoriesByLevel(2) || [], []);
+  const resolvedLevel1 = level1Categories.length ? level1Categories : cachedLevel1;
+  const resolvedLevel2 = level2Categories.length ? level2Categories : cachedLevel2;
   const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
   const [imageTick, setImageTick] = useState(0);
   const trackRef = useRef(null);
@@ -123,20 +127,20 @@ export default function SourceByCategory() {
   const [canNext, setCanNext] = useState(false);
 
   useEffect(() => {
-    if (!level1Categories?.length) {
+    if (!resolvedLevel1?.length) {
       dispatch(apiGetCategories({ level: 1 }));
     }
-  }, [dispatch, level1Categories?.length]);
+  }, [dispatch, resolvedLevel1?.length]);
 
   useEffect(() => {
-    if (level1Categories?.length || !level2Categories?.length) return;
+    if (resolvedLevel1?.length || !resolvedLevel2?.length) return;
     dispatch(apiGetCategories({ level: 2 }));
-  }, [dispatch, level1Categories?.length, level2Categories?.length]);
+  }, [dispatch, resolvedLevel1?.length, resolvedLevel2?.length]);
 
   const categoriesToShow = useMemo(() => {
-    const base = (level1Categories?.length ? level1Categories : level2Categories) || [];
+    const base = (resolvedLevel1?.length ? resolvedLevel1 : resolvedLevel2) || [];
     return rotateHomeCategories(base, feedRefresh, MAX_CATEGORIES);
-  }, [level1Categories, level2Categories, feedRefresh]);
+  }, [resolvedLevel1, resolvedLevel2, feedRefresh]);
 
   const categoryIdsKey = useMemo(
     () => `${feedRefresh}:${categoriesToShow.map((c) => c?._id).filter(Boolean).join(",")}`,
@@ -162,35 +166,56 @@ export default function SourceByCategory() {
     [feedRefresh, imageTick]
   );
 
-  const requestCategoryImage = useCallback(
-    async (category, { force = false } = {}) => {
-      const id = String(category?._id || "").trim();
-      if (!id) return;
-      const refresh = feedRefreshRef.current;
-      if (!force && getHomeCategoryCircleImage(id, refresh)) return;
-      if (pendingFetchRef.current.has(id)) return;
-      pendingFetchRef.current.add(id);
+  const requestCategoryImage = useCallback(async (category) => {
+    const id = String(category?._id || "").trim();
+    if (!id || pendingFetchRef.current.has(id)) return;
+    const refresh = feedRefreshRef.current;
+    if (getHomeCategoryCircleImage(id, refresh)) return;
 
-      try {
-        const imageUrl = await fetchCategoryRepresentativeImage(category, refresh);
-        if (imageUrl) setHomeCategoryCircleImage(id, imageUrl, refresh);
-      } finally {
-        pendingFetchRef.current.delete(id);
-        setImageTick((t) => t + 1);
-      }
-    },
-    []
-  );
+    pendingFetchRef.current.add(id);
+    try {
+      const imageUrl = await fetchCategoryRepresentativeImage(category, refresh);
+      if (imageUrl) setHomeCategoryCircleImage(id, imageUrl, refresh);
+    } finally {
+      pendingFetchRef.current.delete(id);
+      setImageTick((tick) => tick + 1);
+    }
+  }, []);
 
   const handleImageError = useCallback(
     (category) => {
       const id = String(category?._id || "").trim();
       if (!id) return;
       clearHomeCategoryCircleImage(id, feedRefreshRef.current);
-      requestCategoryImage(category, { force: true });
+      const iconUrl = resolveCategoryIconUrl(category);
+      if (iconUrl) setHomeCategoryCircleImage(id, iconUrl, feedRefreshRef.current);
+      setImageTick((tick) => tick + 1);
     },
-    [requestCategoryImage]
+    []
   );
+
+  useEffect(() => {
+    return subscribeHomeCategoryCircleImages(() => {
+      setImageTick((tick) => tick + 1);
+    });
+  }, []);
+
+  useEffect(() => {
+    const refresh = feedRefreshRef.current;
+    let seeded = false;
+
+    categoriesToShow.forEach((category) => {
+      const id = String(category?._id || "").trim();
+      if (!id || getHomeCategoryCircleImage(id, refresh)) return;
+      const iconUrl = resolveCategoryIconUrl(category);
+      if (iconUrl) {
+        setHomeCategoryCircleImage(id, iconUrl, refresh);
+        seeded = true;
+      }
+    });
+
+    if (seeded) setImageTick((t) => t + 1);
+  }, [categoryIdsKey, categoriesToShow]);
 
   useEffect(() => {
     if (!categoryIdsKey) return undefined;
@@ -199,29 +224,48 @@ export default function SourceByCategory() {
     const prefetchMissing = async () => {
       const cats = categoriesToShowRef.current;
       const refresh = feedRefreshRef.current;
-      const needsThumb = cats.filter((c) => {
-        const id = String(c?._id || "").trim();
-        if (!id) return false;
-        return !getHomeCategoryCircleImage(id, refresh);
-      });
+      if (!cats.length) return;
 
-      if (!needsThumb.length) return;
-
-      const batch = await fetchCategoryThumbnailsBatch(needsThumb, refresh);
-      if (cancelled) return;
-
-      Object.entries(batch || {}).forEach(([id, url]) => {
-        const key = String(id || "").trim();
-        if (key && url) setHomeCategoryCircleImage(key, url, refresh);
-      });
-      if (Object.keys(batch || {}).length) {
+      const ids = cats.map((c) => String(c?._id || "").trim()).filter(Boolean);
+      if (hydratePersistedCategoryImages(refresh, ids)) {
         setImageTick((t) => t + 1);
       }
 
-      const stillMissing = needsThumb.filter((c) => {
+      const cachedBatch = getCachedCategoryThumbnails(ids, refresh);
+      if (cachedBatch) {
+        applyCategoryThumbnailBatch(cachedBatch, refresh);
+        setImageTick((t) => t + 1);
+      } else {
+        void fetchCategoryThumbnailsBatch(cats, refresh)
+          .then((batch) => {
+            if (cancelled) return;
+            if (applyCategoryThumbnailBatch(batch, refresh)) {
+              setImageTick((t) => t + 1);
+            }
+          })
+          .finally(() => {
+            if (cancelled) return;
+            const missingAfterBatch = cats.filter((c) => {
+              const id = String(c._id);
+              return id && !getHomeCategoryCircleImage(id, refresh);
+            });
+            if (!missingAfterBatch.length) return;
+            void (async () => {
+              for (let i = 0; i < missingAfterBatch.length; i += IMAGE_FETCH_CONCURRENCY) {
+                if (cancelled) break;
+                const chunk = missingAfterBatch.slice(i, i + IMAGE_FETCH_CONCURRENCY);
+                await Promise.all(chunk.map((category) => requestCategoryImage(category)));
+              }
+            })();
+          });
+      }
+
+      const stillMissing = cats.filter((c) => {
         const id = String(c._id);
-        return !getHomeCategoryCircleImage(id, refresh);
+        return id && !getHomeCategoryCircleImage(id, refresh);
       });
+
+      if (!stillMissing.length || isCategoryThumbnailsBatchInFlight()) return;
 
       for (let i = 0; i < stillMissing.length; i += IMAGE_FETCH_CONCURRENCY) {
         if (cancelled) break;
@@ -230,13 +274,10 @@ export default function SourceByCategory() {
       }
     };
 
-    const timer = window.setTimeout(() => {
-      void prefetchMissing();
-    }, PREFETCH_DELAY_MS);
+    void prefetchMissing();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
     };
   }, [categoryIdsKey, requestCategoryImage]);
 
@@ -269,7 +310,7 @@ export default function SourceByCategory() {
     el.scrollBy({ left: dir === "next" ? step : -step, behavior: "smooth" });
   };
 
-  const hasAnyCategories = (level1Categories?.length || 0) > 0 || (level2Categories?.length || 0) > 0;
+  const hasAnyCategories = (resolvedLevel1?.length || 0) > 0 || (resolvedLevel2?.length || 0) > 0;
   const waitingForCategories = categoriesLoading && !hasAnyCategories;
 
   if (waitingForCategories) {
@@ -339,7 +380,6 @@ export default function SourceByCategory() {
               key={String(category._id)}
               category={category}
               imageUrl={resolveImageUrl(category)}
-              onRequestImage={requestCategoryImage}
               onImageError={handleImageError}
               priority={index < 4}
             />
