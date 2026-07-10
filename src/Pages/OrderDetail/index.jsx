@@ -61,6 +61,33 @@ const OrderDetailPage = () => {
                 <p>{moment(detail.date_created).format("MMMM DD, YYYY")}</p>
               </Col>
 
+              {(() => {
+                const cargoLocation = String(
+                  detail?.warehouseLocation?.location ||
+                    detail?.warehouseLocation?.label ||
+                    ""
+                ).trim()
+                if (!cargoLocation) return null
+                return (
+                <Col lg="12" className="text-start mb-3">
+                  <div className="border rounded p-3 bg-light">
+                    <strong className="d-block mb-1">Cargo location</strong>
+                    <p className="mb-1 fs-5 text-primary fw-semibold">
+                      {cargoLocation}
+                    </p>
+                    {detail.warehouseLocation.notes ? (
+                      <p className="mb-0 small">{detail.warehouseLocation.notes}</p>
+                    ) : null}
+                    {detail.warehouseLocation.markedAt ? (
+                      <p className="mb-0 text-muted small mt-2">
+                        Updated {moment(detail.warehouseLocation.markedAt).format("MMMM DD, YYYY [at] h:mm A")}
+                      </p>
+                    ) : null}
+                  </div>
+                </Col>
+                )
+              })()}
+
               <Col lg="12" className="text-start py-2 bg-body-secondary d-flex justify-content-between align-items-center rounded">
                 <strong>Items Ordered</strong>
                 <Button className="btn-link">Invoice</Button>
