@@ -27,6 +27,32 @@ const apiClient = axios.create({
   },
 });
 let requestInterceptorId = null;
+let isForceLoggingOut = false;
+
+const isAuthCredentialRoute = (reqUrl = "") =>
+  /users\/login\b/i.test(reqUrl)
+  || /users\/register\b/i.test(reqUrl)
+  || /users\/verify/i.test(reqUrl)
+  || /users\/forgotPassword/i.test(reqUrl)
+  || /users\/resetPassword/i.test(reqUrl);
+
+/** Backend locale for INVALID_TOKEN is "Token Expired!" / "Jeton expiré !" */
+const isExpiredTokenMessage = (message = "") => {
+  const normalized = String(message).toLowerCase();
+  return (
+    normalized.includes("token expired")
+    || normalized.includes("jeton expiré")
+    || normalized === "invalid_token"
+    || normalized.includes("invalid token")
+  );
+};
+
+const forceLogoutToSignIn = () => {
+  if (isForceLoggingOut || typeof window === "undefined") return;
+  isForceLoggingOut = true;
+  removeAuthInfo();
+  window.location.href = `${ROUTES.HOME}?auth=signin`;
+};
 
 // Response interceptor (for handling responses and errors globally)
 apiClient.interceptors.response.use(
@@ -42,10 +68,31 @@ apiClient.interceptors.response.use(
     }
 
     const isNetworkError = !error?.response;
-
-    const message = error?.response?.data?.message
+    const responseData = error?.response?.data;
+    const httpStatus = error?.response?.status;
+    const bodyStatusCode = Number(responseData?.status_code);
+    const message = responseData?.message
       || error?.message
       || i18n.t("common.somethingWentWrong");
+
+    const reqUrl = `${error?.config?.baseURL || ""}${error?.config?.url || ""}`;
+    const isAuthRoute = isAuthCredentialRoute(reqUrl);
+    const hasToken = !!getAuthToken();
+
+    // Prefer session cleanup over toast when the stored token is no longer valid.
+    const shouldForceLogout = !isAuthRoute
+      && hasToken
+      && (
+        httpStatus === 401
+        || bodyStatusCode === 401
+        || isExpiredTokenMessage(message)
+      );
+
+    if (shouldForceLogout) {
+      logger("SESSION EXPIRED — forcing logout ::: ", error);
+      forceLogoutToSignIn();
+      return Promise.reject(responseData || error);
+    }
 
     // Do not show a global toast for network/timeout/offline failures — callers can handle UX; avoids noisy "check backend" toasts.
     if (!suppressGlobalErrorToast && !isNetworkError) {
@@ -53,25 +100,7 @@ apiClient.interceptors.response.use(
     }
 
     logger("ERROR RESPONSE ::: ", error);
-    // Handle response errors
-    if (error.response && error.response.status === 401) {
-      const reqUrl = `${error?.config?.baseURL || ""}${error?.config?.url || ""}`;
-      const isAuthRoute =
-        /users\/login\b/i.test(reqUrl)
-        || /users\/register\b/i.test(reqUrl)
-        || /users\/verify/i.test(reqUrl)
-        || /users\/forgotPassword/i.test(reqUrl)
-        || /users\/resetPassword/i.test(reqUrl);
-      if (isAuthRoute) {
-        return Promise.reject(error?.response?.data || error);
-      }
-      const hasToken = !!getAuthToken();
-      if (hasToken) {
-        removeAuthInfo();
-        window.location.href = `${ROUTES.HOME}?auth=signin`;
-      }
-    }
-    return Promise.reject(error?.response?.data || error);
+    return Promise.reject(responseData || error);
   }
 );
 
