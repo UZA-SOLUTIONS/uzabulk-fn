@@ -40,7 +40,7 @@ const ProductsListing = ({
                         return (
                             <Col xl={2} lg={3} md={4} sm={6} xs={6} key={idx}>
                                 <div className="card_comnon-product cursor-pointer h-100"                                >
-                                    <Link to={productLink || "#"} target="_blank" style={{
+                                    <Link to={productLink || "#"} target="_blank" rel="noopener noreferrer" style={{
                                         textDecoration: "none",
                                         color: "black",
                                         pointerEvents: productLink ? "auto" : "none",

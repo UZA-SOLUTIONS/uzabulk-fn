@@ -54,7 +54,13 @@ export const fetchAssistantHistory = async (sessionId) => {
   return res.data;
 };
 
-export const sendAssistantMessage = async ({ message, sessionId, productId, orderId }) => {
+export const sendAssistantMessage = async ({
+  message,
+  sessionId,
+  productId,
+  orderId,
+  preferredLanguage,
+}) => {
   const res = await apiClient.post(
     BUYER_ASSISTANT.CHAT,
     {
@@ -62,6 +68,7 @@ export const sendAssistantMessage = async ({ message, sessionId, productId, orde
       sessionId: sessionId || undefined,
       productId: productId || undefined,
       orderId: orderId || undefined,
+      preferredLanguage: preferredLanguage || undefined,
     },
     { suppressGlobalErrorToast: true, timeout: 0 }
   );
@@ -110,7 +117,6 @@ export const QUICK_PROMPTS = [
 export const applyAssistantResponse = (data, setters = {}) => {
   const {
     setSessionId,
-    setLanguage,
     setDisputeFlag,
     setEscalated,
   } = setters;
@@ -119,7 +125,6 @@ export const applyAssistantResponse = (data, setters = {}) => {
     setSessionId?.(data.sessionId);
     setAssistantSessionId(data.sessionId);
   }
-  if (data?.language) setLanguage?.(data.language);
   if (data?.dispute_flag) setDisputeFlag?.(true);
   if (data?.escalated) setEscalated?.(true);
 

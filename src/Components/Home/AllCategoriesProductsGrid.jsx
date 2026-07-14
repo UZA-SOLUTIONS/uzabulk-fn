@@ -41,6 +41,8 @@ const AllCategoriesProductsGrid = ({ withContainer = true }) => {
           <Col xl={2} lg={3} md={4} sm={6} xs={6} key={item._id || item?.id || item?.offerId}>
             <Link
               to={productLink}
+              target="_blank"
+              rel="noopener noreferrer"
               className="card_comnon-product cursor-pointer h-100 d-block"
               style={{ textDecoration: "none", color: "black", pointerEvents: resolvedId ? "auto" : "none", opacity: resolvedId ? 1 : 0.6 }}
             >

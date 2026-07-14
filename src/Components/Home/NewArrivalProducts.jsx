@@ -96,7 +96,7 @@ export default function NewArrivalProducts() {
   }
 
   return (
-    <div className="home_feed_section_offset px-3 w-100">
+    <div className="home_feed_section_offset home_new_arrivals_section w-100">
       <section
         className="home_new_arrivals_panel"
         aria-labelledby="home-new-arrivals-title"
@@ -124,6 +124,8 @@ export default function NewArrivalProducts() {
                 <Link
                   key={item?._id || item?.id || idx}
                   to={productLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="new_arrival_img new_arrival_product_card text-start text-decoration-none d-block text-reset"
                 >
                   <div className="new_arrival_media">

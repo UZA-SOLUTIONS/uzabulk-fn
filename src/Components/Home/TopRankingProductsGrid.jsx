@@ -51,6 +51,8 @@ const TopRankingProductsGrid = ({ withContainer = true }) => {
             <Link
               key={item._id || item?.id || item?.offerId}
               to={productLink}
+              target="_blank"
+              rel="noopener noreferrer"
               className="new_arrival_img new_arrival_product_card top_ranking_card_compact cursor-pointer text-start"
               style={{
                 textDecoration: "none",

@@ -8,6 +8,7 @@ import AbortController from "abort-controller";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
+import ImageScanningPanel from "../../Components/Products/ImageScanningPanel";
 import { resolveImageSearchPreviewSource, clearImageSearchPreview } from "../../helpers/imageSearchHelper";
 import { APP_NAME } from "../../config/constants";
 import { balanceCatalogProducts, smoothScrollToTop } from "../../helpers/commonHelper";
@@ -315,7 +316,9 @@ const Productlist = () => {
               <h1 className="products_list_browse__page_title products_list_image_search_header__title">
                 {pageTitle}
               </h1>
-              {searchedImageSrc ? (
+              {isLoading && !displayItems?.length ? (
+                <ImageScanningPanel imageUrl={searchedImageSrc} />
+              ) : searchedImageSrc ? (
                 <div
                   className="products_list_image_search_banner products_list_image_search_banner--with-image"
                   data-testid="image-search-results-preview"
@@ -329,8 +332,6 @@ const Productlist = () => {
                     />
                   </figure>
                 </div>
-              ) : isLoading ? (
-                <p className="products_list_image_search_loading mb-0">Analyzing image…</p>
               ) : null}
             </header>
           ) : (

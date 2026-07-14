@@ -8,6 +8,11 @@ import { useTranslation } from "react-i18next";
 import ROUTES from "../../helpers/routesHelper";
 import { getLanguageCode } from "../../helpers/languageHelper";
 import {
+  buildAssistantSupportWhatsAppMessage,
+  getSupportWhatsAppUrl,
+  openAssistantSupportWhatsApp,
+} from "../../helpers/supportChatHelper";
+import {
   ASSISTANT_OPEN_EVENT,
   QUICK_PROMPTS,
   applyAssistantResponse,
@@ -20,15 +25,12 @@ import {
   setAssistantSessionId,
 } from "../../helpers/buyerAssistantHelper";
 import AssistantMessage from "./AssistantMessage";
+import WhatsAppIcon from "./WhatsAppIcon";
 import "./FloatingBuyerAssistant.css";
 
-const LANG_OPTIONS = [
-  { code: "en", label: "EN" },
-  { code: "fr", label: "FR" },
-  { code: "rw", label: "RW" },
-];
-
 const DESKTOP_DOCK_MQ = "(min-width: 992px)";
+const SUPPORT_WHATSAPP_PREFILL =
+  "Hi UZA Bulk support, I need help from the buyer assistant.";
 const DOCK_WIDTH_KEY = "uza-assistant-dock-width";
 const DEFAULT_DOCK_WIDTH = 328;
 const MIN_DOCK_WIDTH = 280;
@@ -130,6 +132,7 @@ export default function FloatingBuyerAssistant() {
   const resizeRef = useRef({ startX: 0, startWidth: DEFAULT_DOCK_WIDTH });
 
   const isDocked = open && isDesktop;
+  const isMobileSheet = open && !isDesktop;
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -143,12 +146,17 @@ export default function FloatingBuyerAssistant() {
     const onLanguageChanged = (lng) => {
       const next = lng === "fr" ? "fr" : "en";
       setLanguage(next);
+      // Refresh welcome copy when the platform language changes.
       setMessages([]);
       openLoadedRef.current = false;
     };
     i18n.on("languageChanged", onLanguageChanged);
     return () => i18n.off("languageChanged", onLanguageChanged);
   }, [i18n]);
+
+  useEffect(() => {
+    setLanguage(getLanguageCode());
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -253,6 +261,46 @@ export default function FloatingBuyerAssistant() {
     };
   }, [isDocked, dockWidth, isResizing]);
 
+  // Mobile: lock page scroll so the chat stays fixed while typing / scrolling messages.
+  useEffect(() => {
+    const body = document.body;
+    if (!isMobileSheet) {
+      body.classList.remove("assistant-mobile-sheet-open");
+      return undefined;
+    }
+
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    body.classList.add("assistant-mobile-sheet-open");
+    body.style.top = `-${scrollY}px`;
+
+    return () => {
+      body.classList.remove("assistant-mobile-sheet-open");
+      body.style.top = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [isMobileSheet]);
+
+  useEffect(() => {
+    if (!open || !isMobileSheet) return undefined;
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+
+    const syncViewport = () => {
+      const root = document.documentElement;
+      root.style.setProperty("--assistant-mobile-vh", `${vv.height}px`);
+      root.style.setProperty("--assistant-mobile-offset-top", `${vv.offsetTop}px`);
+    };
+    syncViewport();
+    vv.addEventListener("resize", syncViewport);
+    vv.addEventListener("scroll", syncViewport);
+    return () => {
+      vv.removeEventListener("resize", syncViewport);
+      vv.removeEventListener("scroll", syncViewport);
+      document.documentElement.style.removeProperty("--assistant-mobile-vh");
+      document.documentElement.style.removeProperty("--assistant-mobile-offset-top");
+    };
+  }, [open, isMobileSheet]);
+
   useEffect(() => {
     if (!open) return undefined;
     const onKeyDown = (event) => {
@@ -322,11 +370,11 @@ export default function FloatingBuyerAssistant() {
         sessionId,
         productId: productIdFromContext || undefined,
         orderId: orderIdFromContext || undefined,
+        preferredLanguage: getLanguageCode(),
       });
 
       const assistantMessage = applyAssistantResponse(data, {
         setSessionId,
-        setLanguage,
         setDisputeFlag,
         setEscalated,
       });
@@ -363,7 +411,6 @@ export default function FloatingBuyerAssistant() {
 
       const assistantMessage = applyAssistantResponse(data, {
         setSessionId,
-        setLanguage,
         setDisputeFlag,
         setEscalated,
       });
@@ -401,58 +448,65 @@ export default function FloatingBuyerAssistant() {
         note: messages.filter((m) => m.role === "user").slice(-3).map((m) => m.content).join("\n"),
       });
       setEscalated(true);
-      pushMessage("assistant", data?.message || "Your case has been escalated to a human agent.");
+      pushMessage(
+        "assistant",
+        data?.message || t("assistant.disputeEscalated")
+      );
     } catch {
-      pushMessage("assistant", "Could not escalate automatically. Please use Contact Us.");
+      pushMessage("assistant", t("assistant.connectionError"));
     } finally {
       setLoading(false);
     }
   };
 
+  const handleWhatsAppSupport = () => {
+    openAssistantSupportWhatsApp({
+      messages,
+      fallbackMessage: SUPPORT_WHATSAPP_PREFILL,
+    });
+  };
+
+  const supportWhatsAppHref = getSupportWhatsAppUrl(
+    buildAssistantSupportWhatsAppMessage({
+      messages,
+      fallbackMessage: SUPPORT_WHATSAPP_PREFILL,
+      pageUrl: typeof window !== "undefined" ? window.location.href : "",
+    })
+  );
+
   const handleAction = (action) => {
+    if (action?.type === "whatsapp") {
+      openAssistantSupportWhatsApp({
+        messages,
+        fallbackMessage: action.message || SUPPORT_WHATSAPP_PREFILL,
+      });
+      return;
+    }
     if (action?.type === "chat" && action.message) {
       handleSend(action.message);
     }
   };
 
   return (
-    <div className={`floating-buyer-assistant ${open ? "is-open" : ""} ${isDocked ? "is-docked" : ""}`}>
+    <div
+      className={`floating-buyer-assistant${open ? " is-open" : ""}${isDocked ? " is-docked" : ""}${isMobileSheet ? " is-mobile-sheet" : ""}`}
+    >
       {open ? (
         <div className="floating-buyer-assistant__panel" role="dialog" aria-label={t("assistant.dialogLabel")}>
           {isDocked ? (
-            <>
-              <div
-                className={`floating-buyer-assistant__resize_handle${isResizing ? " is-active" : ""}`}
-                role="separator"
-                aria-orientation="vertical"
-                aria-label={t("assistant.resize")}
-                onMouseDown={startResize}
-              />
-              <div className="floating-buyer-assistant__dock_tab" aria-hidden>
-                <span className="floating-buyer-assistant__dock_tab_dot" />
-                <span>{t("assistant.dockTab")}</span>
-              </div>
-            </>
+            <div
+              className={`floating-buyer-assistant__resize_handle${isResizing ? " is-active" : ""}`}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t("assistant.resize")}
+              onMouseDown={startResize}
+            />
           ) : null}
           <header className="floating-buyer-assistant__header">
-            <div>
-              <p className="floating-buyer-assistant__eyebrow">{t("assistant.eyebrow")}</p>
+            <div className="floating-buyer-assistant__brand">
               <h2 className="floating-buyer-assistant__title">{t("assistant.title")}</h2>
             </div>
             <div className="floating-buyer-assistant__header_actions">
-              <div className="floating-buyer-assistant__langs" role="group" aria-label={t("assistant.languageHint")}>
-                {LANG_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.code}
-                    type="button"
-                    className={language === opt.code ? "is-active" : ""}
-                    onClick={() => setLanguage(opt.code)}
-                    title={`Prefer ${opt.label}`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
               <button
                 type="button"
                 className="floating-buyer-assistant__close"
@@ -466,13 +520,17 @@ export default function FloatingBuyerAssistant() {
 
           {disputeFlag ? (
             <div className="floating-buyer-assistant__alert" role="status">
-              {escalated
-                ? "A human agent will review this conversation."
-                : "This looks sensitive — you can escalate to a human agent."}
+              <span>
+                {escalated
+                  ? t("assistant.disputeEscalated")
+                  : t("assistant.disputeHint")}
+              </span>
               {!escalated ? (
-                <button type="button" onClick={handleEscalate} disabled={loading}>
-                  Escalate now
-                </button>
+                <div className="floating-buyer-assistant__alert_actions">
+                  <button type="button" onClick={handleEscalate} disabled={loading}>
+                    {t("assistant.escalateNow")}
+                  </button>
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -525,15 +583,31 @@ export default function FloatingBuyerAssistant() {
               maxLength={2000}
               aria-label="Message to buyer assistant"
             />
-            <button type="submit" disabled={loading || !input.trim()}>
-              {t("common.submit")}
-            </button>
+            <div className="floating-buyer-assistant__composer_actions">
+              <button type="submit" disabled={loading || !input.trim()}>
+                {t("common.submit")}
+              </button>
+              <a
+                className="floating-buyer-assistant__composer_whatsapp"
+                href={supportWhatsAppHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t("assistant.whatsappSupport")}
+                title={`${t("assistant.whatsappSupport")} · ${t("assistant.whatsappNumber")}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleWhatsAppSupport();
+                }}
+              >
+                <WhatsAppIcon size={18} />
+              </a>
+            </div>
           </form>
 
           <footer className="floating-buyer-assistant__footer">
             <Link to={ROUTES.CONTACT_US}>{t("nav.contactUs")}</Link>
             <span aria-hidden>·</span>
-            <span>Grounded on live catalog &amp; policies</span>
+            <span>{t("assistant.footerGrounded")}</span>
           </footer>
         </div>
       ) : null}

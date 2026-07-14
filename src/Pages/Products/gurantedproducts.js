@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
 
 import ROUTES from "../../helpers/routesHelper";
 import { apiGetGuaranteedProducts } from "../../store/products/actions";
@@ -12,7 +11,6 @@ const Gurantedproducts = () => {
   const { isLoading, items } = useSelector(
     (s) => s.products.guaranteedProducts
   );
-  const navigate = useNavigate();
 
   useEffect(() => {
     dispatch(apiGetGuaranteedProducts());
@@ -37,7 +35,11 @@ const Gurantedproducts = () => {
                 key={idx}
                 onClick={() => {
                   if (!resolvedId) return;
-                  navigate(`${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(resolvedId)}${fallbackOfferId ? `?offerId=${encodeURIComponent(fallbackOfferId)}` : ""}`);
+                  window.open(
+                    `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(resolvedId)}${fallbackOfferId ? `?offerId=${encodeURIComponent(fallbackOfferId)}` : ""}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
                 }}
               >
                 <img

@@ -1,5 +1,5 @@
 /** Camera icon for “search by image” in the header search bar. */
-export default function ImageSearchIcon({ size = 22 }) {
+export default function ImageSearchIcon({ size = 24 }) {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"

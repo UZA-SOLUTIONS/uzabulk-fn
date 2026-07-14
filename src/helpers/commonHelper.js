@@ -16,8 +16,22 @@ export const logger = (...params) => {
     console.log(...params);
 };
 
+export const scrollToTop = (behavior = "auto") => {
+  if (typeof window === "undefined") return;
+  try {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  window.scrollTo({ top: 0, left: 0, behavior });
+  if (document.documentElement) document.documentElement.scrollTop = 0;
+  if (document.body) document.body.scrollTop = 0;
+};
+
 export const smoothScrollToTop = () => {
-  document.body.scrollTo({ top: 0, behavior: "smooth" });
+  scrollToTop("smooth");
 };
 
 export const handlePageClick = ({ setSkip = () => { }, fetchRecords = () => { } }) => (event) => {
@@ -507,11 +521,17 @@ export const buildProductDetailUrlFromResolved = ({ mongoId, offerId } = {}, opt
   return `${ROUTES.PRODUCT_DETAIL}/${encodeURIComponent(mongoId)}${qs ? `?${qs}` : ""}`;
 };
 
-/** Navigate to product detail immediately (no pre-fetch). Offer IDs resolve on the PDP. */
+/** Open product detail in a new tab (falls back to in-app navigate when newTab is false). */
 export const openProductDetail = (navigate, item, options = {}) => {
-  if (typeof navigate !== "function" || !item) return false;
+  if (!item) return false;
   const path = buildProductDetailUrl(item, options);
   if (!path) return false;
+  const openInNewTab = options.newTab !== false;
+  if (openInNewTab && typeof window !== "undefined") {
+    window.open(path, "_blank", "noopener,noreferrer");
+    return true;
+  }
+  if (typeof navigate !== "function") return false;
   navigate(path);
   if (options.scrollTop !== false) {
     smoothScrollToTop();

@@ -70,6 +70,8 @@ export default function ProductCard({ item, onOpen }) {
   return (
     <Link
       to={productLink}
+      target="_blank"
+      rel="noopener noreferrer"
       className={`${className} text-decoration-none text-reset d-block`}
       onClick={() => onOpen?.(item)}
     >

@@ -9,6 +9,7 @@ import {
 import ROUTES from "../../helpers/routesHelper";
 import { formatAssistantMessageHtml } from "../../helpers/assistantMessageHelper";
 import TranslatedProductName from "./TranslatedProductName";
+import WhatsAppIcon from "./WhatsAppIcon";
 
 function resolveActionPath(action = {}) {
   if (action.type === "product" && action.productId) {
@@ -41,6 +42,8 @@ function AssistantProductCard({ product, onNavigate }) {
   return (
     <Link
       to={detailUrl || ROUTES.PRODUCT_LISTING}
+      target="_blank"
+      rel="noopener noreferrer"
       className="floating-buyer-assistant__product_card"
       onClick={() => onNavigate?.({ closeAssistant: false })}
     >
@@ -92,7 +95,11 @@ function AssistantMessage({ message, onAction, onNavigate, onConfirm, confirming
       {!isUser && products.length > 0 ? (
         <div className="floating-buyer-assistant__products" aria-label="Related products">
           {products.map((product) => (
-            <AssistantProductCard key={product.id} product={product} onNavigate={onNavigate} />
+            <AssistantProductCard
+              key={product.id || product.offerId}
+              product={product}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       ) : null}
@@ -133,6 +140,32 @@ function AssistantMessage({ message, onAction, onNavigate, onConfirm, confirming
             }
 
             const path = resolveActionPath(action);
+            if (action.type === "whatsapp" || action.type === "external") {
+              const href = action.url || action.href || "";
+              return (
+                <a
+                  key={`${action.label}-${href || "whatsapp"}`}
+                  href={href || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`floating-buyer-assistant__action_btn floating-buyer-assistant__action_btn--link${
+                    action.type === "whatsapp" ? " floating-buyer-assistant__action_btn--whatsapp" : ""
+                  }`}
+                  onClick={(e) => {
+                    if (action.type === "whatsapp") {
+                      e.preventDefault();
+                      onAction?.(action);
+                    } else {
+                      onNavigate?.(action);
+                    }
+                  }}
+                >
+                  {action.type === "whatsapp" ? <WhatsAppIcon size={14} /> : null}
+                  <span>{action.label}</span>
+                </a>
+              );
+            }
+
             if (action.type === "chat") {
               return (
                 <button
@@ -146,10 +179,14 @@ function AssistantMessage({ message, onAction, onNavigate, onConfirm, confirming
               );
             }
             if (path) {
+              const isProductPath = action.type === "product" || String(path).includes(ROUTES.PRODUCT_DETAIL);
               return (
                 <Link
                   key={`${action.label}-${path}`}
                   to={path}
+                  {...(isProductPath
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
                   className="floating-buyer-assistant__action_btn floating-buyer-assistant__action_btn--link"
                   onClick={() => onNavigate?.(action)}
                 >

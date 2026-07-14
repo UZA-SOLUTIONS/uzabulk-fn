@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Slider from "react-slick";
@@ -7,14 +7,14 @@ import { useTranslation } from "react-i18next";
 
 import PageSeo from "../../Components/Common/PageSeo";
 import { ProductVariations } from "./ProductVariations";
-import FeatureAttributes from "./FeatureAttributes";
+import ProductInfoTabs from "./ProductInfoTabs";
 import LoadingContent from "../../Components/Common/LoadingContent";
 import NoRecordFound from "../../Components/Common/NoRecordFound";
 import AddToCart from "../../Components/Common/AddToCart";
 
 import { APP_NAME } from "../../config/constants";
 import { addToCart, getProductInfo } from "../../helpers/cartHelper";
-import { formatNumber, parseProductDescription } from "../../helpers/commonHelper";
+import { formatNumber, parseProductDescription, scrollToTop } from "../../helpers/commonHelper";
 import { openBuyerAssistant } from "../../helpers/buyerAssistantHelper";
 import { apiGet } from "../../helpers/apiHelper";
 import ROUTES from "../../helpers/routesHelper";
@@ -37,6 +37,37 @@ import placeholder from "../../assets/images/sousix.jpg";
 import SlideImage from "./SlideImage";
 import ProductRating from "../../Components/Common/ProductRating";
 import ProductReviews from "./ProductReviews";
+import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
+
+/** Resolve category Mongo id for same-category picks (prefer top level like home category filter). */
+const resolveDetailCategoryId = (detail) => {
+  if (!detail) return "";
+  const asObjectId = (value) => {
+    if (!value) return "";
+    if (typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value.trim())) return value.trim();
+    if (value?._id) return String(value._id);
+    if (value?.id) return String(value.id);
+    return "";
+  };
+
+  const fromTiers =
+    asObjectId(detail.topCategoryId) ||
+    asObjectId(detail.secondCategoryId) ||
+    asObjectId(detail.thirdCategoryId);
+  if (fromTiers) return fromTiers;
+
+  const cat = detail.category;
+  const fromCategory = asObjectId(cat) || asObjectId(detail.categoryId);
+  if (fromCategory) return fromCategory;
+
+  if (Array.isArray(detail.categories) && detail.categories.length) {
+    for (let i = 0; i < detail.categories.length; i += 1) {
+      const id = asObjectId(detail.categories[i]);
+      if (id) return id;
+    }
+  }
+  return "";
+};
 
 /** 1688-style numeric offer id (length varies; avoid treating 24-hex Mongo ids as offer ids). */
 const looksLike1688OfferId = (value) => {
@@ -169,6 +200,15 @@ const Singleview = () => {
     ? normalizedId
     : fallbackQueryId;
   const isValidProductId = /^[a-fA-F0-9]{24}$/.test(resolvedProductId);
+
+  // Always open product pages at the top (new tab / route change / async detail load).
+  useLayoutEffect(() => {
+    scrollToTop("auto");
+  }, [resolvedProductId]);
+
+  useEffect(() => {
+    scrollToTop("auto");
+  }, [detail?._id]);
 
   useProductViewTracker(
     isValidProductId && detail?._id ? resolvedProductId : "",
@@ -576,26 +616,30 @@ const Singleview = () => {
             </Row>
 
 
-            <FeatureAttributes detail={detail} displayDetail={displayDetail} />
-
             <div className="mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
               <ProductReviews reviews={detail?.reviews} />
             </div>
 
-            {productDescriptionHtml ? (
-              <div className="product_description mx-auto px-0 px-sm-2" style={{ maxWidth: 900 }}>
-                <Row className="text-start mt-5 ">
-                  <Col lg="12">
-                    <h3 className="pb-3">{t("product.description")}</h3>
-                  </Col>
-                  <Col
-                    lg="12"
-                    className="uza-product-description"
-                    dangerouslySetInnerHTML={{ __html: productDescriptionHtml }}
-                  />
-                </Row>
-              </div>
-            ) : null}
+            <ProductInfoTabs
+              detail={detail}
+              displayDetail={displayDetail}
+              descriptionHtml={productDescriptionHtml}
+            />
+
+            <SimilarProductsRow
+              productId={detail?._id || resolvedProductId}
+              categoryId={resolveDetailCategoryId(detail)}
+              excludeProductId={detail?._id || resolvedProductId}
+              items={
+                Array.isArray(detail?.sameCategoryProducts) && detail.sameCategoryProducts.length
+                  ? detail.sameCategoryProducts
+                  : null
+              }
+              title={t("product.youMayAlsoLike")}
+              limit={12}
+              usePersonalized={false}
+              className="mt-4 mt-lg-5"
+            />
           </>
         ) : (
           <NoRecordFound message={message || "Product not found! Please open a product from the list."} />

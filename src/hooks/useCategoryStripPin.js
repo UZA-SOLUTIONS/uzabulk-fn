@@ -8,7 +8,7 @@ export function useCategoryStripPin({ enabled = true } = {}) {
   useEffect(() => {
     if (!enabled) return undefined;
 
-    const header = document.querySelector(".site-site-header") || document.querySelector(".site-header");
+    const header = document.querySelector(".site-header");
     const measureHeader = () => {
       const height = Math.ceil(header?.getBoundingClientRect().height || 120);
       setHeaderOffset((prev) => (prev === height ? prev : height));

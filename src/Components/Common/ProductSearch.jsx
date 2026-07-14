@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Autocomplete from "react-autocomplete";
 import { toast } from "react-toastify";
 import apiClient from "../../helpers/apiHelper";
@@ -14,6 +15,7 @@ import ROUTES from "../../helpers/routesHelper";
 import suggestionPlaceholder from "../../assets/images/default_name.webp";
 import ImageSearchIcon from "./ImageSearchIcon";
 import TranslatedProductName from "./TranslatedProductName";
+import { rememberRecentSearch } from "../../helpers/recentSearchHelper";
 
 const DEFAULT_MIN_CHARS = 2;
 const DEFAULT_DEBOUNCE_MS = 220;
@@ -41,6 +43,7 @@ export default function ProductSearch({
     enableImageSearch = false,
     imageSearchInputId = "product-search-image-input",
 }) {
+    const { t } = useTranslation();
     const [value, setValue] = useState(defaultValue);
     const [items, setItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -55,10 +58,12 @@ export default function ProductSearch({
 
     const openSuggestion = (item) => {
         const searchLabel = item?.name || item?.title || "";
+        if (searchLabel) rememberRecentSearch(searchLabel);
         const path = buildProductDetailUrl(item);
         if (!path) return;
         const joiner = path.includes("?") ? "&" : "?";
-        navigate(`${path}${joiner}search=${encodeURIComponent(searchLabel)}`);
+        const url = `${path}${joiner}search=${encodeURIComponent(searchLabel)}`;
+        window.open(url, "_blank", "noopener,noreferrer");
     };
 
     const openSuggestionFromClick = (item, event) => {
@@ -319,7 +324,7 @@ export default function ProductSearch({
                 <label
                     className={`header-mockup-img-search product-search-image-btn${imageSearchLoading ? " is-loading" : ""}`}
                     htmlFor={imageSearchInputId}
-                    title={imageSearchLoading ? "Analyzing image…" : "Search by image"}
+                    title={imageSearchLoading ? t("search.scanningImage") : "Search by image"}
                     aria-busy={imageSearchLoading}
                 >
                     <input

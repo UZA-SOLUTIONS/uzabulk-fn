@@ -68,9 +68,9 @@ export default function BrowseCategoryStrip({
     if (href) {
       return (
         <Link
-          key={tab.id || "all"}
+          key={tab.id || `tab-${idx}`}
           to={href}
-          className={`${tabClassName}${idx > 0 ? " home_discover_browse_catstrip__tab--scroll" : ""}`}
+          className={tabClassName}
         >
           {tab.label}
         </Link>
@@ -79,13 +79,13 @@ export default function BrowseCategoryStrip({
 
     return (
       <button
-        key={tab.id || "all"}
+        key={tab.id || `tab-${idx}`}
         type="button"
         role="tab"
         id={`browse-tab-${tab.id || "all"}`}
         aria-selected={isActive}
         tabIndex={isActive ? 0 : -1}
-        className={`${tabClassName}${idx > 0 ? " home_discover_browse_catstrip__tab--scroll" : ""}`}
+        className={tabClassName}
         onClick={() => onTabClick?.(tab.id)}
       >
         {tab.label}
@@ -111,9 +111,7 @@ export default function BrowseCategoryStrip({
           >
             <Chevron dir="prev" />
           </button>
-        ) : (
-          <span className="home_discover_browse_catstrip__arrow-spacer" aria-hidden />
-        )}
+        ) : null}
         <div ref={stripScrollRef} className="home_discover_browse_catstrip__track">
           <div
             ref={tablistRef}
@@ -122,21 +120,7 @@ export default function BrowseCategoryStrip({
             role={getTabTo ? undefined : "tablist"}
             onKeyDown={onTabKeyDown}
           >
-            {tabs.map((tab, idx) => {
-              if (idx === 0) {
-                const first = renderTab(tab, idx);
-                const hasMore = tabs.length > 1;
-                return (
-                  <div key="all" className="home_discover_browse_catstrip__sticky_rail">
-                    {first}
-                    {hasMore ? (
-                      <span className="home_discover_browse_catstrip__divider" aria-hidden="true" />
-                    ) : null}
-                  </div>
-                );
-              }
-              return renderTab(tab, idx);
-            })}
+            {tabs.map((tab, idx) => renderTab(tab, idx))}
           </div>
         </div>
         <button

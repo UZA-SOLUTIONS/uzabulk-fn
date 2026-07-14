@@ -160,6 +160,8 @@ export default function RecentlyViewedProducts() {
                 <Link
                   key={item?._id || item?.id || idx}
                   to={productLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="new_arrival_img new_arrival_product_card home_recently_viewed_card text-start text-decoration-none d-block text-reset"
                 >
                   <div className="new_arrival_media">

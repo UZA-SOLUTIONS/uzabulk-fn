@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { resolveImageSearchPreviewSource } from "../../helpers/imageSearchHelper";
 
 export default function ImageSearchQueryPreview({
   isLoading = false,
   keyword = "",
 }) {
+  const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
 
   const displayUrl = resolveImageSearchPreviewSource();
@@ -35,13 +37,14 @@ export default function ImageSearchQueryPreview({
           />
         ) : (
           <div className="products_list_image_search_query__placeholder" aria-hidden={isLoading}>
-            {isLoading ? "Analyzing image…" : "Image preview unavailable"}
+            {isLoading ? t("search.scanningImage") : "Image preview unavailable"}
           </div>
         )}
         {isLoading ? (
           <div className="products_list_image_search_query__overlay" aria-live="polite">
+            <span className="products_list_image_search_query__scan-line" aria-hidden />
             <span className="products_list_image_search_query__spinner" aria-hidden />
-            <span className="visually-hidden">Analyzing image…</span>
+            <span className="visually-hidden">{t("search.scanningImage")}</span>
           </div>
         ) : null}
       </figure>

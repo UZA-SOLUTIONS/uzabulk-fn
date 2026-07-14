@@ -9,7 +9,12 @@ import {
   resolveProductDetailId,
 } from "../../helpers/productDetailTranslationHelper";
 
-export default function FeatureAttributes({ detail, displayDetail: displayDetailProp }) {
+export default function FeatureAttributes({
+  detail,
+  displayDetail: displayDetailProp,
+  hideTitle = false,
+  hideDivider = false,
+}) {
   const { t } = useTranslation();
   const [viewMore, setViewMore] = useState(false);
   const translatedDetail = useProductDetailTranslation(detail);
@@ -25,10 +30,12 @@ export default function FeatureAttributes({ detail, displayDetail: displayDetail
 
   return (
     <>
-      <Row className="text-start product_attribute">
-        <Col lg="12">
-          <h3>{t("product.attributes")}</h3>
-        </Col>
+      <Row className={`text-start product_attribute${hideTitle ? " product_attribute--embedded" : ""}`}>
+        {!hideTitle ? (
+          <Col lg="12">
+            <h3>{t("product.attributes")}</h3>
+          </Col>
+        ) : null}
         <Col lg="12">
           <ul className="d-flex flex-wrap text-decoration-none ps-0 mb-0">
             {details.map((attr, key) => {
@@ -58,7 +65,7 @@ export default function FeatureAttributes({ detail, displayDetail: displayDetail
           </Col>
         ) : null}
       </Row>
-      <hr className="my-5" />
+      {!hideDivider ? <hr className="my-5" /> : null}
     </>
   );
 }
