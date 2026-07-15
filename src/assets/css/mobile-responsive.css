@@ -128,6 +128,17 @@ label {
     padding: 8px 12px;
     font-size: 14px;
   }
+
+  /* Mockup header bottom strip stays one compact row on mobile. */
+  .site-header.site-header--mockup ul.homeMenu_list.homeMenu_list--mockup {
+    padding: 0 !important;
+  }
+
+  .site-header.site-header--mockup ul.homeMenu_list.homeMenu_list--mockup li .categories-nav-trigger {
+    min-height: 0;
+    padding: 2px 0;
+    font-size: 12px;
+  }
 }
 
 /* Legacy fixed-width search inputs from older rules */
