@@ -2,49 +2,33 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ROUTES from "../../../helpers/routesHelper";
 
-export default function ItemCategory({ catalogTrigger = "hamburger" }) {
+export default function ItemCategory() {
   const { t } = useTranslation();
   return (
     <li className="productmenu">
       <Link
-        to={`${ROUTES.PRODUCT_LISTING}?skip=1`}
+        to={ROUTES.CONTACT_US}
         className="categories-nav-trigger"
-        aria-label={t("nav.browseAllProducts")}
+        aria-label={t("nav.help")}
       >
         <span className="categories-nav-trigger__icon" aria-hidden>
-          {catalogTrigger === "grid" ? appsMenuGrid : threebar}
+          {helpIcon}
         </span>
-        <span className="categories-nav-trigger__label">{t("nav.allCategories")}</span>
+        <span className="categories-nav-trigger__label">{t("nav.help")}</span>
       </Link>
     </li>
   );
 }
 
-const threebar = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="28"
-    height="28"
-    viewBox="0 0 24 24"
-  >
+const helpIcon = (
+  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
     <path
-      fill="none"
+      d="M9.6 9.2a2.5 2.5 0 0 1 4.85.8c0 1.5-2.2 2.1-2.2 3.5"
       stroke="currentColor"
+      strokeWidth="1.8"
       strokeLinecap="round"
-      strokeWidth="2"
-      d="M5 6h14M5 12h14M5 18h14"
     />
-  </svg>
-);
-
-const appsMenuGrid = (
-  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden>
-    {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
-      const row = Math.floor(i / 3);
-      const col = i % 3;
-      const cx = 4 + col * 8;
-      const cy = 4 + row * 8;
-      return <circle key={i} cx={cx} cy={cy} r="1.75" fill="currentColor" />;
-    })}
+    <circle cx="12" cy="17" r="1" fill="currentColor" />
   </svg>
 );

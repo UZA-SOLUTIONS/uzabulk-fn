@@ -5,6 +5,8 @@ export const AUTH = {
   REGISTER: "users/register",
   LOGIN: "users/login",
   LOGOUT: "users/logout",
+  GOOGLE_CLIENT_CONFIG: "users/auth/google/client-config",
+  GOOGLE_ONE_TAP: "users/auth/google/one-tap",
 };
 
 export const FORGOT_PASSWORD = {
@@ -66,6 +68,7 @@ export const ORDER = {
   PLACE: "orders/add", // post
   LIST: "orders/list", // get
   DETAIL: "orders/view", // get
+  TRACK: "orders/track", // get ?q=
   CHECK_SLIP_STATUS: "orders/viewOrderDetail", // get
   UPLOAD_SLIP: "orders/uploadSlip", // get
   CREATE_SLIP_UPLOAD_LINK: "orders/createSlipUploadLink",

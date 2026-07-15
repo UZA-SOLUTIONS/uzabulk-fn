@@ -3,6 +3,7 @@ import { Button, FormGroup } from "reactstrap";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 
 import MobileNumberField, { MobileError } from "../Common/MobileNumberField";
@@ -12,8 +13,10 @@ import { apiRegister, apiVerifyEmail, apiVerifyOtp } from "../../store/auth/acti
 import { ICON_EMAIL_OTP, ICON_RELOAD, ICON_USER } from "../../assets/svg";
 import ResendOtp from "../Common/ResendOtp";
 import ButtonLoader from "../Common/ButtonLoader";
+import GoogleContinueButton from "./GoogleContinueButton";
 
 const Signup = ({ handleClose }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -307,6 +310,12 @@ const Signup = ({ handleClose }) => {
                   {form.isSubmitting ? <ButtonLoader /> : "Register"}
                 </Button>
               </div>
+
+              <div className="auth-social-divider" aria-hidden>
+                <span>{t("auth.or")}</span>
+              </div>
+
+              <GoogleContinueButton />
             </Form>
           );
         }}

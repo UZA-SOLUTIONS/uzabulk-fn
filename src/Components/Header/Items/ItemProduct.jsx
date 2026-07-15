@@ -36,9 +36,9 @@ export default function ItemProduct({ top, scroll }) {
                         navigate(ROUTES.NEW_ARRIVALS_PRODUCT_LISTING);
                     }} className="cursor-pointer">
                         <div className="menu_box text-center">
-                            <span>{toprank}</span>
+                            <span>{hotIcon}</span>
 
-                            <p>New arrivals</p>
+                            <p>Hot Deals</p>
                         </div>
                     </Col>
 
@@ -96,6 +96,20 @@ const toprank = (
         <path
             fill="currentColor"
             d="M255 471L91.7 387V41h328.6v346zm-147.3-93.74L255 453l149.3-75.76V57H107.7zm187.61-168.34l-14.5-46l38.8-28.73l-48.27-.43L256 87.94l-15.33 45.78l-48.27.43l38.8 28.73l-14.5 46l39.31-28zM254.13 311.5l98.27-49.89v-49.9l-98.14 49.82l-94.66-48.69v50zm.13 32.66l-94.66-48.69v50l94.54 48.62l98.27-49.89v-49.9z"
+        />
+    </svg>
+);
+
+const hotIcon = (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="32"
+        height="32"
+        viewBox="0 0 24 24"
+    >
+        <path
+            fill="#ef4444"
+            d="M12 23c-3.9 0-7-2.9-7-6.9 0-2.2 1-4.2 2.7-5.8.3-.3.8-.2.9.2.3 1.3.9 2.4 1.8 3.2.2.2.5.1.6-.1.6-1.4 1.7-4.2 1.3-7.4-.1-.6.6-1 .1-.5C16.6 8.4 19 11.6 19 15.2c0 4.3-3.1 7.8-7 7.8zm0-2c2.8 0 5-2.5 5-5.8 0-2.2-1.3-4.3-3.3-5.7.1 2.2-.5 4.5-1.8 6.2-1 .1-1.7-.6-2-1.5-.9.9-1.5 2.1-1.5 3.4C8.4 19.1 10 21 12 21z"
         />
     </svg>
 );

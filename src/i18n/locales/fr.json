@@ -3,7 +3,10 @@
     "home": "Accueil",
     "allProducts": "Tous les produits",
     "allCategories": "Toutes les catégories",
+    "help": "Aide",
+    "trackOrder": "Suivre la commande",
     "newArrivals": "Nouveautés",
+    "hotDeals": "Offres chaudes",
     "topRanking": "Meilleures ventes",
     "bestDeals": "Meilleures offres",
     "savingSpotlight": "Économies en vedette",
@@ -80,6 +83,10 @@
     "rememberMe": "Se souvenir de moi",
     "forgotPassword": "Mot de passe oublié",
     "login": "Connexion",
+    "or": "ou",
+    "continueWithGoogle": "Continuer avec Google",
+    "googleSigningIn": "Connexion avec Google…",
+    "googleAuthFailed": "Échec de la connexion Google. Veuillez réessayer.",
     "createAccount": "Créer un compte",
     "haveAccount": "Vous avez déjà un compte",
     "validEmail": "Veuillez entrer une adresse e-mail valide",
@@ -146,9 +153,11 @@
   },
   "home": {
     "newArrivals": "Nouveautés",
+    "hotDeals": "Offres chaudes",
     "viewAll": "Voir tout",
     "viewMore": "Voir plus",
     "viewDetails": "Voir les détails",
+    "soldCount": "{{count}} vendus",
     "categoriesForYou": "Catégories pour vous",
     "browseFeaturedSelections": "Parcourir les sélections en vedette",
     "noProductsFound": "Aucun produit trouvé.",
@@ -233,6 +242,16 @@
     "logoutConfirm": "Êtes-vous sûr de vouloir vous déconnecter ?",
     "logoutHint": "Vous devrez vous reconnecter pour accéder à votre compte."
   },
+  "trackOrder": {
+    "title": "Suivre la commande",
+    "hint": "Entrez votre numéro de commande pour voir le statut et les détails. Connexion non requise.",
+    "placeholder": "Rechercher un numéro de commande…",
+    "submit": "Suivre",
+    "viewAllOrders": "Voir mes commandes",
+    "orderIdRequired": "Veuillez entrer un numéro de commande.",
+    "signInRequired": "Connectez-vous pour suivre votre commande.",
+    "notFound": "Commande introuvable. Vérifiez le numéro et réessayez."
+  },
   "assistant": {
     "eyebrow": "Assistant acheteur IA",
     "title": "Support UZA Bulk",
@@ -281,9 +300,9 @@
         "keywords": "catégories de gros, catégories produits, fournisseurs par catégorie, sourcing en vrac"
       },
       "newArrivals": {
-        "title": "Nouveautés | {{appName}}",
-        "description": "Découvrez les derniers produits de gros et nouveautés tendance sur {{appName}} auprès de fournisseurs vérifiés.",
-        "keywords": "nouveautés, derniers produits de gros, produits tendance, nouveau stock"
+        "title": "Offres chaudes | {{appName}}",
+        "description": "Achetez les produits de gros les plus vendus et les offres chaudes sur {{appName}} auprès de fournisseurs vérifiés.",
+        "keywords": "offres chaudes, meilleures ventes, produits les plus achetés, gros volume"
       },
       "topRanking": {
         "title": "Produits les mieux classés | {{appName}}",

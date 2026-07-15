@@ -3,7 +3,10 @@
     "home": "Home",
     "allProducts": "All Products",
     "allCategories": "All Categories",
+    "help": "Help",
+    "trackOrder": "Track Order",
     "newArrivals": "New Arrivals",
+    "hotDeals": "Hot Deals",
     "topRanking": "Top Ranking",
     "bestDeals": "Best Deals",
     "savingSpotlight": "Saving Spotlight",
@@ -80,6 +83,10 @@
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot Password",
     "login": "Login",
+    "or": "or",
+    "continueWithGoogle": "Continue with Google",
+    "googleSigningIn": "Signing you in with Google…",
+    "googleAuthFailed": "Google sign-in failed. Please try again.",
     "createAccount": "Create Account",
     "haveAccount": "Have Already Account",
     "validEmail": "Please enter a valid email",
@@ -146,9 +153,11 @@
   },
   "home": {
     "newArrivals": "New Arrivals",
+    "hotDeals": "Hot Deals",
     "viewAll": "View All",
     "viewMore": "View More",
     "viewDetails": "View details",
+    "soldCount": "{{count}} sold",
     "categoriesForYou": "Categories for you",
     "browseFeaturedSelections": "Browse featured selections",
     "noProductsFound": "No products found.",
@@ -233,6 +242,16 @@
     "logoutConfirm": "Are you sure you want to log out?",
     "logoutHint": "You will need to sign in again to access your account."
   },
+  "trackOrder": {
+    "title": "Track Order",
+    "hint": "Enter your order number to see status and details. No sign-in required.",
+    "placeholder": "Search order number…",
+    "submit": "Track",
+    "viewAllOrders": "View my orders",
+    "orderIdRequired": "Please enter an order number.",
+    "signInRequired": "Sign in to track your order.",
+    "notFound": "Order not found. Check the number and try again."
+  },
   "assistant": {
     "eyebrow": "AI Buyer Assistant",
     "title": "UZA Bulk Support",
@@ -281,9 +300,9 @@
         "keywords": "wholesale categories, product categories, supplier categories, bulk sourcing categories"
       },
       "newArrivals": {
-        "title": "New Arrivals | {{appName}}",
-        "description": "Find the latest wholesale products and trending new arrivals on {{appName}} from verified suppliers worldwide.",
-        "keywords": "new arrivals, latest wholesale products, trending products, new stock, fresh inventory"
+        "title": "Hot Deals | {{appName}}",
+        "description": "Shop the most purchased wholesale products and hot deals on {{appName}} from verified suppliers worldwide.",
+        "keywords": "hot deals, best sellers, top purchased, wholesale products, high volume sales"
       },
       "topRanking": {
         "title": "Top Ranking Products | {{appName}}",

@@ -14,6 +14,7 @@ import { ICON_USER } from "../../assets/svg";
 import PasswordField from "../Common/PasswordField";
 import ROUTES from "../../helpers/routesHelper";
 import ButtonLoader from "../Common/ButtonLoader";
+import GoogleContinueButton from "./GoogleContinueButton";
 
 const Signin = ({ handleClose }) => {
   const { t } = useTranslation();
@@ -121,6 +122,12 @@ const Signin = ({ handleClose }) => {
                     {form.isSubmitting || isAuthLoading ? <ButtonLoader /> : t("auth.login")}
                   </Button>
                 </div>
+
+                <div className="auth-social-divider" aria-hidden>
+                  <span>{t("auth.or")}</span>
+                </div>
+
+                <GoogleContinueButton />
               </Form>
             );
           }}

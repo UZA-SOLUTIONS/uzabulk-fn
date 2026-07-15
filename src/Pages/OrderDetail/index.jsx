@@ -23,6 +23,7 @@ const OrderDetailPage = () => {
   const dispatch = useDispatch();
   const { currentCurrency } = useSelector(s => s.config);
   const profile = useSelector((s) => s.auth.user);
+  const isLogin = useSelector((s) => s.auth.isLogin);
   const detail = useSelector((s) => s.order.detail);
   const isLoading = useSelector((s) => s.order.isLoading);
 
@@ -49,8 +50,19 @@ const OrderDetailPage = () => {
                 <div className="d-flex align-items-center justify-content-between gap-5 border-bottom pb-3">
                   <h5 className="">Order {detail ? "# " + detail?.customOrderId : null}</h5>
                   <div className="d-flex align-items-center justify-content-center gap-2">
-                    <Button className="d-flex align-items-center justify-content-center subscribe_btn" onClick={() => { navigate(ROUTES.MY_ORDERS) }}>Back</Button>
-                    {cancelStates.includes(detail?.orderStatus) ? <Button className="d-flex align-items-center justify-content-center subscribe_btn">Cancel Order</Button> : null}
+                    <Button
+                      className="d-flex align-items-center justify-content-center subscribe_btn"
+                      onClick={() => {
+                        navigate(isLogin ? ROUTES.MY_ORDERS : ROUTES.HOME);
+                      }}
+                    >
+                      Back
+                    </Button>
+                    {isLogin && cancelStates.includes(detail?.orderStatus) ? (
+                      <Button className="d-flex align-items-center justify-content-center subscribe_btn">
+                        Cancel Order
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </Col>

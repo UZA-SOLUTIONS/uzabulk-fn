@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Container } from "react-bootstrap";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -11,14 +11,7 @@ import Homemenustrip from "./Homemenustrip";
 import ProductSearch from "../Common/ProductSearch";
 import ImageSearchTray from "../Common/ImageSearchTray";
 import ImageScanningPanel from "../Products/ImageScanningPanel";
-import AnimatedSearchPlaceholder from "../Common/AnimatedSearchPlaceholder";
-import { apiGet } from "../../helpers/apiHelper";
-import { PRODUCTS } from "../../helpers/urlHelper";
-import {
-  getRecentSearches,
-  mergeSearchPlaceholderTerms,
-  rememberRecentSearch,
-} from "../../helpers/recentSearchHelper";
+import { rememberRecentSearch } from "../../helpers/recentSearchHelper";
 import {
   persistImageSearchPreview,
   readImageFromClipboard,
@@ -42,7 +35,6 @@ export default function Header() {
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
   const imageSearchLoadingLabel = t("search.scanningImage");
   const [localImagePreview, setLocalImagePreview] = useState("");
-  const [placeholderTerms, setPlaceholderTerms] = useState(() => getRecentSearches());
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -51,12 +43,6 @@ export default function Header() {
 
   const imageFromQuery = searchParams.get("image") || "";
   const activeImagePreview = localImagePreview || readImageSearchBlobPreview() || "";
-  const showAnimatedPlaceholder = !String(searchText || "").trim() && !activeImagePreview;
-
-  const rotatingTerms = useMemo(
-    () => (placeholderTerms.length ? placeholderTerms : [t("search.placeholder")]),
-    [placeholderTerms, t]
-  );
 
   useLayoutEffect(() => {
     const readY = () => window.scrollY ?? document.documentElement.scrollTop ?? 0;
@@ -84,33 +70,6 @@ export default function Header() {
     setSearchText(searchParams.get("search") || "");
   }, [searchParams]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiGet(PRODUCTS.FREQUENTLY_SEARCH, {
-          suppressGlobalErrorToast: true,
-        });
-        if (cancelled) return;
-        const apiTerms = Array.isArray(res?.data) ? res.data : [];
-        setPlaceholderTerms(mergeSearchPlaceholderTerms(getRecentSearches(), apiTerms));
-      } catch {
-        if (!cancelled) setPlaceholderTerms(getRecentSearches());
-      }
-    })();
-
-    const onRecentSearches = (event) => {
-      const local = Array.isArray(event?.detail) ? event.detail : getRecentSearches();
-      setPlaceholderTerms((prev) => mergeSearchPlaceholderTerms(local, prev));
-    };
-    window.addEventListener("uzabulk:recent-searches", onRecentSearches);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("uzabulk:recent-searches", onRecentSearches);
-    };
-  }, []);
-
   const revokeLocalPreview = () => {
     if (localPreviewRef.current) {
       URL.revokeObjectURL(localPreviewRef.current);
@@ -136,8 +95,7 @@ export default function Header() {
     const trimmed = (searchText || "").trim();
     if (!trimmed) return;
 
-    const updated = rememberRecentSearch(trimmed);
-    setPlaceholderTerms(mergeSearchPlaceholderTerms(updated, placeholderTerms));
+    rememberRecentSearch(trimmed);
 
     const params = new URLSearchParams();
     params.set("search", trimmed);
@@ -262,20 +220,13 @@ export default function Header() {
                 <ProductSearch
                   wrapperClassName="header-mockup-autocomplete"
                   defaultValue={searchText}
-                  placeholder=""
+                  placeholder={
+                    activeImagePreview
+                      ? t("search.placeholderWithImage")
+                      : t("search.placeholder")
+                  }
                   callback={({ search }) => setSearchText(search || "")}
                 />
-                {showAnimatedPlaceholder ? (
-                  <AnimatedSearchPlaceholder
-                    terms={rotatingTerms}
-                    fallback={t("search.placeholder")}
-                    className="header-mockup-search-placeholder"
-                  />
-                ) : !String(searchText || "").trim() && activeImagePreview ? (
-                  <span className="header-mockup-search-placeholder is-static" aria-hidden="true">
-                    {t("search.placeholderWithImage")}
-                  </span>
-                ) : null}
                 <div className="header-mockup-search-tray">
                   <ImageSearchTray
                     previewUrl={activeImagePreview}

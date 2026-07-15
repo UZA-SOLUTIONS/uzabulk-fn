@@ -19,9 +19,9 @@ import TranslatedProductName from "../Common/TranslatedProductName";
 import { getMainContentWidth } from "../../helpers/scrollRootHelper";
 import HomeHorizontalScrollRow from "./HomeHorizontalScrollRow";
 
-const HOME_NEW_ARRIVAL_LIMIT = 12;
+const HOME_HOT_DEALS_LIMIT = 12;
 
-function newArrivalsSkeletonSlotCount(viewportWidth) {
+function hotDealsSkeletonSlotCount(viewportWidth) {
   const w = viewportWidth || 1200;
   const card = Math.min(204, Math.max(158, w * 0.38));
   const gap = 14;
@@ -29,12 +29,21 @@ function newArrivalsSkeletonSlotCount(viewportWidth) {
   return Math.min(24, Math.max(6, visible + 2));
 }
 
-function resolveTrustLine(item) {
-  const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;
-  const sold = item?.sold || item?.totalSold || item?.orderCount;
-  if (moq && sold) return `MOQ ${moq} • ${sold} sold`;
+function formatSoldCount(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace(/\.0$/, "")}k`;
+  return String(Math.round(n));
+}
+
+function resolveTrustLine(item, t) {
+  const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity || item?.min_order_qty;
+  const soldRaw = item?.sold_count ?? item?.sold ?? item?.totalSold ?? item?.orderCount;
+  const soldLabel = formatSoldCount(soldRaw);
+  if (moq && soldLabel) return `MOQ ${moq} • ${t("home.soldCount", { count: soldLabel })}`;
+  if (soldLabel) return t("home.soldCount", { count: soldLabel });
   if (moq) return `MOQ ${moq}`;
-  if (sold) return `${sold} sold`;
   return "";
 }
 
@@ -43,18 +52,33 @@ const isTestProduct = (item) => {
   return !name || name.includes("test");
 };
 
+const HOT_ICON = (
+  <svg
+    className="home_hot_deals_icon"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <path
+      fill="currentColor"
+      d="M12 23c-3.9 0-7-2.9-7-6.9 0-2.2 1-4.2 2.7-5.8.3-.3.8-.2.9.2.3 1.3.9 2.4 1.8 3.2.2.2.5.1.6-.1.6-1.4 1.7-4.2 1.3-7.4-.1-.6.6-1 .1-.5C16.6 8.4 19 11.6 19 15.2c0 4.3-3.1 7.8-7 7.8zm0-2c2.8 0 5-2.5 5-5.8 0-2.2-1.3-4.3-3.3-5.7.1 2.2-.5 4.5-1.8 6.2-1 .1-1.7-.6-2-1.5-.9.9-1.5 2.1-1.5 3.4C8.4 19.1 10 21 12 21z"
+    />
+  </svg>
+);
+
 export default function NewArrivalProducts() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [skeletonSlots, setSkeletonSlots] = useState(() =>
-    typeof window !== "undefined" ? newArrivalsSkeletonSlotCount(getMainContentWidth()) : 12
+    typeof window !== "undefined" ? hotDealsSkeletonSlotCount(getMainContentWidth()) : 12
   );
   const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
   const { isLoading, items } = useSelector((s) => s.products.homeNewArrivalProducts);
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
 
-  const fetchLimit = HOME_NEW_ARRIVAL_LIMIT;
+  const fetchLimit = HOME_HOT_DEALS_LIMIT;
 
   const displayItems = useMemo(
     () => (items || []).filter((item) => !isTestProduct(item)).slice(0, fetchLimit),
@@ -62,7 +86,7 @@ export default function NewArrivalProducts() {
   );
 
   useEffect(() => {
-    const updateSlots = () => setSkeletonSlots(newArrivalsSkeletonSlotCount(getMainContentWidth()));
+    const updateSlots = () => setSkeletonSlots(hotDealsSkeletonSlotCount(getMainContentWidth()));
     updateSlots();
 
     const shell = document.querySelector(".app-layout-shell");
@@ -78,9 +102,28 @@ export default function NewArrivalProducts() {
   }, []);
 
   useEffect(() => {
+    const refreshHotDeals = () => {
+      setFeedRefresh(getHomeFeedRefreshToken());
+    };
+
+    // Keep Hot Deals in sync with live sold_count as it changes.
+    const intervalId = window.setInterval(refreshHotDeals, 3 * 60 * 1000);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshHotDeals();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+
+  useEffect(() => {
     dispatch(
       apiGetHomeNewArrivalProducts({
-        limit: HOME_NEW_ARRIVAL_LIMIT,
+        limit: HOME_HOT_DEALS_LIMIT,
         refresh: feedRefresh,
         homeFeed: true,
         suppressGlobalErrorToast: true,
@@ -99,12 +142,15 @@ export default function NewArrivalProducts() {
     <div className="home_feed_section_offset home_new_arrivals_section w-100">
       <section
         className="home_new_arrivals_panel"
-        aria-labelledby="home-new-arrivals-title"
+        aria-labelledby="home-hot-deals-title"
         aria-busy={showRowSkeleton}
       >
         <div className="home_new_arrivals_panel__head">
-          <h2 id="home-new-arrivals-title" className="home_new_arrivals_panel__title">
-            {t("home.newArrivals")}
+          <h2 id="home-hot-deals-title" className="home_new_arrivals_panel__title home_hot_deals_title">
+            {t("home.hotDeals")}
+            <span className="home_hot_deals_title__icon" aria-hidden>
+              {HOT_ICON}
+            </span>
           </h2>
           <Link to={ROUTES.NEW_ARRIVALS_PRODUCT_LISTING} className="home_new_arrivals_panel__view_all">
             {t("home.viewAll")} <span aria-hidden>&gt;</span>
@@ -118,7 +164,7 @@ export default function NewArrivalProducts() {
         ) : (
           <HomeHorizontalScrollRow className="home_new_arrivals_row" depKey={displayItems.length}>
             {displayItems.map((item, idx) => {
-              const trust = resolveTrustLine(item);
+              const trust = resolveTrustLine(item, t);
               const productLink = buildProductDetailUrl(item) || ROUTES.PRODUCT_LISTING;
               return (
                 <Link

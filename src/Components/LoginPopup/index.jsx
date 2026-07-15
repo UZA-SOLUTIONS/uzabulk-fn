@@ -11,6 +11,12 @@ export default function LoginPopup({ show, handleClose, initialTab = "signin" })
   useEffect(() => {
     if (show) {
       setState({ tab: initialTab });
+      window.dispatchEvent(new Event("uzabulk:auth-modal-open"));
+      try {
+        window.google?.accounts?.id?.cancel?.();
+      } catch (_) {
+        /* ignore */
+      }
     }
   }, [show, initialTab]);
 

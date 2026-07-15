@@ -6,8 +6,8 @@ import en from "./locales/en.json";
 import fr from "./locales/fr.json";
 
 export const SUPPORTED_LANGUAGES = [
-  { code: "en", label: "English", short: "ENG" },
-  { code: "fr", label: "Français", short: "FR" },
+  { code: "en", label: "English", short: "EN", native: "English" },
+  { code: "fr", label: "Français", short: "FR", native: "Français" },
 ];
 
 export const LANGUAGE_STORAGE_KEY = "uzabulk_lang";

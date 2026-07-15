@@ -4,6 +4,7 @@ import Footer from '../Components/Footer/Footer';
 import BrowsingBehaviorTracker from '../Components/Common/BrowsingBehaviorTracker';
 import FloatingBuyerAssistant from '../Components/Common/FloatingBuyerAssistant';
 import MobileBottomNav from '../Components/Navigation/MobileBottomNav';
+import GoogleOneTap from '../Components/Auth/GoogleOneTap';
 import { Outlet, useLocation } from 'react-router-dom';
 import ROUTES from '../helpers/routesHelper';
 
@@ -19,6 +20,7 @@ const BaseTheme = ({ header = true, footer = true }) => {
     return (
         <div className={`app-layout-shell${!hideHeaderFooter ? " app-layout-shell--mobile-tabbar" : ""}`}>
             <BrowsingBehaviorTracker />
+            <GoogleOneTap />
             {!hideHeaderFooter && <Header />}
             <main className="app-layout-shell__main">
                 <Outlet />

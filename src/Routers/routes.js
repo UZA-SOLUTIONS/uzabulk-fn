@@ -33,6 +33,7 @@ import AboutUs from "../Pages/AboutUs";
 import { apiGetCurrencies } from "../store/config/actions";
 import UploadSlip from "../Pages/UploadSlip";
 import SeoManager from "../Components/Common/SeoManager";
+import GoogleAuthCallback from "../Pages/Auth/GoogleAuthCallback";
 
 export default function MyRouts() {
   const dispatch = useDispatch();
@@ -70,6 +71,11 @@ export default function MyRouts() {
               </>
             )}
 
+            {/* Guest track-order detail (no sign-in). Logged-in users hit the Myaccount route above. */}
+            {!isLogin ? (
+              <Route path={ROUTES.ORDER_DETAIL + "/:id"} element={<OrderDetailPage />} />
+            ) : null}
+
             <Route
               path={ROUTES.LOGIN}
               element={<Navigate to={`${ROUTES.HOME}?auth=signin`} replace />}
@@ -95,6 +101,7 @@ export default function MyRouts() {
             <Route path={`${ROUTES.PRODUCT_DETAIL}/:id`} element={<Singleview />} />
             {/* <Route path="/all-categories" element={<Allcaegoriestheme/>} /> */}
             <Route path={ROUTES.UPLOAD_SLIP} element={<UploadSlip />} />
+            <Route path={ROUTES.AUTH_GOOGLE_CALLBACK} element={<GoogleAuthCallback />} />
           </Route>
 
           <Route path="*" element={<Pagenotfound />} />

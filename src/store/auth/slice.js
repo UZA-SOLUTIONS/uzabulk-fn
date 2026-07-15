@@ -51,6 +51,16 @@ export const slice = createSlice({
     clearUserProfile: (state, action) => {
       state.profile = null;
     },
+    setAuthSession: (state, action) => {
+      const { token, user } = action.payload || {};
+      if (!token || !user) return;
+      state.message = "";
+      state.isLoading = false;
+      state.authToken = token;
+      state.user = user;
+      state.profile = user;
+      state.isLogin = true;
+    },
   },
   extraReducers: (builder) => {
     // Create account
@@ -169,6 +179,7 @@ export const {
   setForgotPasswordOtp,
   clearForgotPasswordState,
   clearUserProfile,
+  setAuthSession,
 } = slice.actions;
 
 export default slice.reducer;

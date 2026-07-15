@@ -1,5 +1,6 @@
 const ROUTES = {
   HOME: "/",
+  AUTH_GOOGLE_CALLBACK: "/auth/google/callback",
   LOGIN: "/auth/login",
   SIGNUP: "/auth/signup",
   FORGOT: "/auth/forgot-password",
