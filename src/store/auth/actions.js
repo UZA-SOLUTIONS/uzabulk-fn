@@ -26,9 +26,11 @@ export const apiVerifyEmail = createAsyncThunk(
   "apiVerifyEmail",
   async ({ data, callback }, Thunk) => {
     try {
-      const res = await apiPost(AUTH.VERIFY_EMAIL, data);
-      callback(res);
-      return res.data;
+      const res = await apiPost(AUTH.VERIFY_EMAIL, data, {
+        suppressGlobalErrorToast: true,
+      });
+      if (typeof callback === "function") callback(res);
+      return res;
     } catch (error) {
       return Thunk.rejectWithValue(
         error.message || "Something went wrong, please try again later."
@@ -54,9 +56,11 @@ export const apiVerifyMobile = createAsyncThunk(
 
 export const apiVerifyOtp = createAsyncThunk("apiVerifyOtp", async ({ data, callback }, Thunk) => {
   try {
-    const res = await apiPost(AUTH.VERIFY_OTP, data);
-    callback(res);
-    return res.data;
+    const res = await apiPost(AUTH.VERIFY_OTP, data, {
+      suppressGlobalErrorToast: true,
+    });
+    if (typeof callback === "function") callback(res);
+    return res;
   } catch (error) {
     return Thunk.rejectWithValue(error.message || "Something went wrong, please try again later.");
   }

@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button, FormGroup } from "reactstrap";
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
 import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
@@ -14,12 +15,15 @@ import { ICON_EMAIL_OTP, ICON_RELOAD, ICON_USER } from "../../assets/svg";
 import ResendOtp from "../Common/ResendOtp";
 import ButtonLoader from "../Common/ButtonLoader";
 import GoogleContinueButton from "./GoogleContinueButton";
+import ROUTES from "../../helpers/routesHelper";
 
 const Signup = ({ handleClose }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingEmailOtp, setSendingEmailOtp] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
   /** Formik can drop `emailOtp` when the field is hidden; backend still needs it on register. */
   const verifiedEmailOtpRef = useRef("");
 
@@ -28,78 +32,92 @@ const Signup = ({ handleClose }) => {
     password: "",
     confirmPassword: "",
     mobileNumber: "",
-    countryCode: "+1",
+    countryCode: "+250",
     emailOtp: "",
+  };
+
+  const toastAuthError = (error) => {
+    const raw =
+      typeof error === "string"
+        ? error
+        : error?.message || error?.payload || t("auth.registerFailed");
+    const msg = String(raw);
+    if (/535|BadCredentials|Username and Password not accepted|gsmtp|EAUTH/i.test(msg)) {
+      toast.error(t("auth.emailSendFailed"));
+      return;
+    }
+    toast.error(msg);
   };
 
   const validationSchema = useMemo(
     () =>
       Yup.object().shape({
         email: Yup.string()
-          .email("Invalid email format")
-          .required("Email is required"),
+          .email(t("auth.validEmail"))
+          .required(t("auth.emailRequired")),
         password: Yup.string()
-          .required("Password is required")
-          .test(
-            "len",
-            "Password must be at least 6 characters",
-            (val) => val && val.length >= 6
-          )
-          .test("number", "Password must contain at least 1 number", (val) =>
-            /\d/.test(val)
-          )
-          .test("letter", "Password must contain at least 1 letter", (val) =>
-            /[a-zA-Z]/.test(val)
-          ),
+          .required(t("auth.passwordRequired"))
+          .min(6, t("auth.passwordHint"))
+          .test("number", t("auth.passwordHint"), (val) => /\d/.test(val || ""))
+          .test("letter", t("auth.passwordHint"), (val) => /[a-zA-Z]/.test(val || "")),
         confirmPassword: Yup.string()
-          .oneOf([Yup.ref("password"), null], "Passwords must match")
-          .required("Confirm Password is required"),
+          .required(t("auth.confirmPasswordRequired"))
+          .oneOf([Yup.ref("password")], t("auth.passwordsMustMatch")),
         mobileNumber: Yup.string()
-          .matches(/^\d+$/, "Mobile number must contain only digits")
-          .min(8, "Enter a valid mobile number (at least 8 digits)")
-          .max(15, "Mobile number is too long")
-          .required("Mobile number is required"),
+          .matches(/^\d+$/, t("auth.phoneInvalid"))
+          .min(8, t("auth.phoneInvalid"))
+          .max(15, t("auth.phoneInvalid"))
+          .required(t("auth.phoneRequired")),
         countryCode: Yup.string()
-          .matches(
-            /^\+\d+$/,
-            "Country code must start with a '+' and contain only digits"
-          )
-          .required("Country code is required"),
+          .matches(/^\+\d+$/, t("auth.phoneRequired"))
+          .required(t("auth.phoneRequired")),
         emailOtp:
           emailOtpSent && !emailVerified
-            ? Yup.string().required("Enter the code from your email")
+            ? Yup.string().required(t("auth.emailOtpRequired"))
             : Yup.string().nullable().notRequired(),
       }),
-    [emailOtpSent, emailVerified]
+    [emailOtpSent, emailVerified, t]
   );
 
-  const sendOtp = (data, api, callback) => {
-    dispatch(
-      api({
-        data,
-        callback: (res) => {
-          callback(true);
-          toast.success(res.message);
-        },
-      })
-    );
+  const sendOtp = async (data, api, callback) => {
+    setSendingEmailOtp(true);
+    try {
+      const res = await dispatch(
+        api({
+          data,
+          callback: () => {},
+        })
+      ).unwrap();
+      callback(true);
+      toast.success(res?.message || t("auth.otpSent"));
+    } catch (error) {
+      toastAuthError(error);
+    } finally {
+      setSendingEmailOtp(false);
+    }
   };
 
-  const verifyOtp = (data, callback) => {
-    dispatch(
-      apiVerifyOtp({
-        data,
-        callback: (res) => {
-          callback(true);
-          toast.success(res.message);
-        },
-      })
-    );
+  const verifyOtp = async (data, callback) => {
+    setVerifyingEmailOtp(true);
+    try {
+      const res = await dispatch(
+        apiVerifyOtp({
+          data,
+          callback: () => {},
+        })
+      ).unwrap();
+      callback(true);
+      toast.success(res?.message || t("auth.codeVerified"));
+    } catch (error) {
+      toastAuthError(error);
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
   };
 
   const onSubmit = async (data, form) => {
     if (!emailVerified) {
-      toast.error("Email is not verified");
+      toast.error(t("auth.emailNotVerified"));
       form.setSubmitting(false);
       return;
     }
@@ -116,9 +134,9 @@ const Signup = ({ handleClose }) => {
     try {
       await dispatch(apiRegister({ data: payload })).unwrap();
       handleClose();
-      toast.success("Account created. You are signed in.");
+      toast.success(t("auth.accountCreated"));
     } catch (e) {
-      const msg = typeof e === "string" ? e : e?.message || "Registration failed";
+      const msg = typeof e === "string" ? e : e?.message || t("auth.registerFailed");
       toast.error(msg);
     } finally {
       form.setSubmitting(false);
@@ -127,55 +145,40 @@ const Signup = ({ handleClose }) => {
 
   return (
     <div className="login_auth">
-      <h4 className="mb-4">USER SIGNUP</h4>
       <Formik
         initialValues={initialValues}
         validationSchema={validationSchema}
         onSubmit={onSubmit}
+        validateOnBlur
+        validateOnChange={false}
       >
         {(form) => {
-          const sendToEmail = () => {
-            sendOtp(
-              {
-                email: form.values.email,
-              },
-              apiVerifyEmail,
-              setEmailOtpSent
-            );
+          const sendToEmail = async () => {
+            const email = String(form.values.email || "").trim();
+            const errors = await form.validateForm({ ...form.values, email });
+            if (errors.email) {
+              form.setFieldTouched("email", true, false);
+              form.setFieldError("email", errors.email);
+              return;
+            }
+            void sendOtp({ email }, apiVerifyEmail, setEmailOtpSent);
           };
 
-          const v = form.values;
-          const otpForRegister = String(
-            v.emailOtp || verifiedEmailOtpRef.current || ""
-          ).trim();
-          const mob = String(v.mobileNumber || "").replace(/\D/g, "");
-          const registerReady =
-            emailVerified &&
-            !form.isSubmitting &&
-            Boolean(v.email?.trim()) &&
-            Boolean(otpForRegister) &&
-            Boolean(v.countryCode && /^\+\d+$/.test(v.countryCode)) &&
-            Boolean(
-              mob.length >= 8 &&
-                mob.length <= 15 &&
-                /^\d+$/.test(mob)
-            ) &&
-            Boolean(
-              v.password &&
-                v.password.length >= 6 &&
-                /\d/.test(v.password) &&
-                /[a-zA-Z]/.test(v.password)
-            ) &&
-            String(v.password || "").trim() === String(v.confirmPassword || "").trim();
+          const emailInvalid =
+            Boolean(form.errors.email) &&
+            (Boolean(form.touched.email) || form.submitCount > 0);
+          const canSendOtp = Boolean(String(form.values.email || "").trim());
 
           return (
-            <Form>
-              <FormGroup className="position-relative">
+            <Form className="auth-form" noValidate>
+              <FormGroup className="position-relative mb-3">
                 {emailOtpSent ? (
-                  <div className="postion-relative verify_input mb-3">
+                  <div className="verify_input auth-verify-chip mb-0">
                     <div className="auth_icon">{ICON_USER}</div>
-                    <div
+                    <button
+                      type="button"
                       className="retry-credentials"
+                      aria-label={t("auth.changeEmail")}
                       onClick={() => {
                         form.setFieldValue("email", "");
                         form.setFieldValue("emailOtp", "");
@@ -185,131 +188,171 @@ const Signup = ({ handleClose }) => {
                       }}
                     >
                       {ICON_RELOAD}
+                    </button>
+                    <p className="auth-verify-chip__email">{form.values.email}</p>
+                    {emailVerified ? (
+                      <span className="auth-verify-chip__badge">{t("auth.verified")}</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <>
+                    <div className={`auth-otp-combo${emailInvalid ? " is-invalid" : ""}`}>
+                      <span className="auth-otp-combo__icon" aria-hidden>
+                        {usericon}
+                      </span>
+                      <Field
+                        className="form-control auth-otp-combo__input"
+                        name="email"
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        autoFocus
+                        placeholder={t("auth.email")}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void sendToEmail()}
+                        className="auth-otp-combo__action"
+                        disabled={!canSendOtp || sendingEmailOtp}
+                      >
+                        {sendingEmailOtp ? (
+                          <>
+                            <ButtonLoader size={14} />
+                            <span className="ms-1">{t("auth.sendingCode")}</span>
+                          </>
+                        ) : (
+                          t("auth.verifyEmail")
+                        )}
+                      </button>
                     </div>
-                    <p
-                      style={{
-                        width: "calc(100% - 50px)",
-                        textOverflow: "ellipsis",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {form.values.email}
-                    </p>
-                  </div>
-                ) : null}
-                <div
-                  className={
-                    emailOtpSent
-                      ? "d-none"
-                      : "d-flex align-items-center inputWithBtn"
-                  }
-                >
-                  <div className="position-relative inputWrp">
-                    <Field
-                      className="form-control send-otp-email"
-                      name="email"
-                      id="email"
-                      placeholder="Email"
-                    />
-                    <div className="auth_icon">{usericon}</div>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => sendToEmail()}
-                    className="send-otp-btn"
-                    disabled={!!form.errors?.email || !form.values.email}
-                  >
-                    Send OTP
-                  </Button>
-                </div>
-                {!emailOtpSent ? (
-                  <ErrorMessage
-                    name="email"
-                    component="p"
-                    className="text-danger"
-                  />
-                ) : null}
+                    {emailInvalid ? (
+                      <small className="auth-field-error">{form.errors.email}</small>
+                    ) : (
+                      <small className="auth-field-hint">{t("auth.verifyEmailHint")}</small>
+                    )}
+                  </>
+                )}
               </FormGroup>
 
-              <FormGroup className="position-relative">
-                {emailOtpSent ? (
-                  <>
-                    <div
-                      className={
-                        emailVerified
-                          ? "d-none"
-                          : "d-flex align-items-center inputWithBtn"
+              {emailOtpSent && !emailVerified ? (
+                <FormGroup className="position-relative mb-3">
+                  <div className="auth-otp-combo">
+                    <span className="auth-otp-combo__icon" aria-hidden>
+                      {ICON_EMAIL_OTP}
+                    </span>
+                    <Field
+                      className="form-control auth-otp-combo__input"
+                      name="emailOtp"
+                      id="emailOtp"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder={t("auth.emailOtp")}
+                    />
+                    <button
+                      type="button"
+                      className="auth-otp-combo__action"
+                      onClick={() => {
+                        const otpSnap = String(form.values.emailOtp || "").trim();
+                        if (!otpSnap) {
+                          form.setFieldTouched("emailOtp", true, false);
+                          form.setFieldError("emailOtp", t("auth.emailOtpRequired"));
+                          return;
+                        }
+                        void verifyOtp(
+                          {
+                            otp: otpSnap,
+                            email: form.values.email,
+                            type: "email",
+                          },
+                          () => {
+                            verifiedEmailOtpRef.current = otpSnap;
+                            form.setFieldValue("emailOtp", otpSnap);
+                            setEmailVerified(true);
+                          }
+                        );
+                      }}
+                      disabled={
+                        verifyingEmailOtp || !String(form.values.emailOtp || "").trim()
                       }
                     >
-                      <div className="position-relative inputWrp">
-                        <Field
-                          className="form-control send-otp-email"
-                          name="emailOtp"
-                          id="emailOtp"
-                          placeholder="Enter Email OTP"
-                        />
-                        <div className="auth_icon">{ICON_EMAIL_OTP}</div>
-                      </div>
-                      <Button
-                        type="button"
-                        className="send-otp-btn"
-                        onClick={() => {
-                          const otpSnap = String(form.values.emailOtp || "").trim();
-                          verifyOtp(
-                            {
-                              otp: otpSnap,
-                              email: form.values.email,
-                              type: "email",
-                            },
-                            () => {
-                              verifiedEmailOtpRef.current = otpSnap;
-                              form.setFieldValue("emailOtp", otpSnap);
-                              setEmailVerified(true);
-                            }
-                          );
-                        }}
-                        disabled={
-                          !!form.errors?.emailOtp || !form.values.emailOtp
-                        }
-                      >
-                        Verify OTP
-                      </Button>
-                    </div>
-                    {!emailVerified ? (
-                      <ResendOtp callback={sendToEmail} />
-                    ) : null}
-                  </>
-                ) : null}
-              </FormGroup>
+                      {verifyingEmailOtp ? (
+                        <>
+                          <ButtonLoader size={14} />
+                          <span className="ms-1">{t("auth.verifying")}</span>
+                        </>
+                      ) : (
+                        t("auth.verifyOtp")
+                      )}
+                    </button>
+                  </div>
+                  <ResendOtp callback={() => void sendToEmail()} />
+                </FormGroup>
+              ) : null}
 
               <FormGroup className="mb-3 signupinput_phone auth-phone-field">
                 <MobileNumberField
+                  country="rw"
                   inputClass="form-control login-auth-phone-input"
-                  placeholder="Phone number"
+                  placeholder={t("auth.phoneNumber")}
                   callback={(code, number) => {
-                    form.setFieldValue("mobileNumber", number);
-                    form.setFieldValue("countryCode", code);
+                    form.setFieldValue("mobileNumber", number, false);
+                    form.setFieldValue("countryCode", code, false);
                   }}
                 />
-                <MobileError value={form.values?.mobileNumber} />
+                {(form.touched.mobileNumber || form.submitCount > 0) && form.errors.mobileNumber ? (
+                  <small className="auth-field-error">{form.errors.mobileNumber}</small>
+                ) : (
+                  <MobileError value={form.values?.mobileNumber} />
+                )}
               </FormGroup>
 
-              <PasswordField className="mb-3" />
+              <PasswordField
+                className="mb-3"
+                autoComplete="new-password"
+                hint={t("auth.passwordHint")}
+              />
               <PasswordField
                 className="mb-3"
                 name="confirmPassword"
-                placeholder="Confirm Password"
+                autoComplete="new-password"
+                placeholder={t("auth.confirmPassword")}
+                liveMatchAgainst="password"
+                liveMatchMessage={t("auth.passwordsMustMatch")}
               />
 
-              <div className="mt-5">
+              <div className="auth-form-actions">
                 <Button
                   className="auth_btn"
                   type="submit"
-                  disabled={!registerReady}
+                  disabled={form.isSubmitting}
                 >
-                  {form.isSubmitting ? <ButtonLoader /> : "Register"}
+                  {form.isSubmitting ? (
+                    <>
+                      <ButtonLoader />
+                      <span className="ms-2">{t("auth.creatingAccount")}</span>
+                    </>
+                  ) : (
+                    t("auth.createAccount")
+                  )}
                 </Button>
+                {!emailVerified && form.submitCount > 0 ? (
+                  <small className="auth-field-hint auth-form-actions__hint">
+                    {t("auth.completeEmailVerify")}
+                  </small>
+                ) : null}
               </div>
+
+              <p className="auth-terms">
+                {t("auth.termsAgreePrefix")}{" "}
+                <Link to={ROUTES.T_AND_C} onClick={handleClose}>
+                  {t("nav.termsConditions")}
+                </Link>{" "}
+                {t("auth.termsAgreeAnd")}{" "}
+                <Link to={ROUTES.PRIVACY_POLICY} onClick={handleClose}>
+                  {t("nav.privacyPolicy")}
+                </Link>
+                .
+              </p>
 
               <div className="auth-social-divider" aria-hidden>
                 <span>{t("auth.or")}</span>
@@ -329,12 +372,13 @@ export default Signup;
 const usericon = (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="22"
-    height="22"
+    width="18"
+    height="18"
     viewBox="0 0 24 24"
+    aria-hidden
   >
     <path
-      fill="#fff"
+      fill="currentColor"
       d="M12 12q-1.65 0-2.825-1.175T8 8t1.175-2.825T12 4t2.825 1.175T16 8t-1.175 2.825T12 12m-8 8v-2.8q0-.85.438-1.562T5.6 14.55q1.55-.775 3.15-1.162T12 13t3.25.388t3.15 1.162q.725.375 1.163 1.088T20 17.2V20z"
     />
   </svg>

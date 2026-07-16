@@ -334,8 +334,10 @@ const Productlist = () => {
                 </div>
               ) : null}
             </header>
-          ) : (
+          ) : !isCategoriesHub ? (
             <h1 className="products_list_browse__page_title">{pageTitle}</h1>
+          ) : (
+            <h1 className="visually-hidden">{pageTitle}</h1>
           )}
           {showCategoryStrip ? (
             <BrowseCategoryStrip

@@ -31,6 +31,7 @@ const Cartpage = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { currentCurrency } = useSelector(s => s.config);
+  const { isLogin } = useSelector((s) => s.auth);
   const { cartCoupon, cartList, isLoading } = useSelector((s) => s.cart);
   const { orderDetails, message } = useSelector((s) => s.order);
   const loadingOrder = useSelector((s) => s.order.isLoading);
@@ -40,6 +41,11 @@ const Cartpage = () => {
   const [showAddressModal, setShowAddressModal] = useState(false);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLogin) return;
+    navigate(`${ROUTES.HOME}?auth=signin`, { replace: true });
+  }, [isLogin, navigate]);
 
   const selectedCartList = () => {
     return cartList.map((c) => c._id);
@@ -77,19 +83,33 @@ const Cartpage = () => {
   };
 
   useEffect(() => {
+    if (!isLogin) return undefined;
     dispatch(apiGetCartList({}));
 
     return () => {
       dispatch(clearSelectedCart());
     }
-  }, [dispatch]);
+  }, [dispatch, isLogin]);
   // }, [dispatch, currentCurrency?.code]);
 
   useEffect(() => {
-    if (!isLoading) {
-      handleCheckout(cartCoupon || "");
-    }
-  }, [cartList, isLoading]);
+    if (!isLogin || isLoading) return;
+    handleCheckout(cartCoupon || "");
+  }, [cartList, isLoading, isLogin]);
+
+  if (!isLogin) {
+    return (
+      <section className="cart_view py-5">
+        <Helmet>
+          <title>{APP_NAME} | {t("cart.title")}</title>
+        </Helmet>
+        <Container>
+          <LoadingContent />
+        </Container>
+      </section>
+    );
+  }
+
   return (
     <section className="cart_view py-5">
       <Addressslemod

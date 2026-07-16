@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -50,7 +51,10 @@ function LanguageSwitcher({ className = "" }) {
   const { i18n, t } = useTranslation();
   const [activeCode, setActiveCode] = useState(() => getLanguageMeta().code);
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState(null);
   const rootRef = useRef(null);
+  const menuRef = useRef(null);
+  const toggleRef = useRef(null);
 
   useEffect(() => {
     const onLanguageChanged = (code) => {
@@ -60,10 +64,45 @@ function LanguageSwitcher({ className = "" }) {
     return () => i18n.off("languageChanged", onLanguageChanged);
   }, [i18n]);
 
+  useLayoutEffect(() => {
+    if (!open || !toggleRef.current) {
+      setMenuStyle(null);
+      return undefined;
+    }
+
+    const syncMenuPosition = () => {
+      const rect = toggleRef.current.getBoundingClientRect();
+      const gutter = 8;
+      const estimatedWidth = 168;
+      const left = Math.min(
+        Math.max(gutter, rect.right - estimatedWidth),
+        window.innerWidth - estimatedWidth - gutter
+      );
+      setMenuStyle({
+        position: "fixed",
+        top: Math.round(rect.bottom + 8),
+        left: Math.round(left),
+        right: "auto",
+        minWidth: Math.max(estimatedWidth, Math.round(rect.width)),
+        zIndex: 10050,
+      });
+    };
+
+    syncMenuPosition();
+    window.addEventListener("resize", syncMenuPosition);
+    window.addEventListener("scroll", syncMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", syncMenuPosition);
+      window.removeEventListener("scroll", syncMenuPosition, true);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event) => {
-      if (!rootRef.current?.contains(event.target)) setOpen(false);
+      const target = event.target;
+      if (rootRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
     };
     const onKeyDown = (event) => {
       if (event.key === "Escape") setOpen(false);
@@ -83,12 +122,58 @@ function LanguageSwitcher({ className = "" }) {
     setOpen(false);
   };
 
+  const menu = open && menuStyle ? (
+    <ul
+      ref={menuRef}
+      className="navbar-lang-dd__menu navbar-lang-dd__menu--portal"
+      role="listbox"
+      aria-label={t("language.selectLanguage")}
+      style={menuStyle}
+    >
+      {SUPPORTED_LANGUAGES.map((lang) => {
+        const isActive = activeCode === lang.code;
+        return (
+          <li key={lang.code} role="none">
+            <button
+              type="button"
+              role="option"
+              aria-selected={isActive}
+              className={`navbar-lang-dd__option${isActive ? " is-active" : ""}`}
+              onClick={() => handleSelect(lang.code)}
+            >
+              <span className="navbar-lang-dd__option-badge" aria-hidden>
+                {lang.short}
+              </span>
+              <span className="navbar-lang-dd__option-copy">
+                <span className="navbar-lang-dd__option-name">{lang.native || lang.label}</span>
+              </span>
+              {isActive ? (
+                <span className="navbar-lang-dd__check" aria-hidden>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5 12.5l5 5L19 7"
+                      stroke="currentColor"
+                      strokeWidth="2.4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              ) : null}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  ) : null;
+
   return (
     <div
       ref={rootRef}
       className={`navbar-lang-dd${open ? " is-open" : ""}${className ? ` ${className}` : ""}`}
     >
       <button
+        ref={toggleRef}
         type="button"
         className="navbar-lang-dd__toggle"
         aria-label={t("language.selectLanguage")}
@@ -105,44 +190,7 @@ function LanguageSwitcher({ className = "" }) {
         </span>
       </button>
 
-      {open ? (
-        <ul className="navbar-lang-dd__menu" role="listbox" aria-label={t("language.selectLanguage")}>
-          {SUPPORTED_LANGUAGES.map((lang) => {
-            const isActive = activeCode === lang.code;
-            return (
-              <li key={lang.code} role="none">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  className={`navbar-lang-dd__option${isActive ? " is-active" : ""}`}
-                  onClick={() => handleSelect(lang.code)}
-                >
-                  <span className="navbar-lang-dd__option-badge" aria-hidden>
-                    {lang.short}
-                  </span>
-                  <span className="navbar-lang-dd__option-copy">
-                    <span className="navbar-lang-dd__option-name">{lang.native || lang.label}</span>
-                  </span>
-                  {isActive ? (
-                    <span className="navbar-lang-dd__check" aria-hidden>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M5 12.5l5 5L19 7"
-                          stroke="currentColor"
-                          strokeWidth="2.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      {menu && typeof document !== "undefined" ? createPortal(menu, document.body) : null}
     </div>
   );
 }
@@ -217,6 +265,18 @@ export default function UserAuthCard({
     setIsAuthModalOpen(true);
   };
 
+  const goToCart = (event) => {
+    if (isLogin) return;
+    event.preventDefault();
+    if (isMockupBottom) {
+      const params = new URLSearchParams(location.search);
+      params.set("auth", "signin");
+      navigate({ pathname: location.pathname, search: `?${params.toString()}` });
+      return;
+    }
+    openAuthModal("signin");
+  };
+
   if (isMockupTop) {
     return (
       <div className={`navbar-mockup-top-auth ${className}`}>
@@ -255,8 +315,9 @@ export default function UserAuthCard({
       >
         <Link
           to={ROUTES.CART}
-          className="navbar-mockup-cart navbar-mockup-cart--with-label"
+          className="navbar-mockup-cart navbar-mockup-cart--with-label d-none d-md-inline-flex"
           aria-label={t("nav.shoppingCart")}
+          onClick={goToCart}
         >
           <span className="navbar-mockup-cart-icon" aria-hidden>
             {ICON_CART}
@@ -266,7 +327,7 @@ export default function UserAuthCard({
           </span>
           <span className="navbar-mockup-cart-label">{t("nav.cart")}</span>
         </Link>
-        <span className="navbar-mockup-vrule" aria-hidden>|</span>
+        <span className="navbar-mockup-vrule d-none d-md-inline" aria-hidden>|</span>
         <LanguageSwitcher />
       </div>
     );
@@ -276,7 +337,7 @@ export default function UserAuthCard({
     <div className={`user_card ${className}`}>
       {showCart ? (
         <div className="align-itmes-center cardone_wallet d-flex">
-          <Link to={ROUTES.CART} className="d-flex align-items-center">
+          <Link to={ROUTES.CART} className="d-flex align-items-center" onClick={goToCart}>
             <span className="me-2">{ICON_CART}</span>
             <div className="card_content">
               <h5>{t("nav.cart")}</h5>

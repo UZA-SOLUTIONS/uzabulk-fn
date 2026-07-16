@@ -31,6 +31,9 @@ export default function MobileNumberField({
   className = "",
   inputClass = "",
   placeholder = "Phone number",
+  /** ISO 3166-1 alpha-2, e.g. `rw` for Rwanda (+250). */
+  country = "rw",
+  preferredCountries = ["rw", "cd", "bi", "ug", "ke", "tz"],
   inputProps: extraInputProps = {},
 }) {
   const [fieldValue, setFieldValue] = useState("");
@@ -42,21 +45,25 @@ export default function MobileNumberField({
   }, [defaultValue]);
 
   const pushToForm = (value, data) => {
-    const dial = data?.dialCode != null ? String(data.dialCode) : "1";
+    const dial = data?.dialCode != null ? String(data.dialCode) : "250";
     const national = nationalFromValue(value, dial);
     callback(`+${dial.replace(/\D/g, "")}`, national.replace(/\D/g, ""));
   };
 
   return (
     <PhoneInput
-      country={"us"}
+      country={country}
+      preferredCountries={preferredCountries}
       value={fieldValue}
-      inputProps={{ placeholder, ...extraInputProps }}
+      enableSearch
+      disableSearchIcon
+      searchPlaceholder="Search country"
+      inputProps={{ placeholder, inputMode: "tel", ...extraInputProps }}
       inputClass={inputClass}
-      className={className}
+      containerClass={`auth-phone-input${className ? ` ${className}` : ""}`}
+      dropdownClass="auth-phone-country-list"
       onMount={(value, data) => {
-        const digits = String(value || "").replace(/\D/g, "");
-        if (digits.length) pushToForm(value, data);
+        pushToForm(value, data);
       }}
       onChange={(value, data) => {
         setFieldValue(value);

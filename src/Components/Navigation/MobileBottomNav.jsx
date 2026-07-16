@@ -112,6 +112,17 @@ const MobileBottomNav = () => {
     navigate(`${ROUTES.HOME}?auth=signin`);
   };
 
+  const goToCart = (event) => {
+    event.preventDefault();
+    if (isLogin) {
+      navigate(ROUTES.CART);
+      return;
+    }
+    const params = new URLSearchParams(location.search);
+    params.set("auth", "signin");
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` });
+  };
+
   return (
     <nav className="mobile-bottom-nav" aria-label={t("nav.mobileNav")}>
       <Link
@@ -132,10 +143,11 @@ const MobileBottomNav = () => {
         <span className="mobile-bottom-nav__label">{t("nav.category")}</span>
       </Link>
 
-      <Link
-        to={ROUTES.CART}
+      <a
+        href={isLogin ? ROUTES.CART : `${location.pathname}?auth=signin`}
         className={`mobile-bottom-nav__item${isCartActive ? " is-active" : ""}`}
         aria-current={isCartActive ? "page" : undefined}
+        onClick={goToCart}
       >
         <span className="mobile-bottom-nav__icon mobile-bottom-nav__icon--cart">
           {ICON_CART}
@@ -146,7 +158,7 @@ const MobileBottomNav = () => {
           ) : null}
         </span>
         <span className="mobile-bottom-nav__label">{t("nav.cart")}</span>
-      </Link>
+      </a>
 
       <a
         href={isLogin ? ROUTES.MY_ORDERS : `${ROUTES.HOME}?auth=signin`}

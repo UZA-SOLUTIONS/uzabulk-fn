@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import PageSeo from "../../Components/Common/PageSeo";
 import { ProductVariations } from "./ProductVariations";
 import ProductInfoTabs from "./ProductInfoTabs";
-import LoadingContent from "../../Components/Common/LoadingContent";
+import UXSkeleton from "../../Components/Common/UXSkeleton";
 import NoRecordFound from "../../Components/Common/NoRecordFound";
 import AddToCart from "../../Components/Common/AddToCart";
 
@@ -256,10 +256,19 @@ const Singleview = () => {
   const clampQty = (n) =>
     Math.min(Math.max(Number(n) || minQty, minQty), maxQty);
 
-  const handlerAddToCart = () =>
-    addedInCart
-      ? navigate(ROUTES.CART)
-      : addToCart({ cartData: cartDataWithQty, dispatch, isLogin });
+  const handlerAddToCart = () => {
+    if (addedInCart) {
+      if (!isLogin) {
+        const params = new URLSearchParams(search);
+        params.set("auth", "signin");
+        navigate({ search: `?${params.toString()}` });
+        return;
+      }
+      navigate(ROUTES.CART);
+      return;
+    }
+    addToCart({ cartData: cartDataWithQty, dispatch, isLogin });
+  };
 
   const handleProductChat = () => {
     if (!detail) return;
@@ -462,7 +471,7 @@ const Singleview = () => {
       ) : null}
       <Container>
         {isLoading || resolving1688OfferId ? (
-          <LoadingContent />
+          <UXSkeleton type="product-detail" />
         ) : !isValidProductId ? (
           <NoRecordFound
             message={

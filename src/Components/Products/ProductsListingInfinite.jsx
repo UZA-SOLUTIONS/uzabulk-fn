@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 
-import LoadingContent from "../../Components/Common/LoadingContent";
+import UXSkeleton from "../Common/UXSkeleton";
 import CommingSoon from "../Common/CommingSoon";
 import ProductCard from "./ProductCard";
 
@@ -27,6 +27,7 @@ const ProductsListingInfinite = ({
   fetchRecords,
   gridClassName = "",
   showVisualMatch = false,
+  skeletonCount = 8,
 }) => {
   const lastAutoFetchAtRef = useRef(0);
 
@@ -54,6 +55,17 @@ const ProductsListingInfinite = ({
   }, [items?.length, hasMore, isLoading, fetchRecords]);
 
   const displayItems = showVisualMatch ? visualMatchSort(items) : items;
+  const showInitialSkeleton = Boolean(isLoading) && !displayItems?.length;
+
+  if (showInitialSkeleton) {
+    return (
+      <section className="products_card products_listing_square position-relative" aria-busy="true">
+        <div className="home_discover_browse__skeleton products_list_browse__skeleton">
+          <UXSkeleton type="product-grid" count={skeletonCount} />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="products_card products_listing_square position-relative">
@@ -64,8 +76,11 @@ const ProductsListingInfinite = ({
         scrollThreshold={0.75}
         loader={
           items?.length > 0 ? (
-            <div className="px-0 uza-infinite-scroll">
-              <LoadingContent />
+            <div
+              className="px-0 uza-infinite-scroll products_list_browse__skeleton products_list_browse__skeleton--more"
+              aria-busy="true"
+            >
+              <UXSkeleton type="product-grid" count={4} />
             </div>
           ) : null
         }
@@ -83,10 +98,6 @@ const ProductsListingInfinite = ({
                 onOpen={handleOpenProduct}
               />
             ))
-          ) : isLoading ? (
-            <div className="products_list_initial_loader">
-              <LoadingContent />
-            </div>
           ) : (
             <CommingSoon message={message || "No products found"} />
           )}

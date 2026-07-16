@@ -22,7 +22,7 @@ const AddAddress = ({ callback, id = null }) => {
     const [initialValues, setInitialValues] = useState({
         area: "",
         name: "",
-        countryCode: "+1",
+        countryCode: "+250",
         mobileNumber: "",
         houseNo: "",
         landmark: "",

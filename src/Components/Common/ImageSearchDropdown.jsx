@@ -38,10 +38,11 @@ export default function ImageSearchDropdown({
       if (event.key === "Escape") onClose();
     };
 
-    document.addEventListener("mousedown", onPointerDown);
+    // pointerdown (not mousedown) so touch outside-close doesn't race the file picker.
+    document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
-      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [isOpen, onClose, excludeRef]);

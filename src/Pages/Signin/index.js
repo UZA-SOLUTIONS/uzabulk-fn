@@ -110,7 +110,6 @@ const Signin = () => {
 
       <div className="auth_login_form position-relative">
         <div className="login_auth">
-          <h4 className="mb-4">USER LOGIN</h4>
           <Formik
             initialValues={initialValues}
             validationSchema={validationSchema}

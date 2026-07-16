@@ -656,6 +656,21 @@ section.header-main .container {
   cursor: wait;
 }
 
+/* Keep file inputs activatable on iOS (clip-only hiding can block native pickers). */
+.header-mockup-img-search-wrap > input[type="file"].visually-hidden,
+.image-search-dropdown__upload-btn input[type="file"].visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .header-mockup-img-search {
   display: inline-flex;
   align-items: center;
@@ -1231,6 +1246,13 @@ section.header-main .container {
   animation: navbar-lang-dd-in 0.16s ease;
 }
 
+/* Portaled menu: escapes mobile header overflow:hidden / max-height clip */
+.navbar-lang-dd__menu--portal {
+  position: fixed;
+  top: auto;
+  right: auto;
+}
+
 .navbar-lang-dd__option {
   display: flex;
   align-items: center;
@@ -1512,6 +1534,7 @@ section.header-main .container {
 
   .site-header.site-header--mockup .navbar-mockup-bottom-tools {
     gap: 5px;
+    margin-left: auto;
   }
 
   .site-header.site-header--mockup .navbar-mockup-cart {
@@ -2813,7 +2836,6 @@ ul.submenu li div {
 }
 
 .wrapList {
-  --products-catstrip-sticky-top: 120px;
   background: #fff;
   padding: 50px 20px;
 }
@@ -3075,7 +3097,6 @@ ul.submenu li div {
 
 @media (max-width: 991.98px) {
   .wrapList {
-    --products-catstrip-sticky-top: 168px;
     padding: 16px max(8px, env(safe-area-inset-right)) 28px max(8px, env(safe-area-inset-left));
   }
 
@@ -3798,12 +3819,42 @@ span.Popular_bagde {
 
 .login_auth h4 {
   color: var(--theme-color);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.1rem;
+}
+
+.auth_modal_content .login_auth > h4 {
+  display: none;
 }
 
 .react-tel-input .country-list {
   text-align: start;
-  /* ~5 country rows (lib default row ~32–36px); was overridden taller but modal clip was the real issue */
-  max-height: min(200px, 42vh) !important;
+  z-index: 10060 !important;
+  max-height: min(260px, 50vh) !important;
+  width: 280px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(17, 29, 43, 0.1) !important;
+  box-shadow: 0 14px 32px rgba(17, 29, 43, 0.18) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.react-tel-input .country-list .search {
+  padding: 8px 10px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+}
+
+.react-tel-input .country-list .search-box {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e2e6ec !important;
 }
 
 .signupinput_phone .react-tel-input input {
@@ -3844,7 +3895,8 @@ span.Popular_bagde {
 }
 
 .login_auth .auth-field:focus-within {
-  border-color: #c9d0da;
+  border-color: rgba(249, 178, 51, 0.85);
+  box-shadow: 0 0 0 3px rgba(249, 178, 51, 0.16);
 }
 
 .login_auth .auth-field__icon {
@@ -3902,60 +3954,86 @@ span.Popular_bagde {
   z-index: 2;
 }
 
-/* Signup modal: phone — flag + dial code only (no lock icon overlay) */
+/* Signup modal: phone — one pill (flag + dial code + number) */
 .login_auth .auth-phone-field {
   position: relative;
-  z-index: 30;
+  z-index: 40;
+}
+
+.login_auth .auth-phone-field:has(.country-list) {
+  z-index: 90;
+}
+
+/* While country list is open, don't clip it inside the scrollable modal content */
+.for_loginmod .auth_modal_content:has(.country-list) {
+  overflow: visible;
 }
 
 .login_auth .auth-phone-field .react-tel-input {
+  position: relative;
   width: 100%;
-  display: flex;
-  align-items: stretch;
   background: #fff;
   border-radius: 999px;
   border: 1px solid #e2e6ec;
   overflow: visible;
   min-height: 48px;
-  padding-left: 0;
+}
+
+.login_auth .auth-phone-field .react-tel-input:focus-within {
+  border-color: rgba(249, 178, 51, 0.85);
+  box-shadow: 0 0 0 3px rgba(249, 178, 51, 0.16);
 }
 
 .login_auth .auth-phone-field .react-tel-input .flag-dropdown {
-  position: relative !important;
-  flex: 0 0 56px;
-  width: 56px;
-  height: auto;
+  position: absolute !important;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 52px !important;
   background: transparent !important;
   border: none !important;
+  border-radius: 999px 0 0 999px;
+  z-index: 2;
 }
 
 .login_auth .auth-phone-field .react-tel-input .selected-flag {
-  width: 56px !important;
+  width: 52px !important;
   height: 48px !important;
-  padding: 0 8px !important;
+  padding: 0 0 0 12px !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
   background: transparent !important;
   border: none !important;
+  border-radius: 999px 0 0 999px;
 }
 
 .login_auth .auth-phone-field .react-tel-input .selected-flag .arrow {
   border-top-color: #6b7280;
+  margin-left: 4px;
+}
+
+.login_auth .auth-phone-field .react-tel-input .flag-dropdown.open,
+.login_auth .auth-phone-field .react-tel-input .flag-dropdown.open .selected-flag {
+  background: transparent !important;
+}
+
+.login_auth .auth-phone-field .react-tel-input .country-list {
+  left: 0 !important;
+  top: calc(100% + 6px) !important;
+  z-index: 10070 !important;
 }
 
 .login_auth .auth-phone-field .react-tel-input .form-control.login-auth-phone-input,
 .login_auth .auth-phone-field .react-tel-input .form-control {
   position: relative !important;
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto !important;
+  width: 100% !important;
   height: 48px !important;
-  margin-left: 0 !important;
-  padding-left: 10px !important;
-  padding-right: 12px !important;
+  margin: 0 !important;
+  padding-left: 58px !important;
+  padding-right: 14px !important;
   background: transparent !important;
   border: none !important;
+  border-radius: 999px !important;
   box-shadow: none !important;
   color: #111d2b !important;
   font-size: 16px;
@@ -4067,11 +4145,12 @@ button.auth_btn:disabled {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 18px 0 14px;
+  margin: 16px 0 14px;
   color: #8b94a3;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: lowercase;
+  letter-spacing: 0.04em;
 }
 
 .auth-social-divider::before,
@@ -5232,7 +5311,7 @@ input:-webkit-autofill:focus {
   position: unset;
   transform: unset;
   width: 100%;
-  padding: 8px 4px 4px;
+  padding: 0;
   background: transparent;
   border-radius: 0;
 }
@@ -5249,14 +5328,34 @@ input:-webkit-autofill:focus {
 
 .for_loginmod .modal-content {
   border: none;
-  border-radius: 28px;
-  overflow: hidden;
+  border-radius: 20px;
+  overflow: visible;
   background: #fff;
+  box-shadow: 0 24px 64px rgba(15, 31, 51, 0.22);
 }
 
-.for_loginmod .modal-body {
-  padding: 28px 28px 24px;
-  border-radius: 28px;
+.for_loginmod .modal-dialog.auth-modal-dialog {
+  max-width: 440px;
+  margin: 1.25rem auto;
+  width: calc(100% - 24px);
+}
+
+.for_loginmod .modal-body,
+.for_loginmod .modal-body.auth-modal-body {
+  position: relative;
+  padding: 20px 22px 22px;
+  border-radius: 20px;
+  max-height: min(92vh, 820px);
+  /* visible so phone country list is not clipped; scroll lives on content */
+  overflow: visible;
+}
+
+.for_loginmod .auth_modal_content {
+  max-height: min(78vh, 680px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
 }
 
 .modal-backdrop.show {
@@ -5269,11 +5368,314 @@ input:-webkit-autofill:focus {
 }
 
 .close_icon {
-  background-color: transparent !important;
+  background-color: #f3f5f8 !important;
   border: none !important;
   padding: 0 !important;
   position: absolute;
-  right: 10px;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  color: #445062 !important;
+  z-index: 2;
+}
+
+.auth-modal-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.auth-modal-close {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background-color: #f3f5f8 !important;
+  color: #445062 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  position: static;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.auth-modal-close:hover,
+.auth-modal-close:focus {
+  background-color: #e8ecf1 !important;
+  color: #111d2b !important;
+  box-shadow: none !important;
+}
+
+.auth-modal-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 0;
+  border-radius: 999px;
+  background: #f2f4f7;
+}
+
+.auth-modal-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #5b6675;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  min-height: 38px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-modal-tab.is-active {
+  background: #fff;
+  color: #111d2b;
+  box-shadow: 0 1px 3px rgba(17, 29, 43, 0.1);
+}
+
+.auth-modal-tab:hover:not(.is-active) {
+  color: #111d2b;
+}
+
+.auth-form-actions {
+  margin-top: 18px;
+}
+
+.auth-form-meta {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.auth-field-error {
+  display: block;
+  margin-top: 6px;
+  color: #d14343;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.auth-field-hint {
+  display: block;
+  margin-top: 6px;
+  color: #8b94a3;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.auth-form-actions__hint {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.auth-terms {
+  margin: 12px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.auth-terms a {
+  color: #111d2b;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-form-actions .auth_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.login_auth .auth-field.is-invalid {
+  border-color: #e35d5d;
+  box-shadow: 0 0 0 3px rgba(227, 93, 93, 0.12);
+}
+
+.login_auth .auth-field.is-invalid:focus-within {
+  border-color: #e35d5d;
+  box-shadow: 0 0 0 3px rgba(227, 93, 93, 0.16);
+}
+
+/* Email + Send OTP / OTP + Verify as one control */
+.auth-otp-combo {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 6px 0 14px;
+  background: #fff;
+  border: 1px solid #e2e6ec;
+  border-radius: 999px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-otp-combo:focus-within {
+  border-color: rgba(249, 178, 51, 0.85);
+  box-shadow: 0 0 0 3px rgba(249, 178, 51, 0.16);
+}
+
+.auth-otp-combo.is-invalid {
+  border-color: #e35d5d;
+  box-shadow: 0 0 0 3px rgba(227, 93, 93, 0.12);
+}
+
+.auth-otp-combo.is-invalid:focus-within {
+  border-color: #e35d5d;
+  box-shadow: 0 0 0 3px rgba(227, 93, 93, 0.16);
+}
+
+.auth-otp-combo__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 8px;
+  color: #6b7280;
+  line-height: 0;
+}
+
+.auth-otp-combo__icon svg path {
+  fill: #6b7280 !important;
+}
+
+.auth-otp-combo__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 46px !important;
+  margin: 0 !important;
+  padding: 0 8px 0 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #111d2b !important;
+  font-size: 15px !important;
+}
+
+.auth-otp-combo__input::placeholder {
+  color: #8b94a3;
+  opacity: 1;
+}
+
+.auth-otp-combo__action {
+  flex: 0 0 auto;
+  min-width: 108px;
+  height: 36px;
+  margin: 0;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--theme-yellow, #f9b233);
+  color: #111d2b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.auth-otp-combo__action:hover:not(:disabled) {
+  background: #f0a828;
+}
+
+.auth-otp-combo__action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.auth-verify-chip {
+  position: relative;
+  gap: 8px;
+  padding-right: 44px;
+}
+
+.auth-verify-chip__email {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-verify-chip__badge {
+  flex-shrink: 0;
+  margin-right: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(34, 160, 107, 0.12);
+  color: #1b7a4f;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+button.retry-credentials {
+  border: none;
+  line-height: 0;
+}
+
+.auth_modal_content .auth-social-divider {
+  margin: 16px 0 12px;
+}
+
+.auth_modal_content .auth-google-btn {
+  margin-top: 0;
+}
+
+.auth_modal_content .auth-form > .form-group,
+.auth_modal_content .auth-form > .mb-3 {
+  margin-bottom: 12px !important;
+}
+
+@media (max-width: 575.98px) {
+  .for_loginmod .modal-dialog.auth-modal-dialog {
+    max-width: none;
+    width: calc(100% - 16px);
+    margin: 0.75rem auto;
+  }
+
+  .for_loginmod .modal-body.auth-modal-body {
+    padding: 16px 14px 16px;
+  }
+
+  .auth-modal-top {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .auth-otp-combo__action {
+    padding: 0 12px;
+    font-size: 11px;
+  }
+
+  .remember_me label,
+  .forgot_pasword a {
+    font-size: 13px;
+  }
 }
 
 .site-loader {
@@ -8617,7 +9019,6 @@ table.order-table tr td {
 
 /* Home discover: category text strip (above card) + product card */
 .home_discover_browse_outer {
-  --home-discover-catstrip-top: 120px;
   width: 100%;
   overflow: visible;
   margin-top: clamp(18px, 3vw, 28px);
@@ -8687,6 +9088,7 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
   box-shadow: none;
   margin-bottom: 10px;
   position: sticky;
+  /* Live header height from useCategoryStripPin (html root vars). */
   top: var(--home-discover-catstrip-top, var(--products-catstrip-sticky-top, 120px));
   z-index: 1100;
   width: 100%;
@@ -9065,7 +9467,6 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
 
 @media (max-width: 767.98px) {
   .home_discover_browse_outer {
-    --home-discover-catstrip-top: 168px;
     margin-top: 12px;
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -9076,6 +9477,14 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
   .home_discover_browse_outer .home_discover_browse--flat {
     padding-left: max(8px, env(safe-area-inset-left, 0px));
     padding-right: max(8px, env(safe-area-inset-right, 0px));
+  }
+
+  /* Sit flush under sticky header (no gap). */
+  .home_discover_browse_catstrip,
+  .home_discover_browse_catstrip.is-pinned {
+    top: var(--home-discover-catstrip-top, var(--products-catstrip-sticky-top, 120px));
+    margin-top: 0;
+    border-top: none !important;
   }
 
   .home_discover_browse_catstrip__inner {
@@ -9553,6 +9962,20 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
   min-height: 280px;
 }
 
+.products_list_browse__skeleton {
+  width: 100%;
+}
+
+.products_list_browse__skeleton--more {
+  margin-top: 10px;
+  padding-bottom: 8px;
+}
+
+.products_list_browse__skeleton .ux-skeleton-grid {
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)) !important;
+  gap: 11px !important;
+}
+
 .products_listing_stock_badge {
   position: absolute;
   top: 8px;
@@ -9739,6 +10162,157 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
   border-radius: 999px;
   margin: 0 auto;
   background: #eef2f7;
+}
+
+.ux-skeleton-pdp {
+  width: 100%;
+}
+
+.ux-skeleton-pdp__main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.ux-skeleton-pdp__gallery .ux-skeleton-line {
+  margin-top: 0;
+}
+
+.ux-skeleton-pdp__gallery .ux-skeleton-line + .ux-skeleton-line {
+  margin-top: 10px;
+}
+
+.ux-skeleton-pdp__title {
+  width: 88%;
+  height: 18px;
+}
+
+.ux-skeleton-pdp__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 480px;
+  margin-top: 16px;
+  border-radius: 12px;
+  background: #eef2f7;
+}
+
+.ux-skeleton-pdp__buybox {
+  padding: 1rem 0;
+}
+
+.ux-skeleton-pdp__price {
+  width: 42%;
+  height: 22px;
+  margin-top: 0;
+}
+
+.ux-skeleton-pdp__rule {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 16px 0;
+  background: #eef2f7;
+  border-radius: 0;
+}
+
+.ux-skeleton-pdp__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ux-skeleton-pdp__chip {
+  display: block;
+  width: 72px;
+  height: 36px;
+  border-radius: 8px;
+  background: #eef2f7;
+}
+
+.ux-skeleton-pdp__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.ux-skeleton-pdp__qty {
+  display: block;
+  width: 110px;
+  height: 42px;
+  border-radius: 8px;
+  background: #eef2f7;
+}
+
+.ux-skeleton-pdp__cta {
+  display: block;
+  width: 160px;
+  height: 42px;
+  border-radius: 8px;
+  background: #eef2f7;
+}
+
+.ux-skeleton-pdp__chat {
+  display: block;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #eef2f7;
+}
+
+.ux-skeleton-pdp__tabs {
+  margin-top: 2rem;
+  padding-top: 1rem;
+}
+
+.ux-skeleton-pdp__tab {
+  display: inline-block;
+  width: 110px;
+  height: 14px;
+  margin-right: 16px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: #eef2f7;
+  vertical-align: top;
+}
+
+.ux-skeleton-pdp__similar {
+  margin-top: 2rem;
+}
+
+.ux-skeleton-pdp__similar > .ux-skeleton-line {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.ux-skeleton-pdp__similar-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (min-width: 992px) {
+  .ux-skeleton-pdp__main {
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  .ux-skeleton-pdp__buybox {
+    padding: 1.25rem 1rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ux-skeleton-pdp__similar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ux-skeleton-pdp__cta {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 140px;
+  }
 }
 
 .shimmer {
@@ -10494,10 +11068,32 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
 @media (max-width: 767.98px) {
   .site-header.site-header--mockup .header-nav-row {
     padding-block: 4px;
+    max-height: 64px;
+    opacity: 1;
+    overflow: hidden;
+    transition:
+      max-height 0.22s ease,
+      opacity 0.16s ease,
+      padding 0.22s ease,
+      border-color 0.16s ease;
   }
 
   .site-header.site-header--mockup .home_strip.home_strip--mockup {
     padding-block: 4px;
+    transition: padding 0.22s ease;
+  }
+
+  /* Mobile: hide Track Order / Help / Language row while scrolling */
+  .site-header.site-header--mockup.is-scrolled .header-nav-row {
+    max-height: 0;
+    opacity: 0;
+    padding-block: 0;
+    border-bottom-color: transparent;
+    pointer-events: none;
+  }
+
+  .site-header.site-header--mockup.is-scrolled .home_strip.home_strip--mockup {
+    padding-block: 0;
   }
 
   section.single_view,
@@ -10552,7 +11148,7 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
   }
 
   .home_new_arrivals_panel {
-    padding: 10px 4px 14px;
+    padding: 10px 0 14px;
   }
 
   img,
