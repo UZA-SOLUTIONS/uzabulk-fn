@@ -152,17 +152,55 @@ const isApiImageUrl = (value = "") => {
   }
 };
 
-/** Local blob preview only — never the uploaded server URL. */
-export const resolveImageSearchPreviewSource = () => {
+/**
+ * Prefer the local blob preview; fall back to the query `image` URL so mobile
+ * does not show a blank preview when sessionStorage blob is gone.
+ */
+export const resolveImageSearchPreviewSource = (fallbackUrl = "") => {
   const blob = readImageSearchBlobPreview();
-  if (!blob) return "";
-  return resolveImageSearchDisplayUrl(blob) || "";
+  if (blob) return resolveImageSearchDisplayUrl(blob) || "";
+  const fallback = String(fallbackUrl || "").trim();
+  if (!fallback) return "";
+  return resolveImageSearchDisplayUrl(fallback) || "";
+};
+
+/** Prefer short `/images/...` in listing URLs when the upload is on our API. */
+export const toListingImageParam = (imageUrl = "") => {
+  const raw = String(imageUrl || "").trim();
+  if (!raw) return "";
+  if (/^(blob:|data:image)/i.test(raw)) return raw;
+
+  try {
+    const parsed = new URL(raw, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    if (parsed.pathname.startsWith("/images/")) {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    // fall through
+  }
+
+  if (raw.startsWith("/images/")) return raw;
+  if (/^images\//i.test(raw)) return `/${raw.replace(/^\/+/, "")}`;
+
+  if (isApiImageUrl(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (parsed.pathname.startsWith("/images/")) {
+        return `${parsed.pathname}${parsed.search}`;
+      }
+    } catch {
+      // keep absolute
+    }
+  }
+
+  return raw;
 };
 
 export const buildSearchBarImageListingUrl = ({ imageUrl, skip = 1 } = {}) => {
   const params = new URLSearchParams();
   params.set("skip", String(skip));
-  if (imageUrl) params.set("image", imageUrl);
+  const listingImage = toListingImageParam(imageUrl);
+  if (listingImage) params.set("image", listingImage);
   return params.toString();
 };
 

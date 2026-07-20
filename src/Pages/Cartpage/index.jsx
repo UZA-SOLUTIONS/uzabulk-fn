@@ -9,7 +9,12 @@ import { useTranslation } from "react-i18next";
 import ROUTES from "../../helpers/routesHelper";
 import { APP_NAME } from "../../config/constants";
 import { formatNumber } from "../../helpers/commonHelper";
-import { getCheckoutErrorMessage, getCouponDiscount, manageCartQuantity } from "../../helpers/cartHelper";
+import {
+  getCartLineMinQuantity,
+  getCheckoutErrorMessage,
+  getCouponDiscount,
+  manageCartQuantity,
+} from "../../helpers/cartHelper";
 
 import EmptyCart from "./EmptyCart";
 import AddToCart from "../../Components/Common/AddToCart";
@@ -179,21 +184,25 @@ const Cartpage = () => {
 
                                     <div className="counter_div d-flex align-items-center gap-3">
                                       <p className="fw-light mb-0 fs-xs">{t("cart.quantity")}</p>
+                                      {(() => {
+                                        const minQty = getCartLineMinQuantity(cart, item, orderDetails);
+                                        return (
                                       <AddToCart
                                         className="fs-base"
                                         value={item.quantity}
-                                        min={0}
+                                        min={minQty}
+                                        decrementDisabled={Number(item.quantity) <= minQty}
                                         onChange={(value) => {
                                           manageCartQuantity({
                                             cartList,
                                             cartListIndex: index,
                                             cart,
                                             cartIndex: idx,
-                                            dispatch,
+                                            orderDetails,
                                             increase: true,
                                             setValue: Math.max(
-                                              parseInt(value),
-                                              0
+                                              parseInt(value, 10) || minQty,
+                                              minQty
                                             ),
                                           });
                                         }}
@@ -203,7 +212,7 @@ const Cartpage = () => {
                                             cartListIndex: index,
                                             cart,
                                             cartIndex: idx,
-                                            dispatch,
+                                            orderDetails,
                                             increase: false,
                                           })
                                         }
@@ -213,11 +222,13 @@ const Cartpage = () => {
                                             cartListIndex: index,
                                             cart,
                                             cartIndex: idx,
-                                            dispatch,
+                                            orderDetails,
                                             increase: true,
                                           });
                                         }}
                                       />
+                                        );
+                                      })()}
                                     </div>
 
                                     {item?.attributes?.map((attribute) => (

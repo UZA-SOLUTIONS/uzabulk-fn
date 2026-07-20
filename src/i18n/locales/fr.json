@@ -58,6 +58,8 @@
     "uploadImage": "Télécharger",
     "suggestions": "Suggestions",
     "noProductsFound": "Aucun produit trouvé",
+    "imageSearchNoMatches": "Aucune correspondance visuelle proche pour cette image. Essayez une photo plus nette ou un autre angle.",
+    "imageSearchShowMore": "Afficher {{count}} résultats similaires de plus",
     "viewProductDetails": "Voir les détails du produit",
     "searchProducts": "Rechercher des produits...",
     "searchInCategory": "Rechercher dans la catégorie",
@@ -148,7 +150,8 @@
     "items": "Articles",
     "enterCouponCode": "Entrez le code promo",
     "cartUpdated": "Panier mis à jour avec succès !",
-    "addItemsFirst": "Veuillez ajouter des articles au panier !"
+    "addItemsFirst": "Veuillez ajouter des articles au panier !",
+    "minQuantityWarning": "La quantité minimum de commande est {{count}}"
   },
   "checkout": {
     "title": "Paiement",

@@ -6,7 +6,7 @@ import * as Yup from "yup";
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
 
-import MobileNumberField, { MobileError } from "../../Components/Common/MobileNumberField";
+import MobileNumberField from "../../Components/Common/MobileNumberField";
 import ROUTES from "../../helpers/routesHelper";
 import { logger } from "../../helpers/commonHelper";
 import { apiAddAddress, apiGetAddress, apiUpdateAddress } from "../../store/address/actions";
@@ -43,11 +43,12 @@ const AddAddress = ({ callback, id = null }) => {
         longitude: Yup.number().optional(),
         mobileNumber: Yup.string()
             .required("Mobile number is a required field")
-            .matches(/^\d{10}$/, "Mobile number must be exactly 10 digits long."),
+            .matches(/^\d{8,15}$/, "Enter a valid mobile number (8–15 digits)."),
         countryCode: Yup.string().matches(
             /^\+\d+$/,
             "Country code must start with a '+' and contain only digits"
         ),
+        addressType: Yup.string().oneOf(["home", "office", "other"]).required(),
     });
 
     useEffect(() => {
@@ -136,13 +137,17 @@ const AddAddress = ({ callback, id = null }) => {
                                         <MobileNumberField
                                             className="border rounded bg-white"
                                             defaultValue={mobileNumber}
+                                            country="rw"
                                             callback={(code, number) => {
                                                 form.setFieldValue("countryCode", code);
                                                 form.setFieldValue("mobileNumber", number);
+                                                form.setFieldTouched("mobileNumber", true, false);
                                             }}
                                         />
-                                        <MobileError
-                                            value={form.values?.mobileNumber}
+                                        <ErrorMessage
+                                            name="mobileNumber"
+                                            className="text-danger"
+                                            component={"p"}
                                         />
                                     </div>
                                 </Col>
@@ -203,7 +208,7 @@ const AddAddress = ({ callback, id = null }) => {
 
                                     <div className="addresstype d-flex align-items-center gap-4">
                                         <div>
-                                            <label htmlFor="addressType-home d-flex align-items-center">
+                                            <label htmlFor="addressType-home" className="d-flex align-items-center">
                                                 <span className="me-2">Home</span>
                                                 <Field
                                                     type="radio"
@@ -214,7 +219,7 @@ const AddAddress = ({ callback, id = null }) => {
                                             </label>
                                         </div>
                                         <div>
-                                            <label htmlFor="addressType-office d-flex align-items-center">
+                                            <label htmlFor="addressType-office" className="d-flex align-items-center">
                                                 <span className="me-2">Office</span>
                                                 <Field
                                                     type="radio"
@@ -225,7 +230,7 @@ const AddAddress = ({ callback, id = null }) => {
                                             </label>
                                         </div>
                                         <div>
-                                            <label htmlFor="addressType-other d-flex align-items-center">
+                                            <label htmlFor="addressType-other" className="d-flex align-items-center">
                                                 <span className="me-2">Other</span>
                                                 <Field
                                                     type="radio"
@@ -246,14 +251,16 @@ const AddAddress = ({ callback, id = null }) => {
 
                                 <Col md={6} className="my-2">
                                     <div className="default_house d-flex align-items-center">
-                                        <label htmlFor="houseNo">Default Address</label>
-                                        <span className="ms-2">
-                                            <Field
-                                                type="checkbox"
-                                                name="default"
-                                                id="default"
-                                            />
-                                        </span>
+                                        <label htmlFor="default" className="d-flex align-items-center mb-0">
+                                            Default Address
+                                            <span className="ms-2">
+                                                <Field
+                                                    type="checkbox"
+                                                    name="default"
+                                                    id="default"
+                                                />
+                                            </span>
+                                        </label>
                                     </div>
                                     <ErrorMessage
                                         name="default"

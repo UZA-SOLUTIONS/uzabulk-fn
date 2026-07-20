@@ -100,7 +100,11 @@ export default function Header() {
     const params = new URLSearchParams();
     params.set("search", trimmed);
     params.set("skip", "1");
-    if (imageFromQuery) params.set("image", imageFromQuery);
+    // Explicit text + image refine only when the user submits keywords while an image is active.
+    if (imageFromQuery) {
+      params.set("image", imageFromQuery);
+      params.set("mixSearch", "1");
+    }
     navigate(`${ROUTES.PRODUCT_LISTING}?${params.toString()}`);
   };
 
@@ -138,6 +142,7 @@ export default function Header() {
     localPreviewRef.current = blobUrl;
     setLocalImagePreview(blobUrl);
     persistImageSearchPreview(blobUrl);
+    setSearchText("");
 
     setImageSearchLoading(true);
 
@@ -159,13 +164,12 @@ export default function Header() {
     if (!imageUrl || imageSearchLoading) return;
 
     revokeLocalPreview();
+    setSearchText("");
     setImageSearchLoading(true);
 
     try {
-      const params = new URLSearchParams();
-      params.set("skip", "1");
-      params.set("image", imageUrl);
-      navigate(`${ROUTES.PRODUCT_LISTING}?${params.toString()}`);
+      const params = buildSearchBarImageListingUrl({ imageUrl });
+      navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
     } catch (error) {
       revokeLocalPreview();
       toast.error(error?.message || t("search.imageUrlSearchFailed"));

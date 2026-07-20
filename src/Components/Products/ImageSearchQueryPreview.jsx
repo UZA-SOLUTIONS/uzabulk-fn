@@ -5,11 +5,12 @@ import { resolveImageSearchPreviewSource } from "../../helpers/imageSearchHelper
 export default function ImageSearchQueryPreview({
   isLoading = false,
   keyword = "",
+  imageUrl = "",
 }) {
   const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
 
-  const displayUrl = resolveImageSearchPreviewSource();
+  const displayUrl = resolveImageSearchPreviewSource(imageUrl);
 
   useEffect(() => {
     setFailed(false);

@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { useTranslation } from "react-i18next";
 
 import UXSkeleton from "../Common/UXSkeleton";
 import CommingSoon from "../Common/CommingSoon";
@@ -7,12 +8,18 @@ import ProductCard from "./ProductCard";
 
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 
+const VISUAL_MATCH_FLOOR = 0.38;
+
+const isStrongVisualItem = (item) => {
+  const pct = Number(item?.similarity_score || 0);
+  return item?.match_type === "visual" && pct >= VISUAL_MATCH_FLOOR;
+};
+
 const visualMatchSort = (items = []) => {
   const visual = [];
   const rest = [];
   (items || []).forEach((item) => {
-    const pct = Number(item?.similarity_score || 0);
-    if (pct >= 0.38) visual.push(item);
+    if (isStrongVisualItem(item)) visual.push(item);
     else rest.push(item);
   });
   visual.sort((a, b) => Number(b?.similarity_score || 0) - Number(a?.similarity_score || 0));
@@ -23,17 +30,24 @@ const ProductsListingInfinite = ({
   items,
   isLoading,
   message = "",
+  emptyMessage = "",
   hasMore,
   fetchRecords,
   gridClassName = "",
   showVisualMatch = false,
   skeletonCount = 8,
 }) => {
+  const { t } = useTranslation();
   const lastAutoFetchAtRef = useRef(0);
+  const [showWeakMatches, setShowWeakMatches] = useState(false);
 
   const handleOpenProduct = useCallback(() => {
     smoothScrollToTop();
   }, []);
+
+  useEffect(() => {
+    setShowWeakMatches(false);
+  }, [items]);
 
   useEffect(() => {
     if (!hasMore || isLoading || typeof fetchRecords !== "function") {
@@ -54,8 +68,36 @@ const ProductsListingInfinite = ({
     return () => window.removeEventListener("resize", fillShortPage);
   }, [items?.length, hasMore, isLoading, fetchRecords]);
 
-  const displayItems = showVisualMatch ? visualMatchSort(items) : items;
-  const showInitialSkeleton = Boolean(isLoading) && !displayItems?.length;
+  const sortedItems = useMemo(
+    () => (showVisualMatch ? visualMatchSort(items) : items),
+    [items, showVisualMatch]
+  );
+
+  const { displayItems, hiddenWeakCount } = useMemo(() => {
+    if (!showVisualMatch || showWeakMatches) {
+      return { displayItems: sortedItems, hiddenWeakCount: 0 };
+    }
+
+    const strong = [];
+    const weak = [];
+    (sortedItems || []).forEach((item) => {
+      if (isStrongVisualItem(item)) strong.push(item);
+      else weak.push(item);
+    });
+
+    // No strong visual hits: show the full catalog/keyword result set (do not gate).
+    if (!strong.length) {
+      return { displayItems: sortedItems, hiddenWeakCount: 0 };
+    }
+
+    // Strong visual hits present: keep low-similarity fillers behind "Show more".
+    return {
+      displayItems: strong,
+      hiddenWeakCount: weak.length,
+    };
+  }, [sortedItems, showVisualMatch, showWeakMatches]);
+
+  const showInitialSkeleton = Boolean(isLoading) && !displayItems?.length && !items?.length;
 
   if (showInitialSkeleton) {
     return (
@@ -67,12 +109,14 @@ const ProductsListingInfinite = ({
     );
   }
 
+  const emptyCopy = emptyMessage || message || t("search.noProductsFound");
+
   return (
     <section className="products_card products_listing_square position-relative">
       <InfiniteScroll
         dataLength={displayItems?.length || 0}
         next={() => fetchRecords?.()}
-        hasMore={Boolean(hasMore)}
+        hasMore={Boolean(hasMore) && (showWeakMatches || !showVisualMatch || hiddenWeakCount === 0)}
         scrollThreshold={0.75}
         loader={
           items?.length > 0 ? (
@@ -96,13 +140,25 @@ const ProductsListingInfinite = ({
                 key={item?._id || item?.offerId || idx}
                 item={item}
                 onOpen={handleOpenProduct}
+                showVisualMatch={showVisualMatch}
               />
             ))
           ) : (
-            <CommingSoon message={message || "No products found"} />
+            <CommingSoon message={emptyCopy} />
           )}
         </div>
       </InfiniteScroll>
+      {showVisualMatch && hiddenWeakCount > 0 ? (
+        <div className="text-center py-3">
+          <button
+            type="button"
+            className="btn btn-outline-secondary btn-sm"
+            onClick={() => setShowWeakMatches(true)}
+          >
+            {t("search.imageSearchShowMore", { count: hiddenWeakCount })}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 };

@@ -114,7 +114,7 @@ const Productlist = () => {
     || others?.imageSearchPhrase
     || searchQuery;
   const isImageSearchSession = Boolean(imageQuery || others?.imageSearch);
-  const searchedImageSrc = resolveImageSearchPreviewSource();
+  const searchedImageSrc = resolveImageSearchPreviewSource(imageQuery);
 
   const { catstripNavRef } = useCategoryStripPin({
     enabled: categoryTabs.length > 0 && !searchQuery && !imageQuery,
@@ -205,17 +205,20 @@ const Productlist = () => {
     cancelToken.current = new AbortController();
     const searchTerm = searchParams.get("search") || "";
     const imageTerm = searchParams.get("image") || "";
+    // Image-only sessions: ignore leftover typed `search` unless the user also submitted text.
+    const useSearchWithImage = Boolean(searchTerm) && searchParams.get("mixSearch") === "1";
+    const effectiveSearch = imageTerm && !useSearchWithImage ? "" : searchTerm;
     const query = {
       limit,
       skip: pageSkip ?? (init ? 1 : skip + 1),
       category: searchParams.get("category")
         ? String(searchParams.get("category"))
         : undefined,
-      search: searchTerm || undefined,
+      search: effectiveSearch || undefined,
       image: imageTerm || undefined,
       country: searchParams.get("country") || "en",
       suppressGlobalErrorToast: true,
-      ...getSortQuery(selectedSort || (searchTerm || imageTerm ? "relevance" : "newest")),
+      ...getSortQuery(selectedSort || (effectiveSearch || imageTerm ? "relevance" : "newest")),
     };
     dispatch(
       apiGetProducts({
@@ -241,10 +244,9 @@ const Productlist = () => {
   );
 
   useEffect(() => {
-    const searchTerm = searchParams.get("search") || "";
-    const imageTerm = searchParams.get("image") || "";
     smoothScrollToTop();
-    dispatch(clearProductList("products"));
+    // Keep prior cards while the new image/text search loads to avoid a blank flash.
+    dispatch(clearProductList({ field: "products", keepItems: true }));
     fetchProducts(true, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when URL filters change
   }, [searchParams.toString()]);
@@ -360,6 +362,11 @@ const Productlist = () => {
                 fetchRecords={handleFetchRequest}
                 gridClassName="home_discover_browse__product_grid"
                 showVisualMatch={isImageSearchSession}
+                emptyMessage={
+                  isImageSearchSession
+                    ? t("search.imageSearchNoMatches")
+                    : undefined
+                }
               />
             </div>
           </section>

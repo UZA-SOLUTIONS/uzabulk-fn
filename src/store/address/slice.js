@@ -43,13 +43,17 @@ export const slice = createSlice({
     setBillingAddress: (state, action) => {
       state.billingAddress.detail = action.payload;
     },
-    setDefaultAddress: (state, action) => {
-      state.addresses?.items?.forEach(address => {
-        if (address.default) {
-          state.shippingAddress.detail = address;
-          state.billingAddress.detail = address;
-        }
-      });
+    setDefaultAddress: (state) => {
+      const items = state.addresses?.items || [];
+      if (!items.length) return;
+      const preferred = items.find((address) => address.default) || items[0];
+      if (!preferred) return;
+      if (!state.billingAddress.detail?._id) {
+        state.billingAddress.detail = preferred;
+      }
+      if (!state.shippingAddress.detail?._id) {
+        state.shippingAddress.detail = preferred;
+      }
     },
   },
   extraReducers: (builder) => {

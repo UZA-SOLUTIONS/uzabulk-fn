@@ -62,6 +62,44 @@ export const addToCart = ({ cartData, isLogin }) => {
   }
 };
 
+/** Resolve MOQ for a cart line (product detail + line fields + checkout payload). */
+export const getCartLineMinQuantity = (cart, item, orderDetails = null) => {
+  const fromOrder = (() => {
+    if (!orderDetails?.line_items?.length) return null;
+    for (const line of orderDetails.line_items) {
+      if (String(line?.cart_id) !== String(cart?._id)) continue;
+      const match = (line.items || []).find(
+        (row) => String(row?._id || "") === String(item?._id || "")
+          || String(row?.variation_id || "") === String(item?.variation_id || "")
+      );
+      const qty = Number(match?.minQuantity ?? line.items?.[0]?.minQuantity);
+      if (Number.isFinite(qty) && qty > 0) return qty;
+    }
+    return null;
+  })();
+
+  const candidates = [
+    fromOrder,
+    item?.minQuantity,
+    item?.moq,
+    item?.minimumOrderQuantity,
+    item?.minOrderQuantity,
+    item?.min_order_qty,
+    item?.variation?.minQuantity,
+    cart?.product?.minQuantity,
+    cart?.product?.moq,
+    cart?.product?.minimumOrderQuantity,
+    cart?.product?.minOrderQuantity,
+    cart?.product?.min_order_qty,
+  ];
+
+  for (const value of candidates) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+  }
+  return 1;
+};
+
 // Cart listing page
 export const manageCartQuantity = ({
   cartList,
@@ -70,28 +108,49 @@ export const manageCartQuantity = ({
   cartIndex,
   increase = true,
   setValue = null,
+  orderDetails = null,
+  allowRemove = false,
 }) => {
   const items = cart.items.map((xItem, i) => {
     const item = { ...xItem };
     if (i === cartIndex) {
-      const quantity = Math.max(
+      const minQty = getCartLineMinQuantity(cart, item, orderDetails);
+      const nextRaw =
         setValue !== null
           ? setValue
           : increase
             ? item.quantity + 1
-            : item.quantity - 1,
-        0
-      );
+            : item.quantity - 1;
+      // Keep MOQ floor unless explicitly removing the line (legacy 0 delete path).
+      const floor = allowRemove && Number(nextRaw) <= 0 ? 0 : minQty;
+      const quantity = Math.max(Number(nextRaw), floor);
+      if (
+        !increase
+        && !allowRemove
+        && Number(item.quantity) <= minQty
+        && Number(nextRaw) < minQty
+      ) {
+        toast.warn(
+          i18n.t("cart.minQuantityWarning", {
+            count: minQty,
+            defaultValue: `Minimum order quantity is ${minQty}`,
+          })
+        );
+      }
       return {
         ...item,
         message: "",
-        quantity: isNaN(quantity) ? 0 : quantity,
+        quantity: Number.isNaN(quantity) ? minQty : quantity,
       };
     } else {
       item.message = "";
       return item;
     }
   });
+
+  if (Number(items[cartIndex].quantity) === Number(cart.items[cartIndex].quantity)) {
+    return;
+  }
 
   const newCart = [...cartList];
   newCart[cartListIndex] = { ...newCart[cartListIndex], items, isLoading: true };

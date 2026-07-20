@@ -33,7 +33,7 @@ export default function AddToCart({
         type="button"
         {...qtyBtnProps}
         onClick={() => onDecrement()}
-        disabled={decrementDisabled}
+        disabled={decrementDisabled || Number(value) <= Number(min)}
         aria-label={t("cart.decreaseQuantity")}
       >
         -

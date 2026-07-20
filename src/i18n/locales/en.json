@@ -58,6 +58,8 @@
     "uploadImage": "Upload",
     "suggestions": "Suggestions",
     "noProductsFound": "No products found",
+    "imageSearchNoMatches": "No close visual matches for this image. Try a clearer photo or a different angle.",
+    "imageSearchShowMore": "Show {{count}} more similar results",
     "viewProductDetails": "View product details",
     "searchProducts": "Search products...",
     "searchInCategory": "Search in category",
@@ -148,7 +150,8 @@
     "items": "Items",
     "enterCouponCode": "Enter coupon code",
     "cartUpdated": "Cart updated successfully!",
-    "addItemsFirst": "Please add items to add cart!"
+    "addItemsFirst": "Please add items to add cart!",
+    "minQuantityWarning": "Minimum order quantity is {{count}}"
   },
   "checkout": {
     "title": "Checkout",

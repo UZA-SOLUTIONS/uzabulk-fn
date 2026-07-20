@@ -6,20 +6,27 @@ import { useDispatch, useSelector } from "react-redux";
 import { Container, Row, Col, Accordion } from "react-bootstrap";
 
 import LoginPopup from "../../Components/LoginPopup";
+import AddToCart from "../../Components/Common/AddToCart";
 import RenderAddress from "../../Components/Common/RenderAddress";
 import AddAddressModal from "../../Components/Modals/AddAddressModal";
 import SimilarProductsRow from "../../Components/Products/SimilarProductsRow";
 import TranslatedProductName from "../../Components/Common/TranslatedProductName";
 
 import ROUTES from "../../helpers/routesHelper";
-import { formatNumber } from "../../helpers/commonHelper";
-import { getCheckoutErrorMessage, getCouponDiscount, isReadyToPlaceOrder } from "../../helpers/cartHelper";
+import { formatNumber, getProductImageUrl } from "../../helpers/commonHelper";
+import {
+  getCartLineMinQuantity,
+  getCheckoutErrorMessage,
+  getCouponDiscount,
+  isReadyToPlaceOrder,
+  manageCartQuantity,
+} from "../../helpers/cartHelper";
 
 import { removeOrderDetails } from "../../store/order/slice";
 import { apiGetAddresses } from "../../store/address/actions";
 import { apiCheckout, apiPlaceOrder } from "../../store/order/actions";
 import { setCouponCode, updateCartList } from "../../store/cart/slice";
-import { apiGetCartCount, apiGetCartList } from "../../store/cart/actions";
+import { apiGetCartCount, apiGetCartList, apiUpdateCart } from "../../store/cart/actions";
 import { setBillingAddress, setDefaultAddress, setShippingAddress } from "../../store/address/slice";
 
 import placeholder from "../../assets/images/sousix.jpg";
@@ -79,7 +86,7 @@ const Checkoutpage = () => {
       return;
     }
     if (!billingAddress?._id) {
-      toast.error("Please add shipping address.");
+      toast.error("Please add billing address.");
       return;
     }
     setIsPlacingOrder(true);
@@ -135,9 +142,10 @@ const Checkoutpage = () => {
   }, [cartList, isLoading, dispatch]);
 
   useEffect(() => {
-    if (addressList.length && (!shippingAddress || !billingAddress))
+    if (addressList.length && (!shippingAddress?._id || !billingAddress?._id)) {
       dispatch(setDefaultAddress());
-  }, [addressList]);
+    }
+  }, [addressList, shippingAddress?._id, billingAddress?._id, dispatch]);
 
   useEffect(() => {
     return () => {
@@ -155,7 +163,7 @@ const Checkoutpage = () => {
           activeKey={activeKey}
           id={addressEditId}
           show={showAddressModal}
-          onhide={() => {
+          onHide={() => {
             setAddressEditId(null);
             setShowAddressModal(false);
           }}
@@ -167,12 +175,68 @@ const Checkoutpage = () => {
           </Col>
 
           <Col lg={8} md={6} sm={12}>
+            {cartList?.length ? (
+              <div className="checkout_acccinner border rounded-3 mb-3 checkout-items-preview">
+                <div className="p-3">
+                  <h5 className="fw-bold text-start border-bottom w-100 mb-3">
+                    Items in this order
+                  </h5>
+                  <div className="checkout-items-preview__list">
+                    {cartList.map((cart) =>
+                      (cart?.items || []).map((item, idx) => (
+                        <div
+                          className="checkout-items-preview__row d-flex align-items-center gap-3"
+                          key={`${cart._id}-${item._id || idx}`}
+                        >
+                          <img
+                            src={getProductImageUrl(cart.product, placeholder)}
+                            alt=""
+                            className="checkout-items-preview__img"
+                            onClick={() => navigate(`${ROUTES.PRODUCT_DETAIL}/${cart?.product?._id}`)}
+                          />
+                          <div className="text-start flex-grow-1 min-w-0">
+                            <p
+                              className="mb-1 fw-semibold text-truncate cursor-pointer"
+                              onClick={() => navigate(`${ROUTES.PRODUCT_DETAIL}/${cart?.product?._id}`)}
+                            >
+                              <TranslatedProductName product={cart.product} />
+                            </p>
+                            <p className="mb-0 fs-xs text-muted">
+                              Qty {item.quantity}
+                              {item?.unitPrice != null
+                                ? ` · ${currentCurrency?.symbol} ${formatNumber(item.unitPrice)}`
+                                : ""}
+                            </p>
+                            {item?.attributes?.length ? (
+                              <p className="mb-0 fs-xs text-muted text-truncate">
+                                {item.attributes.map((a) => a.attrValue).filter(Boolean).join(" / ")}
+                              </p>
+                            ) : null}
+                          </div>
+                          <p className="mb-0 fw-semibold text-nowrap">
+                            {currentCurrency?.symbol}{" "}
+                            {formatNumber(Number(item.unitPrice || 0) * Number(item.quantity || 0))}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="checkout_accordion">
               <LoginPopup
                 show={showLoginPopup}
                 handleClose={() => setShowLoginPopup(false)}
               />
-              <Accordion activeKey={isLogin ? activeKey : "join-platform"} onSelect={(k) => setActiveKey(k)}>
+              <Accordion
+                activeKey={isLogin ? activeKey : "join-platform"}
+                onSelect={(k) => {
+                  if (k == null) return;
+                  setActiveKey(String(k));
+                }}
+              >
 
                 {!isLogin ? (
                   <Accordion.Item eventKey="join-platform">
@@ -198,10 +262,10 @@ const Checkoutpage = () => {
                 ) : null}
 
                 <Accordion.Item eventKey="0">
-                  <Accordion.Header className={parseInt(activeKey) <= 0 || !isLogin ? "disabled" : ""}>
+                  <Accordion.Header className={!isLogin || parseInt(activeKey, 10) < 0 ? "disabled" : ""}>
                     <div className="text-start">
                       Select a billing address
-                      {parseInt(activeKey) >= 0 ? <RenderAddress address={billingAddress} className="w-100 fs-xs mb-0" /> : null}
+                      {parseInt(activeKey, 10) >= 0 ? <RenderAddress address={billingAddress} className="w-100 fs-xs mb-0" /> : null}
                     </div>
                   </Accordion.Header>
                   <Accordion.Body>
@@ -214,28 +278,26 @@ const Checkoutpage = () => {
                         <div className="radio_set my-3">
                           {addressList?.length ? (
                             addressList.map((address, key) => (
-                              <div className="radio-item d-flex align-items-center" key={key}>
+                              <div className="radio-item d-flex align-items-center" key={address._id || key}>
                                 <input
                                   type="radio"
                                   id={"bill-address-" + key}
                                   name="address"
-                                  checked={
-                                    !!billingAddress?._id
-                                      ? billingAddress?._id === address._id
-                                      : address.default
-                                  }
+                                  checked={billingAddress?._id === address._id}
                                   onChange={() => {
                                     dispatch(setBillingAddress(address));
                                   }}
                                 />
-                                <label htmlFor={"bill-address-" + key} className="d-flex justify-content-between">
+                                <label htmlFor={"bill-address-" + key} className="d-flex justify-content-between flex-grow-1">
                                   <span>
                                     <strong>{address?.name} | {address?.countryCode} {address?.mobileNumber}</strong>{" "}
                                     {address?.area}, {address?.houseNo}, {address?.landmark}, {address?.address}
                                   </span>
                                   <Button
                                     className="use_thisadd"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
                                       setAddressEditId(address._id);
                                       setShowAddressModal(true);
                                     }}
@@ -268,10 +330,10 @@ const Checkoutpage = () => {
 
 
                 <Accordion.Item eventKey="1">
-                  <Accordion.Header className={parseInt(activeKey) <= 1 || !isLogin ? "disabled" : ""}>
+                  <Accordion.Header className={!isLogin || parseInt(activeKey, 10) < 1 ? "disabled" : ""}>
                     <div className="text-start">
                       Select a shipping address
-                      {parseInt(activeKey) >= 1 ? <RenderAddress address={shippingAddress} className="w-100 fs-xs mb-0" /> : null}
+                      {parseInt(activeKey, 10) >= 1 ? <RenderAddress address={shippingAddress} className="w-100 fs-xs mb-0" /> : null}
                     </div>
                   </Accordion.Header>
                   <Accordion.Body>
@@ -284,28 +346,26 @@ const Checkoutpage = () => {
                         <div className="radio_set my-3">
                           {addressList?.length ? (
                             addressList.map((address, key) => (
-                              <div className="radio-item d-flex align-items-center" key={key}>
+                              <div className="radio-item d-flex align-items-center" key={address._id || key}>
                                 <input
                                   type="radio"
                                   id={"address-" + key}
                                   name="shipaddress"
-                                  checked={
-                                    !!shippingAddress?._id
-                                      ? shippingAddress?._id === address._id
-                                      : address.default
-                                  }
+                                  checked={shippingAddress?._id === address._id}
                                   onChange={() => {
                                     dispatch(setShippingAddress(address));
                                   }}
                                 />
-                                <label htmlFor={"address-" + key} className="d-flex justify-content-between">
+                                <label htmlFor={"address-" + key} className="d-flex justify-content-between flex-grow-1">
                                   <span>
                                     <strong>{address?.name} | {address?.countryCode} {address?.mobileNumber}</strong>{" "}
                                     {address?.area}, {address?.houseNo}, {address?.landmark}, {address?.address}
                                   </span>
                                   <Button
                                     className="use_thisadd"
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
                                       setAddressEditId(address._id);
                                       setShowAddressModal(true);
                                     }}
@@ -337,7 +397,7 @@ const Checkoutpage = () => {
                 </Accordion.Item>
 
                 <Accordion.Item eventKey="2">
-                  <Accordion.Header className={parseInt(activeKey) <= 2 ? "disabled" : ""} > Payment method</Accordion.Header>
+                  <Accordion.Header className={parseInt(activeKey, 10) < 2 ? "disabled" : ""}> Payment method</Accordion.Header>
                   <Accordion.Body>
                     <div className="checkout_acccinner border rounded-3">
                       <div className="text-start p-3">
@@ -387,7 +447,7 @@ const Checkoutpage = () => {
                 </Accordion.Item>
 
                 <Accordion.Item eventKey="3">
-                  <Accordion.Header className="disabled" > Review items and delivery</Accordion.Header>
+                  <Accordion.Header className={parseInt(activeKey, 10) < 3 ? "disabled" : ""}> Review items and delivery</Accordion.Header>
                   <Accordion.Body>
                     <div className="checkout_acccinner border rounded-3">
                       <div className="your_address p-3">
@@ -405,10 +465,7 @@ const Checkoutpage = () => {
                                           <div className="productimmg_side w-25">
                                             <div className="product_img me-lg-4 me-3" style={{ width: "100px", height: "100px" }}>
                                               <img
-                                                src={
-                                                  cart?.product?.featured_image ||
-                                                  placeholder
-                                                }
+                                                src={getProductImageUrl(cart.product, placeholder)}
                                                 alt=""
                                                 className="img-fluid cursor-pointer"
                                                 onClick={() => {
@@ -444,49 +501,52 @@ const Checkoutpage = () => {
                                                 </h2>
 
                                                 <div className="counter_div d-flex align-items-center gap-3">
-                                                  <p className="fw-light mb-0 fs-xs"><span className="fw-medium">Quantity:</span> {item.quantity}</p>
-                                                  {/* <AddToCart
-                                                    className="fs-base"
-                                                    value={item.quantity}
-                                                    min={0}
-                                                    onChange={(value) => {
-                                                      manageCartQuantity({
-                                                        cartList,
-                                                        cartListIndex: index,
-                                                        cart,
-                                                        cartIndex: idx,
-                                                        dispatch,
-                                                        increase: true,
-                                                        setValue: Math.max(
-                                                          parseInt(value),
-                                                          0
-                                                        ),
-                                                        callback: handleEmptyCart
-                                                      });
-                                                    }}
-                                                    onDecrement={() =>
-                                                      manageCartQuantity({
-                                                        cartList,
-                                                        cartListIndex: index,
-                                                        cart,
-                                                        cartIndex: idx,
-                                                        dispatch,
-                                                        increase: false,
-                                                        callback: handleEmptyCart
-                                                      })
-                                                    }
-                                                    onIncrement={() => {
-                                                      manageCartQuantity({
-                                                        cartList,
-                                                        cartListIndex: index,
-                                                        cart,
-                                                        cartIndex: idx,
-                                                        dispatch,
-                                                        increase: true,
-                                                        callback: handleEmptyCart
-                                                      });
-                                                    }}
-                                                  /> */}
+                                                  <p className="fw-light mb-0 fs-xs"><span className="fw-medium">Quantity:</span></p>
+                                                  {(() => {
+                                                    const minQty = getCartLineMinQuantity(cart, item, orderDetails);
+                                                    return (
+                                                      <AddToCart
+                                                        className="fs-base"
+                                                        value={item.quantity}
+                                                        min={minQty}
+                                                        decrementDisabled={Number(item.quantity) <= minQty}
+                                                        onChange={(value) => {
+                                                          manageCartQuantity({
+                                                            cartList,
+                                                            cartListIndex: index,
+                                                            cart,
+                                                            cartIndex: idx,
+                                                            orderDetails,
+                                                            increase: true,
+                                                            setValue: Math.max(
+                                                              parseInt(value, 10) || minQty,
+                                                              minQty
+                                                            ),
+                                                          });
+                                                        }}
+                                                        onDecrement={() =>
+                                                          manageCartQuantity({
+                                                            cartList,
+                                                            cartListIndex: index,
+                                                            cart,
+                                                            cartIndex: idx,
+                                                            orderDetails,
+                                                            increase: false,
+                                                          })
+                                                        }
+                                                        onIncrement={() => {
+                                                          manageCartQuantity({
+                                                            cartList,
+                                                            cartListIndex: index,
+                                                            cart,
+                                                            cartIndex: idx,
+                                                            orderDetails,
+                                                            increase: true,
+                                                          });
+                                                        }}
+                                                      />
+                                                    );
+                                                  })()}
                                                 </div>
 
                                                 {item?.attributes?.length ? (
@@ -615,10 +675,46 @@ const Checkoutpage = () => {
               <div className="summary_list p-3 pt-0">
                 <h5 className="fw-bold text-start border-bottom w-100">Order Summary</h5>
 
+                {cartList?.length ? (
+                  <div className="checkout-summary-items mb-3">
+                    {cartList.map((cart) =>
+                      (cart?.items || []).map((item, idx) => (
+                        <div
+                          className="checkout-summary-items__row d-flex align-items-start gap-2 mb-2"
+                          key={`summary-${cart._id}-${item._id || idx}`}
+                        >
+                          <img
+                            src={getProductImageUrl(cart.product, placeholder)}
+                            alt=""
+                            className="checkout-summary-items__img"
+                          />
+                          <div className="text-start min-w-0 flex-grow-1">
+                            <p className="mb-0 fs-xs fw-semibold text-truncate">
+                              <TranslatedProductName product={cart.product} />
+                            </p>
+                            <p className="mb-0 fs-xs text-muted">
+                              Qty {item.quantity} · {currentCurrency?.symbol}{" "}
+                              {formatNumber(Number(item.unitPrice || 0) * Number(item.quantity || 0))}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <p className="fs-xs text-muted text-start">No items in checkout.</p>
+                )}
+
                 <ul>
                   <li>
                     <p>Items:</p>
-                    <p>{orderDetails?.totalItems || 0}</p>
+                    <p>
+                      {orderDetails?.totalItems
+                        || cartList.reduce(
+                          (sum, cart) => sum + (cart.items || []).reduce((s, i) => s + Number(i.quantity || 0), 0),
+                          0
+                        )}
+                    </p>
                   </li>
                   {orderDetails ? (
                     <>

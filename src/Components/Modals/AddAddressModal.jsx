@@ -1,7 +1,7 @@
 import React from "react";
 import { Modal } from "react-bootstrap";
 import { Link } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { setBillingAddress, setShippingAddress } from "../../store/address/slice";
 
@@ -10,17 +10,32 @@ import { apiGetAddresses } from "../../store/address/actions";
 
 const AddAddressModal = (props) => {
   const dispatch = useDispatch();
+  const handleHide = props.onHide || props.onhide;
 
   return (
     <Modal
-      {...props}
+      show={props.show}
+      onHide={handleHide}
       size="lg"
       aria-labelledby="contained-modal-title-vcenter"
       centered
+      scrollable
+      className="add-address-modal"
+      dialogClassName="add-address-modal__dialog"
+      backdropClassName="add-address-modal__backdrop"
     >
       <Modal.Header className="position-relative d-flex align-items-center justify-content-between">
-        <Modal.Title id="contained-modal-title-vcenter">{props.id ? 'Edit Address' : 'Add Address'}</Modal.Title>
-        <Link to="#" onClick={props.onhide}>
+        <Modal.Title id="contained-modal-title-vcenter">
+          {props.id ? "Edit Address" : "Add Address"}
+        </Modal.Title>
+        <Link
+          to="#"
+          onClick={(e) => {
+            e.preventDefault();
+            handleHide?.();
+          }}
+          aria-label="Close"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="20"
@@ -38,17 +53,18 @@ const AddAddressModal = (props) => {
         <AddAddress
           id={props?.id || null}
           callback={(res) => {
-            dispatch(apiGetAddresses({
-              limit: 100,
-              skip: 0,
-            }));
-            props.setAddressEditId(null);
-            props.onhide();
-            if (props.activeKey === '0')
-              dispatch(setBillingAddress(res.data));
-            else if (props.activeKey === '1')
-              dispatch(setShippingAddress(res.data));
-          }} />
+            dispatch(
+              apiGetAddresses({
+                limit: 100,
+                skip: 0,
+              })
+            );
+            props.setAddressEditId?.(null);
+            handleHide?.();
+            if (props.activeKey === "0") dispatch(setBillingAddress(res.data));
+            else if (props.activeKey === "1") dispatch(setShippingAddress(res.data));
+          }}
+        />
       </Modal.Body>
     </Modal>
   );

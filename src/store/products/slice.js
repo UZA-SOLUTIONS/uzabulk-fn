@@ -42,7 +42,16 @@ export const slice = createSlice({
             }
         },
         clearProductList: (state, action) => {
-            state[action.payload] = { ...paginationInfiniteInitialState, isLoading: true };
+            const payload = action.payload;
+            const field = typeof payload === "string" ? payload : payload?.field;
+            if (!field) return;
+            // Soft refresh: keep current cards visible while page-1 reloads (avoids blank flash).
+            if (typeof payload === "object" && payload?.keepItems) {
+                state[field].isLoading = true;
+                state[field].message = "";
+                return;
+            }
+            state[field] = { ...paginationInfiniteInitialState, isLoading: true };
         },
         clearHomeFeedProducts: (state) => {
             state.homeNewArrivalProducts = { ...paginationInitialState, isLoading: true };

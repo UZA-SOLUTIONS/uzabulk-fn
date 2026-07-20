@@ -12,10 +12,16 @@ import placeholder from "../../assets/images/default_name.webp";
 import SupplierVerificationBadge from "./SupplierVerificationBadge";
 import useProductDisplayName from "../../hooks/useProductDisplayName";
 
-export default function ProductCard({ item, onOpen }) {
+export default function ProductCard({ item, onOpen, showVisualMatch = false }) {
   const { t } = useTranslation();
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
+  const similarity = Number(item?.similarity_score || 0);
+  const showMatchBadge =
+    showVisualMatch
+    && item?.match_type === "visual"
+    && similarity >= 0.38;
+  const matchPercent = Math.round(similarity * 100);
 
   const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;
   const sold = item?.sold || item?.totalSold || item?.orderCount || item?.sold_count;
@@ -43,6 +49,11 @@ export default function ProductCard({ item, onOpen }) {
         />
         {isOut ? (
           <span className="products_listing_stock_badge">{t("product.outOfStock")}</span>
+        ) : null}
+        {showMatchBadge ? (
+          <span className="products_listing_visual_match_badge">
+            {t("product.visualMatch", { percent: matchPercent })}
+          </span>
         ) : null}
       </div>
       <div className="home_product_card_body px-1 pt-2">
