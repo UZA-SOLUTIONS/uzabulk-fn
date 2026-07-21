@@ -16,14 +16,17 @@ const AllCategoriesProductsGrid = ({ withContainer = true }) => {
   const appConfig = useSelector((s) => s.config.data);
 
   useEffect(() => {
-    if (!items?.length) {
-      dispatch(
-        apiGetHomeProducts({
-          limit: 24,
-          skip: 1,
-        })
-      );
-    }
+    if (items?.length) return undefined;
+    const ac = new AbortController();
+    dispatch(
+      apiGetHomeProducts({
+        limit: 24,
+        skip: 1,
+        signal: ac.signal,
+        suppressGlobalErrorToast: true,
+      })
+    );
+    return () => ac.abort();
   }, [dispatch, items?.length]);
 
   const content = (

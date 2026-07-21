@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
+import moment from "moment";
 
 import { apiGet } from "../../helpers/apiHelper";
 import { ORDER } from "../../helpers/urlHelper";
@@ -12,6 +13,7 @@ import ButtonLoader from "../Common/ButtonLoader";
 
 /**
  * Track Order search modal — track by order number without sign-in.
+ * Logged-in users also see recent account orders below the search field.
  */
 export default function TrackOrderModal({ show, onHide }) {
   const { t } = useTranslation();
@@ -19,17 +21,60 @@ export default function TrackOrderModal({ show, onHide }) {
   const isLogin = useSelector((s) => s.auth.isLogin);
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [recentOrders, setRecentOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
   useEffect(() => {
-    if (show) {
-      setQuery("");
-      setSubmitting(false);
+    if (!show) return undefined;
+
+    setQuery("");
+    setSubmitting(false);
+    setRecentOrders([]);
+
+    if (!isLogin) {
+      setLoadingOrders(false);
+      return undefined;
     }
-  }, [show]);
+
+    let cancelled = false;
+    setLoadingOrders(true);
+
+    (async () => {
+      try {
+        const res = await apiGet(ORDER.LIST, {
+          limit: 8,
+          skip: 1,
+          order: "desc",
+          orderBy: "date_created_utc",
+          suppressGlobalErrorToast: true,
+        });
+        if (cancelled) return;
+        if (res?.status === "success") {
+          setRecentOrders(Array.isArray(res?.data?.items) ? res.data.items : []);
+        } else {
+          setRecentOrders([]);
+        }
+      } catch {
+        if (!cancelled) setRecentOrders([]);
+      } finally {
+        if (!cancelled) setLoadingOrders(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [show, isLogin]);
 
   const close = () => {
     if (submitting) return;
     onHide?.();
+  };
+
+  const openOrder = (order) => {
+    if (!order?._id || submitting) return;
+    close();
+    navigate(`${ROUTES.ORDER_DETAIL}/${order._id}`);
   };
 
   const handleSubmit = async (event) => {
@@ -81,20 +126,6 @@ export default function TrackOrderModal({ show, onHide }) {
             <h4 id="track-order-modal-title" className="track-order-auth__title mb-0">
               {t("trackOrder.title")}
             </h4>
-            <button
-              type="button"
-              className="track-order-auth__link"
-              onClick={() => {
-                close();
-                if (!isLogin) {
-                  navigate(`${ROUTES.HOME}?auth=signin`);
-                  return;
-                }
-                navigate(ROUTES.MY_ORDERS);
-              }}
-            >
-              {t("trackOrder.viewAllOrders")}
-            </button>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -121,6 +152,50 @@ export default function TrackOrderModal({ show, onHide }) {
               </button>
             </div>
           </form>
+
+          {isLogin ? (
+            <div className="track-order-recent">
+              <div className="track-order-recent__header">
+                <p className="track-order-recent__heading mb-0">{t("trackOrder.recentOrders")}</p>
+                <button
+                  type="button"
+                  className="track-order-recent__view-all"
+                  onClick={() => {
+                    close();
+                    navigate(ROUTES.MY_ORDERS);
+                  }}
+                  disabled={submitting}
+                >
+                  {t("trackOrder.viewAll")}
+                </button>
+              </div>
+              {loadingOrders ? (
+                <p className="track-order-recent__empty">{t("trackOrder.loadingOrders")}</p>
+              ) : recentOrders.length ? (
+                <ul className="track-order-recent__list">
+                  {recentOrders.map((order) => {
+                    const orderNo = order.customOrderId || order._id;
+                    const dateLabel = moment(order.date_created || order.date_created_utc).format("M/D/YY");
+                    return (
+                      <li key={order._id}>
+                        <button
+                          type="button"
+                          className="track-order-recent__item"
+                          onClick={() => openOrder(order)}
+                          disabled={submitting}
+                        >
+                          <span className="track-order-recent__date">{dateLabel}</span>
+                          <span className="track-order-recent__number">{orderNo}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="track-order-recent__empty">{t("trackOrder.noRecentOrders")}</p>
+              )}
+            </div>
+          ) : null}
         </div>
       </Modal.Body>
     </Modal>

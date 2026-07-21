@@ -16,6 +16,7 @@ import {
 } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
+import InCartBadge from "../Common/InCartBadge";
 import TranslatedProductName from "../Common/TranslatedProductName";
 import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefetch";
@@ -66,6 +67,7 @@ function OftenCategoryColumn({
               onClick={() => onOpenProduct(item)}
             >
               <div className="new_arrival_media">
+                <InCartBadge product={item} />
                 <img src={getProductImageUrl(item, placeholder)} alt={item?.name || "product"} />
               </div>
               <div className="home_product_card_body px-1 pt-2">
@@ -334,6 +336,7 @@ export default function OftenPurchasedCategories() {
 
   useEffect(() => {
     let cancelled = false;
+    const ac = new AbortController();
 
     const fetchForCategory = async (category) => {
       try {
@@ -343,9 +346,14 @@ export default function OftenPurchasedCategories() {
           skip: 1,
           fieldName: "bestSeller",
           fieldValue: true,
+          signal: ac.signal,
+          suppressGlobalErrorToast: true,
         });
         return [category?._id, response?.data?.items || []];
       } catch (error) {
+        if (error?.code === "ERR_CANCELED" || error?.name === "CanceledError" || error?.name === "AbortError") {
+          return [category?._id, null];
+        }
         return [category?._id, []];
       }
     };
@@ -369,7 +377,7 @@ export default function OftenPurchasedCategories() {
           const records = await Promise.all(chunk.map((category) => fetchForCategory(category)));
           if (cancelled) break;
           records.forEach(([categoryId, products]) => {
-            if (categoryId) accum[categoryId] = products;
+            if (categoryId && products != null) accum[categoryId] = products;
           });
           categoryProductsRef.current = accum;
           setCategoryProducts({ ...accum });
@@ -382,6 +390,7 @@ export default function OftenPurchasedCategories() {
     run();
     return () => {
       cancelled = true;
+      ac.abort();
     };
   }, [selectedCategoryIdsKey]);
 

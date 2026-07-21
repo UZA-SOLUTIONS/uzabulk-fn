@@ -1,21 +1,26 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import ROUTES from "../../../helpers/routesHelper";
+import HelpModal from "../../Modals/HelpModal";
 
 export default function ItemCategory() {
   const { t } = useTranslation();
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
   return (
     <li className="productmenu">
-      <Link
-        to={ROUTES.CONTACT_US}
-        className="categories-nav-trigger"
+      <button
+        type="button"
+        className="categories-nav-trigger help-nav-btn"
         aria-label={t("nav.help")}
+        onClick={() => setShowHelpModal(true)}
       >
         <span className="categories-nav-trigger__icon" aria-hidden>
           {helpIcon}
         </span>
         <span className="categories-nav-trigger__label">{t("nav.help")}</span>
-      </Link>
+      </button>
+
+      <HelpModal show={showHelpModal} onHide={() => setShowHelpModal(false)} />
     </li>
   );
 }

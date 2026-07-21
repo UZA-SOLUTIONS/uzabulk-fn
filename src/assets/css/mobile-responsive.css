@@ -673,6 +673,10 @@ label {
     margin-right: auto;
   }
 
+  .cart_view .product_img {
+    max-width: 280px;
+  }
+
   .price_quantity {
     flex-wrap: wrap;
     gap: 12px !important;

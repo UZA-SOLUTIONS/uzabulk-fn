@@ -222,10 +222,14 @@
     "categoriesLoadError": "Impossible de charger les catégories. Vérifiez que l'API est en cours d'exécution et que MongoDB est accessible, puis actualisez.",
     "noCategoriesAvailable": "Aucune catégorie à afficher.",
     "categoryFallback": "Catégorie",
-    "recentlyViewed": "Récemment consultés",
-    "recentlyViewedHint": "Reprenez là où vous vous êtes arrêté",
+    "recentlyViewed": "Hey {{name}}, vous cherchez toujours ces articles ?",
+    "cartReminderTitle": "Hey {{name}}, vous cherchez toujours ces articles ?",
+    "cartReminderTitleOne": "Hey {{name}}, vous cherchez toujours {{product}} ?",
     "clearRecentlyViewed": "Effacer l'historique",
     "recentBadge": "Récent",
+    "cartReminderCta": "Voir le panier",
+    "cartReminderContinue": "Continuer",
+    "cartBadge": "Dans le panier",
     "exploreMore": "Explorer davantage",
     "exploreMoreHint": "Sélection variée dans plusieurs catégories — pas seulement vos recherches",
     "hero": {
@@ -274,9 +278,35 @@
     "placeholder": "Rechercher un numéro de commande…",
     "submit": "Suivre",
     "viewAllOrders": "Voir mes commandes",
+    "viewAll": "Voir tout",
     "orderIdRequired": "Veuillez entrer un numéro de commande.",
     "signInRequired": "Connectez-vous pour suivre votre commande.",
-    "notFound": "Commande introuvable. Vérifiez le numéro et réessayez."
+    "notFound": "Commande introuvable. Vérifiez le numéro et réessayez.",
+    "recentOrders": "Vos commandes récentes",
+    "loadingOrders": "Chargement de vos commandes…",
+    "noRecentOrders": "Aucune commande sous votre compte pour le moment."
+  },
+  "help": {
+    "intro": "Pour toute demande ou assistance, n'hésitez pas à nous contacter.",
+    "email": "E-mail",
+    "call": "Appel",
+    "whatsapp": "WhatsApp",
+    "whatsappPrefill": "Bonjour le support UZA Bulk, j'ai besoin d'aide.",
+    "offices": "Nos bureaux",
+    "office": {
+      "rwanda": {
+        "region": "Rwanda (siège)",
+        "detail": "Uza Solutions Ltd, Kigali, UNIFY HOUSE 4e étage"
+      },
+      "uganda": {
+        "region": "Ouganda",
+        "detail": "Uza Solutions Ltd, Kampala"
+      },
+      "hongKong": {
+        "region": "Hong Kong",
+        "detail": "Uza Solutions Ltd, Hong Kong"
+      }
+    }
   },
   "assistant": {
     "eyebrow": "Assistant acheteur IA",

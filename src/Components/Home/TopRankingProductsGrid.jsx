@@ -8,6 +8,7 @@ import ROUTES from "../../helpers/routesHelper";
 import { amountConversion, buildProductDetailUrl, getProductImageUrl } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/gurfive.jpg";
 import TranslatedProductName from "../Common/TranslatedProductName";
+import InCartBadge from "../Common/InCartBadge";
 
 const TopRankingProductsGrid = ({ withContainer = true }) => {
   const dispatch = useDispatch();
@@ -18,13 +19,16 @@ const TopRankingProductsGrid = ({ withContainer = true }) => {
   const appConfig = useSelector((s) => s.config.data);
 
   useEffect(() => {
-    if (!items?.length) {
-      dispatch(
-        apiGetHomeTopRankingProducts({
-          limit: 16,
-        })
-      );
-    }
+    if (items?.length) return undefined;
+    const ac = new AbortController();
+    dispatch(
+      apiGetHomeTopRankingProducts({
+        limit: 16,
+        signal: ac.signal,
+        suppressGlobalErrorToast: true,
+      })
+    );
+    return () => ac.abort();
   }, [dispatch, items?.length]);
 
   const resolveTrustText = (item) => {
@@ -61,6 +65,7 @@ const TopRankingProductsGrid = ({ withContainer = true }) => {
               }}
             >
               <div className="new_arrival_media">
+                <InCartBadge product={item} />
                 <img
                   src={getProductImageUrl(item, placeholder)}
                   alt={item?.name || "Product"}

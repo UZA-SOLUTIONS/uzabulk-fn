@@ -51,7 +51,7 @@ const OrderDetailPage = () => {
                   <h5 className="">Order {detail ? "# " + detail?.customOrderId : null}</h5>
                   <div className="d-flex align-items-center justify-content-center gap-2">
                     <Button
-                      className="d-flex align-items-center justify-content-center subscribe_btn"
+                      className="d-flex align-items-center justify-content-center order-detail-action-btn order-detail-action-btn--back"
                       onClick={() => {
                         navigate(isLogin ? ROUTES.MY_ORDERS : ROUTES.HOME);
                       }}
@@ -59,7 +59,7 @@ const OrderDetailPage = () => {
                       Back
                     </Button>
                     {isLogin && cancelStates.includes(detail?.orderStatus) ? (
-                      <Button className="d-flex align-items-center justify-content-center subscribe_btn">
+                      <Button className="d-flex align-items-center justify-content-center order-detail-action-btn order-detail-action-btn--cancel">
                         Cancel Order
                       </Button>
                     ) : null}

@@ -40,25 +40,44 @@ export default function Header() {
   const [searchParams] = useSearchParams();
   const imageSearchInputRef = useRef(null);
   const localPreviewRef = useRef("");
+  const navStripHiddenRef = useRef(false);
 
   const imageFromQuery = searchParams.get("image") || "";
   const activeImagePreview = localImagePreview || readImageSearchBlobPreview() || "";
 
   useLayoutEffect(() => {
     const readY = () => window.scrollY ?? document.documentElement.scrollTop ?? 0;
+    // Hysteresis: hide past this, show again only near the top (avoids bounce + keeps category strip sticky).
+    const SHOW_BELOW = 16;
+    const HIDE_ABOVE = 80;
     let rafId = 0;
-    const syncScrolled = () => {
-      const next = readY() > 4;
-      setIsScrolled((prev) => (prev === next ? prev : next));
+
+    const applyHidden = (hidden) => {
+      if (navStripHiddenRef.current === hidden) return;
+      navStripHiddenRef.current = hidden;
+      setIsScrolled(hidden);
     };
+
+    const syncNavStrip = () => {
+      const y = readY();
+      if (y <= SHOW_BELOW) {
+        applyHidden(false);
+        return;
+      }
+      if (y >= HIDE_ABOVE) {
+        applyHidden(true);
+      }
+    };
+
     const onScroll = () => {
       if (rafId) return;
       rafId = requestAnimationFrame(() => {
         rafId = 0;
-        syncScrolled();
+        syncNavStrip();
       });
     };
-    syncScrolled();
+
+    syncNavStrip();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       if (rafId) cancelAnimationFrame(rafId);

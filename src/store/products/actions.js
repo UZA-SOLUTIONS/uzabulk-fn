@@ -12,6 +12,12 @@ import { PRODUCTS } from "../../helpers/urlHelper";
 const hasNetworkConnection = () =>
   typeof navigator === "undefined" || navigator.onLine !== false;
 
+const isRequestAborted = (error) =>
+  error?.code === "ERR_CANCELED"
+  || error?.name === "CanceledError"
+  || error?.name === "AbortError"
+  || error?.payload?.aborted === true;
+
 const getProducts = (url) => async (query, Thunk) => {
   try {
     if (!hasNetworkConnection()) {
@@ -24,6 +30,9 @@ const getProducts = (url) => async (query, Thunk) => {
       throw new Error(res.message);
     }
   } catch (error) {
+    if (isRequestAborted(error)) {
+      return Thunk.rejectWithValue({ aborted: true });
+    }
     return Thunk.rejectWithValue(
       error.message || "Something went wrong, please try again later."
     );

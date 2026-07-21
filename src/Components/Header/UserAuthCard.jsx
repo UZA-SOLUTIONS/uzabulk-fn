@@ -11,12 +11,14 @@ import {
 } from "reactstrap";
 
 import { apiGetCartCount } from "../../store/cart/actions";
-import { apiGetProfile } from "../../store/auth/actions";
+import { apiGetProfile, apiLogout } from "../../store/auth/actions";
+import { setCouponCode } from "../../store/cart/slice";
 import { ICON_CART, ICON_USER_SECONDARY } from "../../assets/svg";
 import { formatNumber } from "../../helpers/commonHelper";
 import { getLanguageMeta, setSiteLanguage } from "../../helpers/languageHelper";
 import { SUPPORTED_LANGUAGES } from "../../i18n";
 import LoginPopup from "../LoginPopup";
+import LogoutPopup from "../Modals/LogoutPopup";
 import UserAccountAvatar from "./UserAccountAvatar";
 import ROUTES from "../../helpers/routesHelper";
 
@@ -207,12 +209,22 @@ export default function UserAuthCard({
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
-  const { isLogin, user, profile } = useSelector((s) => s.auth);
+  const { isLogin, user, profile, isLoading } = useSelector((s) => s.auth);
   const cartItems = useSelector((s) => s.cart.count);
   const accountUser = profile || user;
+  const accountDisplayName = String(
+    accountUser?.name || accountUser?.hintName || accountUser?.email || ""
+  ).trim() || t("nav.account");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState("signin");
+  const [showLogoutPopup, setShowLogoutPopup] = useState(false);
   const resolvedSignupLabel = signupButtonLabel || t("nav.getStarted");
+
+  const handleLogout = () => {
+    setShowLogoutPopup(false);
+    dispatch(setCouponCode());
+    dispatch(apiLogout());
+  };
 
   const isMockupBottom = navbarPlacement === "mockupBottom";
   const isMockupTop = navbarPlacement === "mockupTop";
@@ -299,9 +311,52 @@ export default function UserAuthCard({
             />
           </>
         ) : (
-          <Link to={ROUTES.MY_ORDERS} className="navbar-mockup-account-link navbar-mockup-account-link--avatar" aria-label={t("nav.myAccount")}>
-            <UserAccountAvatar user={accountUser} size={34} className="navbar-mockup-account-avatar" />
-          </Link>
+          <UncontrolledDropdown className="navbar-mockup-account-dropdown">
+            <DropdownToggle
+              caret={false}
+              tag="button"
+              type="button"
+              className="navbar-mockup-account-pill"
+              aria-label={accountDisplayName}
+            >
+              <span className="navbar-mockup-account-pill__avatar-wrap">
+                <UserAccountAvatar
+                  user={accountUser}
+                  size={28}
+                  className="navbar-mockup-account-avatar"
+                />
+              </span>
+              <span className="navbar-mockup-account-pill__right">
+                <span className="navbar-mockup-account-pill__label">{accountDisplayName}</span>
+                <span className="navbar-mockup-account-pill__chevron" aria-hidden>
+                  {ICON_CHEVRON}
+                </span>
+              </span>
+            </DropdownToggle>
+            <DropdownMenu end className="account-compact-menu navbar-mockup-account-menu">
+              <DropdownItem tag={Link} to={ROUTES.PROFILE}>
+                {t("account.profile")}
+              </DropdownItem>
+              <DropdownItem tag={Link} to={ROUTES.MY_ORDERS}>
+                {t("account.myOrders")}
+              </DropdownItem>
+              <DropdownItem divider />
+              <DropdownItem
+                tag="button"
+                type="button"
+                className="navbar-mockup-account-menu__logout"
+                onClick={() => setShowLogoutPopup(true)}
+              >
+                {t("account.logout")}
+              </DropdownItem>
+            </DropdownMenu>
+            <LogoutPopup
+              show={showLogoutPopup}
+              onhide={() => setShowLogoutPopup(false)}
+              onLogout={handleLogout}
+              isLoggingOut={isLoading}
+            />
+          </UncontrolledDropdown>
         )}
       </div>
     );
@@ -388,7 +443,7 @@ export default function UserAuthCard({
                   <div className="d-flex align-items-center">
                     <UserAccountAvatar user={accountUser} size={36} className="me-2" />
                     <div className="card_content">
-                      <h5>{t("nav.myAccount")}</h5>
+                      <h5>{accountDisplayName}</h5>
                     </div>
                   </div>
                 </Link>

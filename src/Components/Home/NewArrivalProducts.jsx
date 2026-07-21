@@ -14,6 +14,7 @@ import { apiGetHomeNewArrivalProducts } from "../../store/products/actions";
 
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
+import InCartBadge from "../Common/InCartBadge";
 import SupplierVerificationBadge from "../Products/SupplierVerificationBadge";
 import TranslatedProductName from "../Common/TranslatedProductName";
 import { getMainContentWidth } from "../../helpers/scrollRootHelper";
@@ -53,18 +54,14 @@ const isTestProduct = (item) => {
 };
 
 const HOT_ICON = (
-  <svg
+  <img
     className="home_hot_deals_icon"
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    aria-hidden
-  >
-    <path
-      fill="currentColor"
-      d="M12 23c-3.9 0-7-2.9-7-6.9 0-2.2 1-4.2 2.7-5.8.3-.3.8-.2.9.2.3 1.3.9 2.4 1.8 3.2.2.2.5.1.6-.1.6-1.4 1.7-4.2 1.3-7.4-.1-.6.6-1 .1-.5C16.6 8.4 19 11.6 19 15.2c0 4.3-3.1 7.8-7 7.8zm0-2c2.8 0 5-2.5 5-5.8 0-2.2-1.3-4.3-3.3-5.7.1 2.2-.5 4.5-1.8 6.2-1 .1-1.7-.6-2-1.5-.9.9-1.5 2.1-1.5 3.4C8.4 19.1 10 21 12 21z"
-    />
-  </svg>
+    src="/fire.gif"
+    alt=""
+    width={22}
+    height={22}
+    decoding="async"
+  />
 );
 
 export default function NewArrivalProducts() {
@@ -121,14 +118,17 @@ export default function NewArrivalProducts() {
   }, []);
 
   useEffect(() => {
+    const ac = new AbortController();
     dispatch(
       apiGetHomeNewArrivalProducts({
         limit: HOME_HOT_DEALS_LIMIT,
         refresh: feedRefresh,
         homeFeed: true,
         suppressGlobalErrorToast: true,
+        signal: ac.signal,
       })
     );
+    return () => ac.abort();
   }, [dispatch, feedRefresh]);
 
   const showRowSkeleton = isLoading && !displayItems.length;
@@ -175,6 +175,7 @@ export default function NewArrivalProducts() {
                   className="new_arrival_img new_arrival_product_card text-start text-decoration-none d-block text-reset"
                 >
                   <div className="new_arrival_media">
+                    <InCartBadge product={item} />
                     <img
                       src={getProductImageUrl(item, placeholder)}
                       alt={item?.name || "Product"}

@@ -60,13 +60,17 @@ export default function TopRankingProducts() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!items?.length)
-      dispatch(
-        apiGetHomeTopRankingProducts({
-          limit: limit,
-        })
-      );
-  }, [dispatch]);
+    if (items?.length) return undefined;
+    const ac = new AbortController();
+    dispatch(
+      apiGetHomeTopRankingProducts({
+        limit: limit,
+        signal: ac.signal,
+        suppressGlobalErrorToast: true,
+      })
+    );
+    return () => ac.abort();
+  }, [dispatch, items?.length, limit]);
 
   const settings = {
     dots: false,

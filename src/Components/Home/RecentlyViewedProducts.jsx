@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 
 import ROUTES from "../../helpers/routesHelper";
@@ -9,11 +9,16 @@ import { apiDelete, apiGet } from "../../helpers/apiHelper";
 import {
   amountConversion,
   buildProductDetailUrl,
+  getProductDedupeKey,
   getProductImageUrl,
+  mergeUniqueProducts,
   normalizeHomeCatalogProducts,
 } from "../../helpers/commonHelper";
+import { apiGetCartList } from "../../store/cart/actions";
+import useCartProductKeys from "../../hooks/useCartProductKeys";
 import placeholder from "../../assets/images/default_name.webp";
 import UXSkeleton from "../Common/UXSkeleton";
+import InCartBadge from "../Common/InCartBadge";
 import SupplierVerificationBadge from "../Products/SupplierVerificationBadge";
 import TranslatedProductName from "../Common/TranslatedProductName";
 import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefetch";
@@ -32,15 +37,32 @@ const isTestProduct = (item) => {
   return !name || name.includes("test");
 };
 
+function cartProductsFromList(cartList) {
+  const products = [];
+  (Array.isArray(cartList) ? cartList : []).forEach((cart) => {
+    const product = cart?.product;
+    if (!product || isTestProduct(product)) return;
+    products.push(product);
+  });
+  return products;
+}
+
+/** Combined cart + recently viewed row: "Hey {name}, still looking for these?" */
 export default function RecentlyViewedProducts() {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const isLogin = useSelector((s) => s.auth.isLogin);
+  const user = useSelector((s) => s.auth.profile || s.auth.user);
   const userId = useSelector((s) => s.auth.user?._id || s.auth.user?.id || "");
+  const cartCount = useSelector((s) => s.cart.count);
+  const cartList = useSelector((s) => s.cart.cartList);
+  const isCartLoading = useSelector((s) => s.cart.isLoading);
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
+  const { isInCart } = useCartProductKeys();
 
-  const [items, setItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [recentItems, setRecentItems] = useState([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [skeletonSlots, setSkeletonSlots] = useState(() =>
     typeof window !== "undefined" ? rowSkeletonSlotCount(window.innerWidth) : 8
@@ -51,15 +73,25 @@ export default function RecentlyViewedProducts() {
     [skeletonSlots]
   );
 
-  const displayItems = useMemo(
-    () => normalizeHomeCatalogProducts(items).filter((item) => !isTestProduct(item)).slice(0, fetchLimit),
-    [items, fetchLimit]
-  );
+  const cartProducts = useMemo(() => cartProductsFromList(cartList), [cartList]);
+
+  const displayItems = useMemo(() => {
+    const cartFirst = mergeUniqueProducts([], cartProducts);
+    const recent = normalizeHomeCatalogProducts(recentItems).filter((item) => !isTestProduct(item));
+    return mergeUniqueProducts(cartFirst, recent).slice(0, fetchLimit);
+  }, [cartProducts, recentItems, fetchLimit]);
 
   useFrenchTranslationPrefetch(displayItems);
 
+  useEffect(() => {
+    if (!isLogin) return;
+    if (Number(cartCount) <= 0 && !cartList?.length) return;
+    if (cartList?.length) return;
+    dispatch(apiGetCartList({}));
+  }, [isLogin, cartCount, cartList?.length, dispatch]);
+
   const loadRecentlyViewed = useCallback(async (signal) => {
-    setIsLoading(true);
+    setIsLoadingRecent(true);
     try {
       const res = await apiGet(PRODUCTS.RECOMMENDATIONS.RECENTLY_VIEWED, {
         limit: fetchLimit,
@@ -69,15 +101,15 @@ export default function RecentlyViewedProducts() {
       if (signal?.aborted) return;
       if (res?.status === "success") {
         const batch = Array.isArray(res.data?.items) ? res.data.items : [];
-        setItems(batch);
+        setRecentItems(batch);
       } else {
-        setItems([]);
+        setRecentItems([]);
       }
     } catch (e) {
       if (signal?.aborted || e?.name === "CanceledError" || e?.code === "ERR_CANCELED") return;
-      setItems([]);
+      setRecentItems([]);
     } finally {
-      if (!signal?.aborted) setIsLoading(false);
+      if (!signal?.aborted) setIsLoadingRecent(false);
     }
   }, [fetchLimit]);
 
@@ -90,10 +122,9 @@ export default function RecentlyViewedProducts() {
 
   useEffect(() => {
     if (!isLogin || !userId) {
-      setItems([]);
+      setRecentItems([]);
       return undefined;
     }
-
     const ac = new AbortController();
     void loadRecentlyViewed(ac.signal);
     return () => ac.abort();
@@ -106,7 +137,7 @@ export default function RecentlyViewedProducts() {
       await apiDelete(PRODUCTS.RECOMMENDATIONS.RECENTLY_VIEWED, {
         suppressGlobalErrorToast: true,
       });
-      setItems([]);
+      setRecentItems([]);
     } catch {
       /* ignore */
     } finally {
@@ -116,33 +147,48 @@ export default function RecentlyViewedProducts() {
 
   if (!isLogin || !userId) return null;
 
-  const showRowSkeleton = isLoading && !displayItems.length;
-  const showEmpty = !isLoading && !displayItems.length;
+  const showRowSkeleton =
+    (isLoadingRecent || isCartLoading)
+    && !displayItems.length
+    && (Number(cartCount) > 0 || isLoadingRecent);
 
-  if (showEmpty) return null;
+  if (!showRowSkeleton && !displayItems.length) return null;
+
+  const firstName =
+    String(user?.hintName || user?.name || "")
+      .trim()
+      .split(/\s+/)[0]
+      .toUpperCase() || t("nav.account").toUpperCase();
+
+  const hasCartProducts = cartProducts.length > 0;
 
   return (
-    <div className="home_feed_section_offset home_recently_viewed_section px-3 w-100">
+    <div className="home_feed_section_offset home_recently_viewed_section home_continue_looking_section px-3 w-100">
       <section
-        className="home_new_arrivals_panel home_recently_viewed_panel"
-        aria-labelledby="home-recently-viewed-title"
+        className="home_new_arrivals_panel home_recently_viewed_panel home_continue_looking_panel"
+        aria-labelledby="home-continue-looking-title"
         aria-busy={showRowSkeleton || isClearing}
       >
         <div className="home_new_arrivals_panel__head home_recently_viewed_panel__head">
           <div className="home_recently_viewed_panel__titles">
-            <h2 id="home-recently-viewed-title" className="home_new_arrivals_panel__title">
-              {t("home.recentlyViewed")}
+            <h2 id="home-continue-looking-title" className="home_new_arrivals_panel__title">
+              {t("home.cartReminderTitle", { name: firstName })}
             </h2>
-            <span className="home_recently_viewed_panel__hint">{t("home.recentlyViewedHint")}</span>
           </div>
-          <button
-            type="button"
-            className="home_recently_viewed_clear_btn"
-            onClick={handleClearHistory}
-            disabled={isClearing || isLoading}
-          >
-            {t("home.clearRecentlyViewed")}
-          </button>
+          {hasCartProducts ? (
+            <Link to={ROUTES.CART} className="home_cart_reminder_cta">
+              {t("home.cartReminderCta")}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="home_recently_viewed_clear_btn"
+              onClick={handleClearHistory}
+              disabled={isClearing || isLoadingRecent}
+            >
+              {t("home.clearRecentlyViewed")}
+            </button>
+          )}
         </div>
 
         {showRowSkeleton ? (
@@ -152,10 +198,11 @@ export default function RecentlyViewedProducts() {
         ) : (
           <HomeHorizontalScrollRow
             className="home_new_arrivals_row home_recently_viewed_row"
-            depKey={displayItems.length}
+            depKey={displayItems.map((item) => getProductDedupeKey(item)).join("|")}
           >
             {displayItems.map((item, idx) => {
               const productLink = buildProductDetailUrl(item) || ROUTES.PRODUCT_LISTING;
+              const inCart = isInCart(item);
               return (
                 <Link
                   key={item?._id || item?.id || idx}
@@ -165,7 +212,9 @@ export default function RecentlyViewedProducts() {
                   className="new_arrival_img new_arrival_product_card home_recently_viewed_card text-start text-decoration-none d-block text-reset"
                 >
                   <div className="new_arrival_media">
-                    <span className="home_recently_viewed_badge">{t("home.recentBadge")}</span>
+                    {inCart ? <InCartBadge product={item} /> : (
+                      <span className="home_recently_viewed_badge">{t("home.recentBadge")}</span>
+                    )}
                     <img
                       src={getProductImageUrl(item, placeholder)}
                       alt={item?.name || "Product"}
@@ -180,7 +229,9 @@ export default function RecentlyViewedProducts() {
                     </p>
                     <div className="home_product_footer">
                       <SupplierVerificationBadge item={item} />
-                      <span className="home_product_cta">{t("home.viewDetails")}</span>
+                      <span className="home_product_cta">
+                        {inCart ? t("home.cartReminderContinue") : t("home.viewDetails")}
+                      </span>
                     </div>
                   </div>
                 </Link>

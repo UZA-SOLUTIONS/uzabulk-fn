@@ -56,13 +56,15 @@ const AddAddressModal = (props) => {
             dispatch(
               apiGetAddresses({
                 limit: 100,
-                skip: 0,
+                skip: 1,
               })
             );
             props.setAddressEditId?.(null);
             handleHide?.();
-            if (props.activeKey === "0") dispatch(setBillingAddress(res.data));
-            else if (props.activeKey === "1") dispatch(setShippingAddress(res.data));
+            if (res?.data) {
+              dispatch(setBillingAddress(res.data));
+              dispatch(setShippingAddress(res.data));
+            }
           }}
         />
       </Modal.Body>

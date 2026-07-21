@@ -12,10 +12,8 @@ import Cartpage from "../Pages/Cartpage";
 import Checkoutpage from "../Pages/Checkoutpage";
 import MyOrdersPage from "../Pages/MyOrders";
 import OrderDetailPage from "../Pages/OrderDetail";
-import AddressPage from "../Pages/Address";
 import AddAddressPage from "../Pages/AddAddress";
 import ProfilePage from "../Pages/Profile";
-import ChangePasswordPage from "../Pages/ChangePassword";
 import ForgotPassword from "../Pages/ForgotPassword";
 import Homepage from "../Pages/Home";
 import Blog from "../Pages/Blog";
@@ -57,11 +55,11 @@ export default function MyRouts() {
                 <Route element={<Myaccount />}>
                   <Route path={ROUTES.MY_ORDERS} element={<MyOrdersPage />} />
                   <Route path={ROUTES.ORDER_DETAIL + "/:id"} element={<OrderDetailPage />} />
-                  <Route path={ROUTES.ORDER_ADDRESS} element={<AddressPage />} />
+                  <Route path={ROUTES.ORDER_ADDRESS} element={<Navigate to={ROUTES.PROFILE} replace />} />
                   <Route path={ROUTES.CREATE_ADDRESS + "/:id"} element={<AddAddressPage />} />
                   <Route path={ROUTES.CREATE_ADDRESS + "/"} element={<AddAddressPage />} />
                   <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
-                  <Route path={ROUTES.CHANGE_PASSWORD} element={<ChangePasswordPage />} />
+                  <Route path={ROUTES.CHANGE_PASSWORD} element={<Navigate to={ROUTES.PROFILE} replace />} />
                 </Route>
 
               </>

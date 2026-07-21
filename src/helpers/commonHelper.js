@@ -409,9 +409,48 @@ export const resolveMediaUrl = (value) => {
   return `${origin}/${unquoted.replace(/^\/+/, "")}`;
 };
 
-export const getUserAvatarUrl = (user) => {
+/**
+ * Prefer a crisp Google profile photo URL for the given display size (retina-aware).
+ */
+export const upgradeGoogleProfilePhotoUrl = (rawUrl, displayPx = 96) => {
+  const url = String(rawUrl || "").trim();
+  if (!url) return "";
+  const target = Math.max(200, Math.min(800, Math.round(Number(displayPx) || 96) * 2));
+
+  if (/googleusercontent\.com/i.test(url)) {
+    let next = url;
+    if (/=s\d+-c\b/i.test(next)) {
+      next = next.replace(/=s\d+-c\b/i, `=s${target}-c`);
+    } else if (/=s\d+\b/i.test(next)) {
+      next = next.replace(/=s\d+\b/i, `=s${target}`);
+    } else if (/[?&]sz=\d+/i.test(next)) {
+      next = next.replace(/([?&]sz=)\d+/i, `$1${target}`);
+    } else {
+      next += (next.includes("?") ? "&" : "?") + `sz=${target}`;
+    }
+    return next.startsWith("//") ? `https:${next}` : next;
+  }
+
+  return url.startsWith("//") ? `https:${url}` : url;
+};
+
+export const getUserAvatarUrl = (user, { displayPx = 96 } = {}) => {
   if (!user) return "";
-  return resolveMediaUrl(user.profileImage);
+  const fromFile = resolveMediaUrl(user.profileImage);
+  if (fromFile) return fromFile;
+
+  // Google OAuth stores the photo URL on the user document.
+  const googlePic = String(
+    user.google_picture
+    || user.googlePicture
+    || user.picture
+    || ""
+  ).trim();
+  if (!googlePic) return "";
+  if (!/^(https?:|data:|blob:)/i.test(googlePic) && !googlePic.startsWith("//")) {
+    return resolveMediaUrl(googlePic);
+  }
+  return upgradeGoogleProfilePhotoUrl(googlePic, displayPx);
 };
 
 export const getUserInitials = (user) => {

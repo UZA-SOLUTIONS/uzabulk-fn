@@ -18,15 +18,19 @@ export default function BestSalerProduct() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!items?.length)
-      dispatch(
-        apiGetHomeBestSalerProducts({
-          limit: 10,
-          fieldName: "bestSeller",
-          fieldValue: true,
-        })
-      );
-  }, [dispatch]);
+    if (items?.length) return undefined;
+    const ac = new AbortController();
+    dispatch(
+      apiGetHomeBestSalerProducts({
+        limit: 10,
+        fieldName: "bestSeller",
+        fieldValue: true,
+        signal: ac.signal,
+        suppressGlobalErrorToast: true,
+      })
+    );
+    return () => ac.abort();
+  }, [dispatch, items?.length]);
 
   const settings = {
     dots: false,

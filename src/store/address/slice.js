@@ -46,14 +46,14 @@ export const slice = createSlice({
     setDefaultAddress: (state) => {
       const items = state.addresses?.items || [];
       if (!items.length) return;
-      const preferred = items.find((address) => address.default) || items[0];
-      if (!preferred) return;
-      if (!state.billingAddress.detail?._id) {
-        state.billingAddress.detail = preferred;
-      }
-      if (!state.shippingAddress.detail?._id) {
-        state.shippingAddress.detail = preferred;
-      }
+      // Prefer the marked default address; otherwise use the first saved address.
+      const preferred =
+        items.find((address) => address?.default === true)
+        || items.find((address) => address?.isDefault === true)
+        || items[0];
+      if (!preferred?._id) return;
+      state.billingAddress.detail = preferred;
+      state.shippingAddress.detail = preferred;
     },
   },
   extraReducers: (builder) => {

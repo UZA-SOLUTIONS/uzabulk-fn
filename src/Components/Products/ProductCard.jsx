@@ -10,6 +10,7 @@ import {
 } from "../../helpers/commonHelper";
 import placeholder from "../../assets/images/default_name.webp";
 import SupplierVerificationBadge from "./SupplierVerificationBadge";
+import InCartBadge from "../Common/InCartBadge";
 import useProductDisplayName from "../../hooks/useProductDisplayName";
 
 export default function ProductCard({ item, onOpen, showVisualMatch = false }) {
@@ -47,6 +48,7 @@ export default function ProductCard({ item, onOpen, showVisualMatch = false }) {
           className="img-fluid"
           loading="lazy"
         />
+        <InCartBadge product={item} />
         {isOut ? (
           <span className="products_listing_stock_badge">{t("product.outOfStock")}</span>
         ) : null}

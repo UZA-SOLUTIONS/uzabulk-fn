@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +44,8 @@ const Cartpage = () => {
 
   const [delId, setDelId] = useState("");
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const checkoutAbortRef = useRef(null);
+  const checkoutTimerRef = useRef(null);
 
   const navigate = useNavigate();
 
@@ -56,7 +58,6 @@ const Cartpage = () => {
     return cartList.map((c) => c._id);
   }
 
-
   const handleCheckout = (coupon = "", callback = (res) => {
     if (res.status === "success" && !res.data?.couponError) {
       dispatch(setCouponCode(res.data?.coupon));
@@ -67,6 +68,10 @@ const Cartpage = () => {
   }) => {
     const ids = selectedCartList();
     if (ids?.length) {
+      if (checkoutAbortRef.current) checkoutAbortRef.current.abort();
+      const ac = new AbortController();
+      checkoutAbortRef.current = ac;
+
       let data = {
         cart_ids: ids,
         shipping_address: shippingAddress?._id,
@@ -78,6 +83,7 @@ const Cartpage = () => {
         apiCheckout({
           data,
           callback,
+          signal: ac.signal,
         })
       );
     }
@@ -93,14 +99,60 @@ const Cartpage = () => {
 
     return () => {
       dispatch(clearSelectedCart());
+      if (checkoutAbortRef.current) checkoutAbortRef.current.abort();
+      if (checkoutTimerRef.current) window.clearTimeout(checkoutTimerRef.current);
     }
   }, [dispatch, isLogin]);
-  // }, [dispatch, currentCurrency?.code]);
 
   useEffect(() => {
-    if (!isLogin || isLoading) return;
-    handleCheckout(cartCoupon || "");
-  }, [cartList, isLoading, isLogin]);
+    if (!isLogin || isLoading) return undefined;
+    if (checkoutTimerRef.current) window.clearTimeout(checkoutTimerRef.current);
+    // Debounce rapid qty changes so we don't stack checkout calls.
+    checkoutTimerRef.current = window.setTimeout(() => {
+      handleCheckout(cartCoupon || "");
+    }, 250);
+    return () => {
+      if (checkoutTimerRef.current) window.clearTimeout(checkoutTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh when cart changes
+  }, [cartList, isLoading, isLogin, cartCoupon]);
+
+  const cartFallbackSubtotal = cartList.reduce(
+    (sum, cart) =>
+      sum +
+      (cart.items || []).reduce((lineSum, item) => {
+        const unit = Number(item.unitPrice) || 0;
+        const qty = Number(item.quantity) || 0;
+        return lineSum + (Number(item.amount) || unit * qty);
+      }, 0),
+    0
+  );
+  const cartFallbackItems = cartList.reduce(
+    (sum, cart) =>
+      sum + (cart.items || []).reduce((s, i) => s + (Number(i.quantity) || 0), 0),
+    0
+  );
+  const taxPercent = Number(orderDetails?.taxAmount);
+  const resolvedTaxPercent = Number.isFinite(taxPercent) ? taxPercent : 2;
+  const serverSubTotal = Number(orderDetails?.subTotal) || 0;
+  const useServerTotals =
+    !!orderDetails &&
+    !loadingOrder &&
+    Math.abs(serverSubTotal - cartFallbackSubtotal) < 0.02;
+  const displaySubTotal = useServerTotals ? serverSubTotal : cartFallbackSubtotal;
+  const displayTax = useServerTotals
+    ? Number(orderDetails?.tax) || 0
+    : (displaySubTotal * resolvedTaxPercent) / 100;
+  const displayDiscount =
+    orderDetails?.coupon && Number(orderDetails?.couponAmount)
+      ? Number(orderDetails.couponAmount)
+      : 0;
+  const displayOrderTotal = useServerTotals
+    ? Number(orderDetails?.orderTotal) || 0
+    : Math.max(0, displaySubTotal + displayTax - (orderDetails?.coupon ? displayDiscount : 0));
+  const displayTotalItems = useServerTotals
+    ? Number(orderDetails?.totalItems) || cartFallbackItems
+    : cartFallbackItems;
 
   if (!isLogin) {
     return (
@@ -127,7 +179,7 @@ const Cartpage = () => {
       <Container>
         <Row>
           <Col lg="12" className="text-start">
-            <h2 className="fw-bold mt-0 mb-4">{t("cart.title")}</h2>
+            <h2 className="cart_page_title mt-0 mb-3">{t("cart.title")}</h2>
           </Col>
         </Row>
         {cartList?.length ? (
@@ -145,7 +197,7 @@ const Cartpage = () => {
                         {cart?.items?.map((item, idx) => {
                           return (
                             <div className="productd_wrap mb-2" key={idx}>
-                              <div className="productimmg_side w-25">
+                              <div className="productimmg_side flex-shrink-0">
                                 <div className="product_img me-lg-4 me-3">
                                   <img
                                     src={cart?.product?.featured_image || placeholder}
@@ -162,7 +214,7 @@ const Cartpage = () => {
                                 </div>
                               </div>
 
-                              <div className="d-flex justify-content-between gap-4 w-75">
+                              <div className="d-flex justify-content-between gap-4 flex-grow-1 min-w-0">
                                 <div>
                                   <div>
                                     <h2 className="fs-6 mb-0">
@@ -298,36 +350,31 @@ const Cartpage = () => {
 
                 <Form>
                   <div className="car_total mt-3 text-start position-relative overflow-hidden">
-                    {loadingOrder && <BlockContent />}
                     <h5>{t("cart.priceDetails")}</h5>
                     <p className="text-danger">{message}</p>
                     <ul className="p-0">
                       <li>
                         <p>{t("cart.totalItems")}</p>
-                        <p>{formatNumber(orderDetails?.totalItems || 0)}</p>
+                        <p>{formatNumber(displayTotalItems)}</p>
                       </li>
-                      {orderDetails ? (
-                        <>
-                          <li>
-                            <p>{t("cart.subTotal")}</p>
-                            <p>{currentCurrency?.symbol} {formatNumber(orderDetails?.subTotal || 0)}</p>
-                          </li>
-                          <li>
-                            <p>{t("cart.taxAmount", { percent: orderDetails.taxAmount })}</p>
-                            <p>{currentCurrency?.symbol} {formatNumber(orderDetails?.tax || 0)}</p>
-                          </li>
-                          {orderDetails?.coupon ? (
-                            <li>
-                              <p>{t("cart.couponDiscount")}</p>
-                              <p className="text-success">-{currentCurrency?.symbol} {formatNumber(orderDetails.couponAmount)}</p>
-                            </li>
-                          ) : null}
-                        </>
+                      <li>
+                        <p>{t("cart.subTotal")}</p>
+                        <p>{currentCurrency?.symbol} {formatNumber(displaySubTotal)}</p>
+                      </li>
+                      <li>
+                        <p>{t("cart.taxAmount", { percent: resolvedTaxPercent })}</p>
+                        <p>{currentCurrency?.symbol} {formatNumber(displayTax)}</p>
+                      </li>
+                      {orderDetails?.coupon ? (
+                        <li>
+                          <p>{t("cart.couponDiscount")}</p>
+                          <p className="text-success">-{currentCurrency?.symbol} {formatNumber(displayDiscount)}</p>
+                        </li>
                       ) : null}
                       <li>
                         <p className="fs-6 fw-medium mt-3">{t("cart.totalAmount")}</p>
                         <p className="fs-6 fw-medium mt-3">
-                          {currentCurrency?.symbol} {formatNumber(orderDetails?.orderTotal || 0)}
+                          {currentCurrency?.symbol} {formatNumber(displayOrderTotal)}
                         </p>
                       </li>
                     </ul>

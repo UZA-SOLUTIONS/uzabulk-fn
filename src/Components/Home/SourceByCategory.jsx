@@ -29,6 +29,9 @@ import UXSkeleton from "../Common/UXSkeleton";
 const MAX_CATEGORIES = 16;
 const IMAGE_FETCH_CONCURRENCY = 2;
 const SKELETON_CARD_COUNT = 6;
+/** Slow continuous auto-slide speed (px/sec). */
+const AUTO_SLIDE_PX_PER_SEC = 34;
+const AUTO_RESUME_MS = 1800;
 
 const Chevron = ({ dir }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -123,8 +126,13 @@ export default function SourceByCategory() {
   const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
   const [imageTick, setImageTick] = useState(0);
   const trackRef = useRef(null);
-  const [canPrev, setCanPrev] = useState(false);
-  const [canNext, setCanNext] = useState(false);
+  const marqueeRef = useRef(null);
+  const [canPrev, setCanPrev] = useState(true);
+  const [canNext, setCanNext] = useState(true);
+  const autoPausedRef = useRef(false);
+  const resumeTimerRef = useRef(0);
+  const slideOffsetRef = useRef(0);
+  const halfWidthRef = useRef(0);
 
   useEffect(() => {
     if (!resolvedLevel1?.length) {
@@ -282,33 +290,129 @@ export default function SourceByCategory() {
   }, [categoryIdsKey, requestCategoryImage]);
 
   const syncArrows = useCallback(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
-    const max = scrollWidth - clientWidth;
-    setCanPrev(scrollLeft > 2);
-    setCanNext(max > 2 && scrollLeft < max - 2);
+    const track = trackRef.current;
+    const marquee = marqueeRef.current;
+    if (!track || !marquee) return;
+    const canScroll = marquee.scrollWidth > track.clientWidth + 4;
+    setCanPrev(canScroll);
+    setCanNext(canScroll);
+    halfWidthRef.current = marquee.scrollWidth / 2;
   }, []);
 
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    syncArrows();
-    el.addEventListener("scroll", syncArrows, { passive: true });
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncArrows) : null;
-    ro?.observe(el);
-    return () => {
-      el.removeEventListener("scroll", syncArrows);
-      ro?.disconnect();
-    };
-  }, [syncArrows, categoriesToShow.length, imageTick]);
+  const pauseAutoSlide = useCallback((resumeAfterMs = AUTO_RESUME_MS) => {
+    autoPausedRef.current = true;
+    if (resumeTimerRef.current) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = 0;
+    }
+    if (resumeAfterMs > 0) {
+      resumeTimerRef.current = window.setTimeout(() => {
+        autoPausedRef.current = false;
+        resumeTimerRef.current = 0;
+      }, resumeAfterMs);
+    }
+  }, []);
 
-  const scrollByDir = (dir) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const step = Math.max(240, Math.floor(el.clientWidth * 0.65));
-    el.scrollBy({ left: dir === "next" ? step : -step, behavior: "smooth" });
-  };
+  const applyMarqueeOffset = useCallback((offset) => {
+    const marquee = marqueeRef.current;
+    if (!marquee) return;
+    const half = halfWidthRef.current || marquee.scrollWidth / 2;
+    let next = offset;
+    if (half > 0) {
+      while (next >= half) next -= half;
+      while (next < 0) next += half;
+    }
+    slideOffsetRef.current = next;
+    marquee.style.transform = `translate3d(${-next}px, 0, 0)`;
+  }, []);
+
+  const scrollByDir = useCallback((dir) => {
+    pauseAutoSlide();
+    const step = Math.max(240, Math.floor((trackRef.current?.clientWidth || 320) * 0.65));
+    applyMarqueeOffset(slideOffsetRef.current + (dir === "next" ? step : -step));
+  }, [pauseAutoSlide, applyMarqueeOffset]);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    const marquee = marqueeRef.current;
+    if (!track || !marquee) return undefined;
+    syncArrows();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(syncArrows) : null;
+    ro?.observe(track);
+    ro?.observe(marquee);
+    return () => ro?.disconnect();
+  }, [syncArrows, categoriesToShow.length, imageTick, categoryIdsKey]);
+
+  // Infinite slow auto-slide via transform (more reliable than scrollLeft).
+  useEffect(() => {
+    const track = trackRef.current;
+    const marquee = marqueeRef.current;
+    if (!track || !marquee || categoriesToShow.length < 2) return undefined;
+
+    const prefersReduced =
+      typeof window !== "undefined"
+      && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (prefersReduced) return undefined;
+
+    slideOffsetRef.current = 0;
+    marquee.style.transform = "translate3d(0, 0, 0)";
+    syncArrows();
+
+    let rafId = 0;
+    let lastTs = performance.now();
+
+    const tick = (now) => {
+      rafId = requestAnimationFrame(tick);
+      const dt = Math.min(0.05, (now - lastTs) / 1000);
+      lastTs = now;
+
+      if (autoPausedRef.current || document.hidden) return;
+
+      const half = halfWidthRef.current || marquee.scrollWidth / 2;
+      if (!(half > track.clientWidth + 4)) return;
+      halfWidthRef.current = half;
+
+      applyMarqueeOffset(slideOffsetRef.current + AUTO_SLIDE_PX_PER_SEC * dt);
+    };
+
+    rafId = requestAnimationFrame(tick);
+
+    const onPointerEnter = () => pauseAutoSlide(0);
+    const onPointerLeave = () => pauseAutoSlide(AUTO_RESUME_MS);
+    const onPointerDown = () => pauseAutoSlide();
+    const onFocusIn = () => pauseAutoSlide(0);
+    const onFocusOut = () => pauseAutoSlide(AUTO_RESUME_MS);
+    const onVisibility = () => {
+      if (document.hidden) autoPausedRef.current = true;
+      else pauseAutoSlide(400);
+    };
+
+    track.addEventListener("pointerenter", onPointerEnter);
+    track.addEventListener("pointerleave", onPointerLeave);
+    track.addEventListener("pointerdown", onPointerDown);
+    track.addEventListener("focusin", onFocusIn);
+    track.addEventListener("focusout", onFocusOut);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      if (resumeTimerRef.current) {
+        window.clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = 0;
+      }
+      track.removeEventListener("pointerenter", onPointerEnter);
+      track.removeEventListener("pointerleave", onPointerLeave);
+      track.removeEventListener("pointerdown", onPointerDown);
+      track.removeEventListener("focusin", onFocusIn);
+      track.removeEventListener("focusout", onFocusOut);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [categoriesToShow.length, categoryIdsKey, pauseAutoSlide, applyMarqueeOffset, syncArrows]);
+
+  const loopCategories = useMemo(() => {
+    if (categoriesToShow.length < 2) return categoriesToShow;
+    return [...categoriesToShow, ...categoriesToShow];
+  }, [categoriesToShow]);
 
   const hasAnyCategories = (resolvedLevel1?.length || 0) > 0 || (resolvedLevel2?.length || 0) > 0;
   const waitingForCategories = categoriesLoading && !hasAnyCategories;
@@ -351,10 +455,14 @@ export default function SourceByCategory() {
   return (
     <section className="home_source_by_category py-3" aria-labelledby="home-source-by-category-title">
       <h2 id="home-source-by-category-title" className="home_source_by_category__title">
-        {t("home.sourceByCategory")}
+        {t("home.categoriesForYou")}
       </h2>
 
-      <div className="home_source_by_category__wrap">
+      <div
+        className="home_source_by_category__wrap"
+        onPointerEnter={() => pauseAutoSlide(0)}
+        onPointerLeave={() => pauseAutoSlide(AUTO_RESUME_MS)}
+      >
         <button
           type="button"
           className="home_source_by_category__arrow home_source_by_category__arrow--prev"
@@ -374,16 +482,21 @@ export default function SourceByCategory() {
           <Chevron dir="next" />
         </button>
 
-        <div ref={trackRef} className="home_source_by_category__track">
-          {categoriesToShow.map((category, index) => (
-            <SourceCategoryCard
-              key={String(category._id)}
-              category={category}
-              imageUrl={resolveImageUrl(category)}
-              onImageError={handleImageError}
-              priority={index < 4}
-            />
-          ))}
+        <div
+          ref={trackRef}
+          className="home_source_by_category__track home_source_by_category__track--autoslide"
+        >
+          <div ref={marqueeRef} className="home_source_by_category__marquee">
+            {loopCategories.map((category, index) => (
+              <SourceCategoryCard
+                key={`${String(category._id)}-${index < categoriesToShow.length ? "a" : "b"}`}
+                category={category}
+                imageUrl={resolveImageUrl(category)}
+                onImageError={handleImageError}
+                priority={index < 4}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

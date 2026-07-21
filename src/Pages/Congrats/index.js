@@ -48,7 +48,15 @@ const Congrats = () => {
                 <h4>Thank you for placing your order on Uzabulk.com.</h4>
 
                 <p className="fs-6">
-                  Request you to share us the payment receipt against the order on <br /><span className="text-body">My account {">"} My orders {">"} Upload Receipt</span>.</p>
+                  {state?.slipUploaded
+                    ? "We received your payment receipt with this order. Our team will verify it shortly."
+                    : (
+                      <>
+                        Request you to share us the payment receipt against the order on <br />
+                        <span className="text-body">My account {">"} My orders {">"} Upload Receipt</span>.
+                      </>
+                    )}
+                </p>
                 <hr />
 
                 {state?.order?.map((order, key) => {

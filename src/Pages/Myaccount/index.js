@@ -9,7 +9,7 @@ const Myaccount = () => {
         <Container>
               <Row> 
                   <Col lg={3} md={4}  sm={12}>
-                     <div className="myacsidebar bg-white px-3 py-2 rounded">
+                     <div className="myacsidebar bg-white px-3 py-3 rounded">
                            <Accountaside/>  
                      </div>
                   </Col>

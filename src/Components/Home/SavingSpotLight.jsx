@@ -9,6 +9,7 @@ import { apiGetHomeSavingSpotlightProducts } from "../../store/products/actions"
 import placeholder from "../../assets/images/Decor.webp";
 import Spinner from "../Spinner";
 import TranslatedProductName from "../Common/TranslatedProductName";
+import InCartBadge from "../Common/InCartBadge";
 
 export default function SavingSpotLight() {
   const dispatch = useDispatch();
@@ -22,13 +23,17 @@ export default function SavingSpotLight() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!items?.length)
-      dispatch(
-        apiGetHomeSavingSpotlightProducts({
-          limit: limit,
-        })
-      );
-  }, [dispatch, items?.length]);
+    if (items?.length) return undefined;
+    const ac = new AbortController();
+    dispatch(
+      apiGetHomeSavingSpotlightProducts({
+        limit: limit,
+        signal: ac.signal,
+        suppressGlobalErrorToast: true,
+      })
+    );
+    return () => ac.abort();
+  }, [dispatch, items?.length, limit]);
 
   // Create a fallback component for Suspense
   const LoadingFallback = () => (
@@ -81,6 +86,7 @@ export default function SavingSpotLight() {
                         }}
                       >
                         <div className="new_arrival_media">
+                          <InCartBadge product={item} />
                           <img
                             src={getProductImageUrl(item, placeholder)}
                             alt={item?.name || "Saving spotlight product"}

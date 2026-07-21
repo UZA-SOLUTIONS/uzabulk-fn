@@ -137,10 +137,14 @@ export const manageCartQuantity = ({
           })
         );
       }
+      const nextQty = Number.isNaN(quantity) ? minQty : quantity;
+      const unitPrice = Number(item.unitPrice) || 0;
       return {
         ...item,
         message: "",
-        quantity: Number.isNaN(quantity) ? minQty : quantity,
+        quantity: nextQty,
+        // Keep sidebar totals instant while the API catches up.
+        amount: unitPrice * nextQty,
       };
     } else {
       item.message = "";

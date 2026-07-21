@@ -3,7 +3,7 @@ import { getUserAvatarUrl, getUserInitials } from "../../helpers/commonHelper";
 
 export default function UserAccountAvatar({ user, className = "", size = 32 }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const avatarUrl = getUserAvatarUrl(user);
+  const avatarUrl = getUserAvatarUrl(user, { displayPx: size });
 
   useEffect(() => {
     setImgFailed(false);
@@ -24,6 +24,9 @@ export default function UserAccountAvatar({ user, className = "", size = 32 }) {
           alt=""
           width={size}
           height={size}
+          decoding="async"
+          // Requested source is already 2x display size for crisp retina rendering.
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
           onError={() => setImgFailed(true)}
         />
       ) : (

@@ -26,6 +26,10 @@ export const slice = createSlice({
         state.isLoading = true;
       })
       .addCase(apiCheckout.rejected, (state, action) => {
+        if (action.payload?.aborted) {
+          // A newer checkout superseded this one — keep existing totals.
+          return;
+        }
         state.message = action.payload;
         state.isLoading = false;
       })

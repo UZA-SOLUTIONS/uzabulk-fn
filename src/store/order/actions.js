@@ -4,16 +4,22 @@ import { ORDER } from "../../helpers/urlHelper";
 
 export const apiCheckout = createAsyncThunk(
   "apiCheckout",
-  async ({ data, callback }, Thunk) => {
+  async ({ data, callback, signal = null }, Thunk) => {
     try {
-      const res = await apiPost(ORDER.CHECKOUT, data);
+      const res = await apiPost(ORDER.CHECKOUT, data, signal ? { signal } : {});
       if (res.status === "success") {
-        callback(res);
+        if (typeof callback === "function") callback(res);
         return res;
       } else {
         throw new Error(res.message);
       }
     } catch (error) {
+      const isCanceled = error?.code === "ERR_CANCELED"
+        || error?.name === "CanceledError"
+        || error?.name === "AbortError";
+      if (isCanceled) {
+        return Thunk.rejectWithValue({ aborted: true });
+      }
       return Thunk.rejectWithValue(
         error.message || "Something went wrong, please try again later."
       );

@@ -222,10 +222,14 @@
     "categoriesLoadError": "Categories could not be loaded. Check that the API is running and MongoDB is reachable, then refresh.",
     "noCategoriesAvailable": "No categories available to display.",
     "categoryFallback": "Category",
-    "recentlyViewed": "Recently viewed",
-    "recentlyViewedHint": "Pick up where you left off",
+    "recentlyViewed": "Hey {{name}}, still looking for these?",
+    "cartReminderTitle": "Hey {{name}}, still looking for these?",
+    "cartReminderTitleOne": "Hey {{name}}, still looking for {{product}}?",
     "clearRecentlyViewed": "Clear history",
     "recentBadge": "Recent",
+    "cartReminderCta": "Go to cart",
+    "cartReminderContinue": "Continue",
+    "cartBadge": "In cart",
     "exploreMore": "Explore more",
     "exploreMoreHint": "Mixed picks from many categories — not only what you searched",
     "hero": {
@@ -274,9 +278,35 @@
     "placeholder": "Search order number…",
     "submit": "Track",
     "viewAllOrders": "View my orders",
+    "viewAll": "View all",
     "orderIdRequired": "Please enter an order number.",
     "signInRequired": "Sign in to track your order.",
-    "notFound": "Order not found. Check the number and try again."
+    "notFound": "Order not found. Check the number and try again.",
+    "recentOrders": "Your recent orders",
+    "loadingOrders": "Loading your orders…",
+    "noRecentOrders": "No orders under your account yet."
+  },
+  "help": {
+    "intro": "For inquiries and support, feel free to reach out to us.",
+    "email": "Email",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "whatsappPrefill": "Hi UZA Bulk support, I need help.",
+    "offices": "Our Offices",
+    "office": {
+      "rwanda": {
+        "region": "Rwanda (Headquarters)",
+        "detail": "Uza Solutions Ltd, Kigali, UNIFY HOUSE 4th Floor"
+      },
+      "uganda": {
+        "region": "Uganda",
+        "detail": "Uza Solutions Ltd, Kampala"
+      },
+      "hongKong": {
+        "region": "Hong Kong",
+        "detail": "Uza Solutions Ltd, Hong Kong"
+      }
+    }
   },
   "assistant": {
     "eyebrow": "AI Buyer Assistant",
