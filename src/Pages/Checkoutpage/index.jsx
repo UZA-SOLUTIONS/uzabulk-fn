@@ -285,10 +285,14 @@ const Checkoutpage = () => {
   );
   const displaySubTotal = Number(orderDetails?.subTotal) || cartFallbackSubtotal;
   const displayTax = Number(orderDetails?.tax) || 0;
+  const displayDelivery = Number(orderDetails?.deliveryFee) || 0;
   const displayDiscount = Number(orderDetails?.couponAmount) || 0;
   const displayOrderTotal = Number.isFinite(Number(orderDetails?.orderTotal)) && Number(orderDetails?.orderTotal) > 0
     ? Number(orderDetails.orderTotal)
-    : Math.max(0, displaySubTotal + displayTax - (orderDetails?.coupon ? displayDiscount : 0));
+    : Math.max(
+        0,
+        displaySubTotal + displayTax + displayDelivery - (orderDetails?.coupon ? displayDiscount : 0)
+      );
   const displayTotalItems = Number(orderDetails?.totalItems) || cartFallbackItems;
 
   return (
@@ -742,6 +746,14 @@ const Checkoutpage = () => {
                       <li>
                         <p>Tax Amount ({orderDetails.taxAmount || 0}%)</p>
                         <p>{currentCurrency?.symbol} {formatNumber(displayTax)}</p>
+                      </li>
+                      <li>
+                        <p>Delivery Fee</p>
+                        <p>
+                          {displayDelivery
+                            ? `${currentCurrency?.symbol} ${formatNumber(displayDelivery)}`
+                            : "Free"}
+                        </p>
                       </li>
                       {orderDetails?.coupon ? (
                         <li>

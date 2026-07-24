@@ -17,6 +17,8 @@ export default function LoginPopup({ show, handleClose, initialTab = "signin" })
       } catch (_) {
         /* ignore */
       }
+    } else {
+      window.dispatchEvent(new Event("uzabulk:auth-modal-close"));
     }
   }, [show, initialTab]);
 
@@ -24,10 +26,15 @@ export default function LoginPopup({ show, handleClose, initialTab = "signin" })
     setState({ tab });
   };
 
+  const onClose = () => {
+    window.dispatchEvent(new Event("uzabulk:auth-modal-close"));
+    handleClose();
+  };
+
   return (
     <Modal
       show={show}
-      onHide={handleClose}
+      onHide={onClose}
       backdrop
       keyboard
       centered
@@ -60,7 +67,7 @@ export default function LoginPopup({ show, handleClose, initialTab = "signin" })
           <Button
             type="button"
             className="auth-modal-close"
-            onClick={handleClose}
+            onClick={onClose}
             aria-label={t("common.close")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden>
@@ -73,8 +80,8 @@ export default function LoginPopup({ show, handleClose, initialTab = "signin" })
         </div>
 
         <div className="auth_modal_content" role="tabpanel">
-          {state.tab === "signin" ? <Signin handleClose={handleClose} /> : null}
-          {state.tab === "signup" ? <Signup handleClose={handleClose} /> : null}
+          {state.tab === "signin" ? <Signin handleClose={onClose} /> : null}
+          {state.tab === "signup" ? <Signup handleClose={onClose} /> : null}
         </div>
       </Modal.Body>
     </Modal>

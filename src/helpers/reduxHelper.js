@@ -69,6 +69,7 @@ export const loginSuccess = (state, action) => {
   state.message = "";
   state.isLoading = false;
   state.user = action.payload.user;
+  state.profile = action.payload.user;
   state.authToken = action.payload.token;
   state.isLogin = true;
   updateAuthInfo(state.authToken, state.user);

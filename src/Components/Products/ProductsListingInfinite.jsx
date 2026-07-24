@@ -8,7 +8,7 @@ import ProductCard from "./ProductCard";
 
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 
-const VISUAL_MATCH_FLOOR = 0.38;
+const VISUAL_MATCH_FLOOR = 0.48;
 
 const isStrongVisualItem = (item) => {
   const pct = Number(item?.similarity_score || 0);

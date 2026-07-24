@@ -25,6 +25,7 @@ export default function UserAccountAvatar({ user, className = "", size = 32 }) {
           width={size}
           height={size}
           decoding="async"
+          referrerPolicy="no-referrer"
           // Requested source is already 2x display size for crisp retina rendering.
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
           onError={() => setImgFailed(true)}

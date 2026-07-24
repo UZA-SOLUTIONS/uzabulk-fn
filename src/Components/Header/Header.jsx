@@ -167,6 +167,7 @@ export default function Header() {
 
     try {
       const imageUrl = await uploadImageForSearchBar(file);
+      persistImageSearchPreview(imageUrl);
       const params = buildSearchBarImageListingUrl({ imageUrl });
       navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
     } catch (error) {

@@ -202,6 +202,7 @@ export default function ProductSearch({
             blobUrl = URL.createObjectURL(file);
             persistImageSearchPreview(blobUrl);
             const imageUrl = await uploadImageForSearchBar(file);
+            persistImageSearchPreview(imageUrl);
             const params = buildSearchBarImageListingUrl({ imageUrl });
             navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
         } catch (error) {

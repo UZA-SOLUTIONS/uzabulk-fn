@@ -21,7 +21,7 @@ export default function ProductCard({ item, onOpen, showVisualMatch = false }) {
   const showMatchBadge =
     showVisualMatch
     && item?.match_type === "visual"
-    && similarity >= 0.38;
+    && similarity >= 0.48;
   const matchPercent = Math.round(similarity * 100);
 
   const moq = item?.moq || item?.minimumOrderQuantity || item?.minOrderQuantity;

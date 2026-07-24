@@ -3,6 +3,11 @@ import { PRODUCTS } from "./urlHelper";
 
 const IMAGE_URL_RE = /\.(avif|bmp|gif|jpe?g|png|svg|webp)(\?|#|$)/i;
 
+/** Max longest edge (px) and JPEG quality for search uploads — keeps mobile uploads fast. */
+const SEARCH_IMAGE_MAX_EDGE = 1280;
+const SEARCH_IMAGE_JPEG_QUALITY = 0.78;
+const SEARCH_IMAGE_SKIP_COMPRESS_BELOW_BYTES = 350 * 1024;
+
 export const isImageUrl = (value = "") => {
   const text = String(value || "").trim();
   if (!text) return false;
@@ -18,6 +23,65 @@ export const isImageUrl = (value = "") => {
     );
   } catch {
     return false;
+  }
+};
+
+/**
+ * Downscale / recompress an image file for faster upload + vision analysis.
+ * Falls back to the original file if compression is unsupported or fails.
+ */
+export const prepareImageFileForSearch = async (file) => {
+  if (!file || typeof window === "undefined") return file;
+  if (!file.type?.startsWith("image/")) return file;
+  if (file.type === "image/svg+xml" || file.type === "image/gif") return file;
+  if (Number(file.size) > 0 && Number(file.size) <= SEARCH_IMAGE_SKIP_COMPRESS_BELOW_BYTES) {
+    return file;
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const longest = Math.max(bitmap.width, bitmap.height) || 1;
+    const scale = longest > SEARCH_IMAGE_MAX_EDGE ? SEARCH_IMAGE_MAX_EDGE / longest : 1;
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) {
+      bitmap.close?.();
+      return file;
+    }
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob(
+        (result) => resolve(result),
+        "image/jpeg",
+        SEARCH_IMAGE_JPEG_QUALITY
+      );
+    });
+
+    if (!blob || blob.size <= 0) return file;
+    // Keep original if compression somehow grew the file.
+    if (blob.size >= file.size && scale >= 0.99) return file;
+
+    const baseName = String(file.name || "search-image")
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^\w.-]+/g, "_")
+      .slice(0, 80) || "search-image";
+
+    return new File([blob], `${baseName}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("[image-search] compress skipped:", err?.message || err);
+    }
+    return file;
   }
 };
 
@@ -57,8 +121,9 @@ export const readImageFromClipboard = (event) => {
  * Upload image only (fast). Vision + catalog search runs once on the products list page.
  */
 export const uploadImageSearch = async (file) => {
+  const prepared = await prepareImageFileForSearch(file);
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", prepared);
 
   const res = await apiClient.post(PRODUCTS.IMAGE_SEARCH, formData, {
     params: { prepare: 1 },
@@ -89,9 +154,13 @@ const IMAGE_SEARCH_BLOB_KEY = "uza_image_search_preview_blob";
 export const persistImageSearchPreview = (url = "") => {
   const value = String(url || "").trim();
   if (!value || typeof sessionStorage === "undefined") return;
-  if (!/^blob:/i.test(value)) return;
   try {
-    sessionStorage.setItem(IMAGE_SEARCH_BLOB_KEY, value);
+    if (/^blob:/i.test(value)) {
+      sessionStorage.setItem(IMAGE_SEARCH_BLOB_KEY, value);
+      return;
+    }
+    // Prefer durable server /images URL for mobile reloads.
+    sessionStorage.setItem(IMAGE_SEARCH_PREVIEW_KEY, value);
   } catch {
     // quota / private mode
   }
@@ -153,10 +222,12 @@ const isApiImageUrl = (value = "") => {
 };
 
 /**
- * Prefer the local blob preview; fall back to the query `image` URL so mobile
+ * Prefer the durable server preview; fall back to blob / query image so mobile
  * does not show a blank preview when sessionStorage blob is gone.
  */
 export const resolveImageSearchPreviewSource = (fallbackUrl = "") => {
+  const stored = readImageSearchPreview();
+  if (stored) return resolveImageSearchDisplayUrl(stored) || "";
   const blob = readImageSearchBlobPreview();
   if (blob) return resolveImageSearchDisplayUrl(blob) || "";
   const fallback = String(fallbackUrl || "").trim();

@@ -315,26 +315,37 @@ const Productlist = () => {
         <div className="home_discover_browse_outer products_list_browse__outer">
           {isImageSearchSession ? (
             <header className="products_list_image_search_header mb-2">
-              <h1 className="products_list_browse__page_title products_list_image_search_header__title">
-                {pageTitle}
-              </h1>
-              {isLoading && !displayItems?.length ? (
-                <ImageScanningPanel imageUrl={searchedImageSrc} />
-              ) : searchedImageSrc ? (
+              {searchedImageSrc ? (
                 <div
                   className="products_list_image_search_banner products_list_image_search_banner--with-image"
                   data-testid="image-search-results-preview"
                 >
-                  <figure className="products_list_image_search_query" aria-label="Image you searched for">
+                  <figure
+                    className={`products_list_image_search_query${isLoading ? " is-loading" : ""}`}
+                    aria-label={isLoading ? t("search.scanningImage") : "Image you searched for"}
+                    aria-busy={isLoading || undefined}
+                  >
                     <img
                       src={searchedImageSrc}
                       alt={imageSearchLabel ? t("search.visualMatchTitle", { name: imageSearchLabel }) : t("search.imageSearchResults")}
                       className="products_list_image_search_query__img"
                       decoding="async"
                     />
+                    {isLoading ? (
+                      <div className="products_list_image_search_query__overlay" aria-live="polite">
+                        <span className="products_list_image_search_query__scan-line" aria-hidden />
+                        <span className="products_list_image_search_query__spinner" aria-hidden />
+                        <span className="visually-hidden">{t("search.scanningImage")}</span>
+                      </div>
+                    ) : null}
                   </figure>
                 </div>
+              ) : isLoading ? (
+                <ImageScanningPanel imageUrl={searchedImageSrc} compact />
               ) : null}
+              <h1 className="products_list_browse__page_title products_list_image_search_header__title">
+                {isLoading && !imageSearchLabel ? t("search.scanningImage") : pageTitle}
+              </h1>
             </header>
           ) : !isCategoriesHub ? (
             <h1 className="products_list_browse__page_title">{pageTitle}</h1>

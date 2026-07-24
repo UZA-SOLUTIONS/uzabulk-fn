@@ -54,9 +54,26 @@ const cancelOneTap = () => {
   }
 };
 
+/** Clear Google One Tap cooldown cookie so the prompt can show again each visit/session. */
+const clearOneTapCooldown = () => {
+  try {
+    const expires = "Thu, 01 Jan 1970 00:00:01 GMT";
+    const paths = ["/", window.location.pathname || "/"];
+    paths.forEach((path) => {
+      document.cookie = `g_state=;path=${path};expires=${expires}`;
+      document.cookie = `g_state=;path=${path};expires=${expires};SameSite=None;Secure`;
+    });
+  } catch (_) {
+    /* ignore */
+  }
+};
+
+const isAuthModalOpen = () =>
+  Boolean(document.querySelector(".modal.for_loginmod.show"));
+
 /**
  * Google One Tap — shows "Continue as …" on the open site (no login modal).
- * On click, verifies the credential with the API and auto-logs the user in.
+ * Re-prompts on every page/session open by clearing Google's cooldown cookie.
  */
 export default function GoogleOneTap() {
   const { t } = useTranslation();
@@ -65,6 +82,7 @@ export default function GoogleOneTap() {
   const isLogin = useSelector((s) => s.auth.isLogin);
   const signingInRef = useRef(false);
   const initializedClientIdRef = useRef("");
+  const promptInFlightRef = useRef(false);
 
   useEffect(() => {
     if (isLogin) {
@@ -78,6 +96,7 @@ export default function GoogleOneTap() {
     }
 
     let cancelled = false;
+    let retryTimer = null;
 
     const handleCredential = async (response) => {
       if (signingInRef.current || cancelled) return;
@@ -110,6 +129,46 @@ export default function GoogleOneTap() {
       }
     };
 
+    const showPrompt = () => {
+      if (cancelled || isLogin || signingInRef.current) return;
+      if (isAuthModalOpen()) {
+        cancelOneTap();
+        return;
+      }
+      if (!window.google?.accounts?.id) return;
+      if (promptInFlightRef.current) return;
+
+      promptInFlightRef.current = true;
+      clearOneTapCooldown();
+
+      try {
+        window.google.accounts.id.prompt((notification) => {
+          promptInFlightRef.current = false;
+          if (cancelled) return;
+
+          const skipped =
+            typeof notification?.isNotDisplayed === "function" && notification.isNotDisplayed()
+            || typeof notification?.isSkippedMoment === "function" && notification.isSkippedMoment();
+
+          // If Google still suppressed the prompt, clear cooldown and try once more.
+          if (skipped && !isAuthModalOpen()) {
+            clearOneTapCooldown();
+            if (retryTimer) clearTimeout(retryTimer);
+            retryTimer = setTimeout(() => {
+              if (cancelled || isAuthModalOpen() || isLogin) return;
+              try {
+                window.google?.accounts?.id?.prompt?.();
+              } catch (_) {
+                /* ignore */
+              }
+            }, 400);
+          }
+        });
+      } catch (_) {
+        promptInFlightRef.current = false;
+      }
+    };
+
     const run = async () => {
       try {
         const configRes = await apiGet(AUTH.GOOGLE_CLIENT_CONFIG, {
@@ -121,26 +180,25 @@ export default function GoogleOneTap() {
         await loadGsiScript();
         if (cancelled || !window.google?.accounts?.id) return;
 
-        // Hide One Tap while email/password login modal is open.
-        if (document.querySelector(".modal.for_loginmod.show")) {
+        if (isAuthModalOpen()) {
           cancelOneTap();
           return;
         }
 
-        if (initializedClientIdRef.current !== clientId) {
-          window.google.accounts.id.initialize({
-            client_id: clientId,
-            callback: handleCredential,
-            auto_select: false,
-            cancel_on_tap_outside: false,
-            context: "signin",
-            itp_support: true,
-            use_fedcm_for_prompt: true,
-          });
-          initializedClientIdRef.current = clientId;
-        }
+        // Re-initialize each run so callback stays fresh and prompt can reappear.
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleCredential,
+          auto_select: false,
+          cancel_on_tap_outside: false,
+          context: "signin",
+          itp_support: true,
+          // Keep FedCM off so g_state cooldown can be cleared and prompt can re-show.
+          use_fedcm_for_prompt: false,
+        });
+        initializedClientIdRef.current = clientId;
 
-        window.google.accounts.id.prompt();
+        showPrompt();
       } catch (err) {
         // One Tap is optional — fail silently if Google/script/config unavailable.
         if (process.env.NODE_ENV === "development") {
@@ -151,12 +209,35 @@ export default function GoogleOneTap() {
 
     run();
 
-    const onAuthModalOpen = () => cancelOneTap();
+    const onAuthModalOpen = () => {
+      cancelOneTap();
+      promptInFlightRef.current = false;
+    };
+    const onAuthModalClose = () => {
+      // Re-show suggestion after login modal closes.
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => {
+        if (!cancelled && !isLogin) showPrompt();
+      }, 300);
+    };
+    const onVisibility = () => {
+      // Every time the tab/session becomes visible again, offer One Tap.
+      if (document.visibilityState === "visible" && !isLogin && !isAuthModalOpen()) {
+        showPrompt();
+      }
+    };
+
     window.addEventListener("uzabulk:auth-modal-open", onAuthModalOpen);
+    window.addEventListener("uzabulk:auth-modal-close", onAuthModalClose);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       cancelled = true;
+      promptInFlightRef.current = false;
+      if (retryTimer) clearTimeout(retryTimer);
       window.removeEventListener("uzabulk:auth-modal-open", onAuthModalOpen);
+      window.removeEventListener("uzabulk:auth-modal-close", onAuthModalClose);
+      document.removeEventListener("visibilitychange", onVisibility);
       cancelOneTap();
     };
   }, [dispatch, isLogin, location.pathname, t]);

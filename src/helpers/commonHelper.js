@@ -436,21 +436,33 @@ export const upgradeGoogleProfilePhotoUrl = (rawUrl, displayPx = 96) => {
 
 export const getUserAvatarUrl = (user, { displayPx = 96 } = {}) => {
   if (!user) return "";
-  const fromFile = resolveMediaUrl(user.profileImage);
-  if (fromFile) return fromFile;
 
-  // Google OAuth stores the photo URL on the user document.
+  // Prefer the Google photo saved during a previous Google login so form
+  // (email/password) sessions still show the same avatar.
   const googlePic = String(
     user.google_picture
     || user.googlePicture
     || user.picture
     || ""
   ).trim();
-  if (!googlePic) return "";
-  if (!/^(https?:|data:|blob:)/i.test(googlePic) && !googlePic.startsWith("//")) {
-    return resolveMediaUrl(googlePic);
+  if (googlePic && (/^(https?:|data:|blob:)/i.test(googlePic) || googlePic.startsWith("//"))) {
+    return upgradeGoogleProfilePhotoUrl(googlePic, displayPx);
   }
-  return upgradeGoogleProfilePhotoUrl(googlePic, displayPx);
+  if (googlePic) {
+    const resolvedGoogle = resolveMediaUrl(googlePic);
+    if (resolvedGoogle) return upgradeGoogleProfilePhotoUrl(resolvedGoogle, displayPx);
+  }
+
+  const fromFile = resolveMediaUrl(user.profileImage);
+  // Ignore ObjectId-looking / non-URL paths that are not real uploaded media.
+  if (fromFile && /^(https?:|data:|blob:)/i.test(fromFile)) {
+    return fromFile;
+  }
+  if (fromFile && fromFile.includes("/uploads/")) {
+    return fromFile;
+  }
+
+  return "";
 };
 
 export const getUserInitials = (user) => {
