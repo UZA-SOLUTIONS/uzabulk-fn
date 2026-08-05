@@ -154,6 +154,7 @@
     "enterCouponCode": "Entrez le code promo",
     "cartUpdated": "Panier mis à jour avec succès !",
     "addItemsFirst": "Veuillez ajouter des articles au panier !",
+    "variationRequired": "Veuillez sélectionner une option produit avant d'ajouter au panier.",
     "minQuantityWarning": "La quantité minimum de commande est {{count}}"
   },
   "checkout": {

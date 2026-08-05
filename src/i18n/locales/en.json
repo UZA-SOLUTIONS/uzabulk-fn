@@ -154,6 +154,7 @@
     "enterCouponCode": "Enter coupon code",
     "cartUpdated": "Cart updated successfully!",
     "addItemsFirst": "Please add items to add cart!",
+    "variationRequired": "Please select a product option before adding to cart.",
     "minQuantityWarning": "Minimum order quantity is {{count}}"
   },
   "checkout": {

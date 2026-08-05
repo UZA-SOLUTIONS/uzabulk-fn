@@ -48,9 +48,9 @@ export const fromNow = (date) => {
 };
 
 export const isEqualArray = (arr1, arr2) => {
-  arr1.sort();
-  arr2.sort();
-  return JSON.stringify(arr1) === JSON.stringify(arr2);
+  const a = (arr1 || []).map((v) => String(v)).sort();
+  const b = (arr2 || []).map((v) => String(v)).sort();
+  return a.length === b.length && a.every((value, index) => value === b[index]);
 };
 
 export const fixedNumber = (number, toFix = 2) => {

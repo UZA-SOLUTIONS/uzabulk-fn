@@ -58,7 +58,7 @@ export const addToCart = ({ cartData, isLogin }) => {
       })
     );
   } else {
-    toast.warn(i18n.t("cart.addItemsFirst"));
+    toast.warn(i18n.t("cart.variationRequired"));
   }
 };
 
@@ -302,8 +302,8 @@ export const getProductInfo = (detail) => {
     if (detail?.variations?.length) {
       const activeAttributes = [];
 
-      for (const attributes of detail.attributes) {
-        for (const term of attributes.terms) {
+      for (const attributes of detail.attributes || []) {
+        for (const term of attributes.terms || []) {
           if (term.active) {
             activeAttributes.push(term._id);
             break;
@@ -311,29 +311,43 @@ export const getProductInfo = (detail) => {
         }
       }
 
+      let selectedVariation = null;
       for (const variation of detail.variations) {
-        const attributes = variation?.attributes?.map((attr) => attr._id);
-        if (isEqualArray(attributes, activeAttributes)) {
-
-          logger("Selected variation", variation);
-
-          variationId = variation._id;
-          price = variation.price;
-          addedInCart = !!variation?.addedInCart;
-
-          cartData.items = [{
-            product: productId,
-            quantity: 1,
-            variation_id: variationId,
-            attributes: variation.attributes.map((attribute) => ({
-              attrId: getAttributeId(detail?.attributes, attribute._id),
-              attrTermId: attribute._id,
-            })),
-          }];
-
-          updateStock(variation, stock);
+        const attributes = (variation?.attributes || []).map((attr) => attr._id);
+        if (activeAttributes.length && isEqualArray(attributes, activeAttributes)) {
+          selectedVariation = variation;
           break;
         }
+      }
+
+      // Fallback when attribute matching fails or options never hydrated on the PDP.
+      if (!selectedVariation) {
+        selectedVariation =
+          detail.variations.find((variation) => {
+            if (!variation?.manage_stock && variation?.stock_status === "outofstock") return false;
+            if (variation?.manage_stock && Number(variation?.stock_quantity) <= 0) return false;
+            return true;
+          }) || detail.variations[0];
+      }
+
+      if (selectedVariation) {
+        logger("Selected variation", selectedVariation);
+
+        variationId = selectedVariation._id;
+        price = selectedVariation.price;
+        addedInCart = !!selectedVariation?.addedInCart;
+
+        cartData.items = [{
+          product: productId,
+          quantity: 1,
+          variation_id: variationId,
+          attributes: (selectedVariation.attributes || []).map((attribute) => ({
+            attrId: getAttributeId(detail?.attributes, attribute._id),
+            attrTermId: attribute._id,
+          })),
+        }];
+
+        updateStock(selectedVariation, stock);
       }
     }
     else {
@@ -343,7 +357,7 @@ export const getProductInfo = (detail) => {
       cartData.items = [{
         product: productId,
         quantity: 1,
-        variation_id: variationId,
+        // Omit null variation_id so backend can auto-resolve or treat as simple.
         attributes: [],
       }];
 

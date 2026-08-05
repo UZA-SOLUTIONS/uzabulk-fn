@@ -1,6 +1,14 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
+import i18n from "../../i18n";
 import { apiDelete, apiGet, apiPost, apiPut } from "../../helpers/apiHelper";
 import { CART } from "../../helpers/urlHelper";
+
+const friendlyCartError = (message) => {
+  const code = String(message || "").trim();
+  if (code === "VARIATION_IS_REQUIRED") return i18n.t("cart.variationRequired");
+  if (code === "PRODUCT_VARIATION_IS_INVALID") return i18n.t("cart.variationRequired");
+  return message || "Something went wrong, please try again later.";
+};
 
 export const apiAddToCart = createAsyncThunk(
   "apiAddToCart",
@@ -15,9 +23,7 @@ export const apiAddToCart = createAsyncThunk(
         throw new Error(res.message);
       }
     } catch (error) {
-      return Thunk.rejectWithValue(
-        error.message || "Something went wrong, please try again later."
-      );
+      return Thunk.rejectWithValue(friendlyCartError(error.message));
     }
   }
 );

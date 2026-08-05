@@ -71,9 +71,12 @@ apiClient.interceptors.response.use(
     const responseData = error?.response?.data;
     const httpStatus = error?.response?.status;
     const bodyStatusCode = Number(responseData?.status_code);
-    const message = responseData?.message
+    const rawMessage = responseData?.message
       || error?.message
       || i18n.t("common.somethingWentWrong");
+    const message = ["VARIATION_IS_REQUIRED", "PRODUCT_VARIATION_IS_INVALID"].includes(String(rawMessage).trim())
+      ? i18n.t("cart.variationRequired")
+      : rawMessage;
 
     const reqUrl = `${error?.config?.baseURL || ""}${error?.config?.url || ""}`;
     const isAuthRoute = isAuthCredentialRoute(reqUrl);
