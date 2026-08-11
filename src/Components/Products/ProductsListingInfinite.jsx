@@ -29,6 +29,7 @@ const visualMatchSort = (items = []) => {
 const ProductsListingInfinite = ({
   items,
   isLoading,
+  isRefreshing = false,
   message = "",
   emptyMessage = "",
   hasMore,
@@ -98,10 +99,15 @@ const ProductsListingInfinite = ({
   }, [sortedItems, showVisualMatch, showWeakMatches]);
 
   const showInitialSkeleton = Boolean(isLoading) && !displayItems?.length && !items?.length;
+  const isRefreshingSearch = Boolean(isRefreshing) && Boolean(items?.length);
 
   if (showInitialSkeleton) {
     return (
       <section className="products_card products_listing_square position-relative" aria-busy="true">
+        <div className="products_list_searching_status products_list_searching_status--initial" role="status" aria-live="polite">
+          <span className="products_list_searching_status__spinner" aria-hidden />
+          <span>{t("search.searching")}</span>
+        </div>
         <div className="home_discover_browse__skeleton products_list_browse__skeleton">
           <UXSkeleton type="product-grid" count={skeletonCount} />
         </div>
@@ -112,14 +118,23 @@ const ProductsListingInfinite = ({
   const emptyCopy = emptyMessage || message || t("search.noProductsFound");
 
   return (
-    <section className="products_card products_listing_square position-relative">
+    <section
+      className={`products_card products_listing_square position-relative${isRefreshingSearch ? " is-searching" : ""}`}
+      aria-busy={isLoading || undefined}
+    >
+      {isRefreshingSearch ? (
+        <div className="products_list_searching_status" role="status" aria-live="polite">
+          <span className="products_list_searching_status__spinner" aria-hidden />
+          <span>{t("search.searching")}</span>
+        </div>
+      ) : null}
       <InfiniteScroll
         dataLength={displayItems?.length || 0}
         next={() => fetchRecords?.()}
         hasMore={Boolean(hasMore) && (showWeakMatches || !showVisualMatch || hiddenWeakCount === 0)}
         scrollThreshold={0.75}
         loader={
-          items?.length > 0 ? (
+          items?.length > 0 && !isRefreshingSearch ? (
             <div
               className="px-0 uza-infinite-scroll products_list_browse__skeleton products_list_browse__skeleton--more"
               aria-busy="true"
@@ -132,7 +147,7 @@ const ProductsListingInfinite = ({
         className="px-0"
       >
         <div
-          className={`new_Arrivals new_Arrivals_many product_square_grid products_infinite_grid${gridClassName ? ` ${gridClassName}` : ""}`}
+          className={`new_Arrivals new_Arrivals_many product_square_grid products_infinite_grid${gridClassName ? ` ${gridClassName}` : ""}${isRefreshingSearch ? " is-searching-dim" : ""}`}
         >
           {displayItems?.length ? (
             displayItems.map((item, idx) => (

@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Container } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
-import AbortController from "abort-controller";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
@@ -18,7 +17,6 @@ import { useCategoryStripPin } from "../../hooks/useCategoryStripPin";
 import { apiGetCategories } from "../../store/categories/actions";
 import { apiGetProductDetail, apiGetProducts } from "../../store/products/actions";
 import { clearProductList } from "../../store/products/slice";
-import { PRODUCTS } from "../../helpers/urlHelper";
 import useCategoryDisplayName from "../../hooks/useCategoryDisplayName";
 import useCategoryDisplayNames from "../../hooks/useCategoryDisplayNames";
 import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefetch";
@@ -35,6 +33,7 @@ const Productlist = () => {
   const { isLoading, items, hasMore, message, skip, others } = useSelector((s) => s.products.products);
   const cancelToken = useRef(null);
   const fetchLockRef = useRef(false);
+  const [isSearchRefreshing, setIsSearchRefreshing] = useState(false);
 
   const limit = 32;
   const searchQuery = searchParams.get("search") || "";
@@ -202,7 +201,7 @@ const Productlist = () => {
 
   const fetchProducts = (init = false, pageSkip = null) => {
     if (cancelToken.current) cancelToken.current.abort();
-    cancelToken.current = new AbortController();
+    cancelToken.current = typeof AbortController !== "undefined" ? new AbortController() : null;
     const searchTerm = searchParams.get("search") || "";
     const imageTerm = searchParams.get("image") || "";
     // Image-only sessions: ignore leftover typed `search` unless the user also submitted text.
@@ -217,19 +216,24 @@ const Productlist = () => {
       search: effectiveSearch || undefined,
       image: imageTerm || undefined,
       country: searchParams.get("country") || "en",
-      suppressGlobalErrorToast: true,
       ...getSortQuery(selectedSort || (effectiveSearch || imageTerm ? "relevance" : "newest")),
     };
     dispatch(
       apiGetProducts({
         query,
-        signal: cancelToken.current.signal,
+        signal: cancelToken.current?.signal,
+        suppressGlobalErrorToast: true,
+        // Live keyword edits should always hit the network for fresh results.
+        skipCache: Boolean(effectiveSearch) && init,
       })
     );
   };
 
   useEffect(() => {
-    if (!isLoading) fetchLockRef.current = false;
+    if (!isLoading) {
+      fetchLockRef.current = false;
+      setIsSearchRefreshing(false);
+    }
   }, [isLoading]);
 
   const handleFetchRequest = useCallback(
@@ -246,6 +250,7 @@ const Productlist = () => {
   useEffect(() => {
     smoothScrollToTop();
     // Keep prior cards while the new image/text search loads to avoid a blank flash.
+    setIsSearchRefreshing(true);
     dispatch(clearProductList({ field: "products", keepItems: true }));
     fetchProducts(true, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when URL filters change
@@ -321,9 +326,9 @@ const Productlist = () => {
                   data-testid="image-search-results-preview"
                 >
                   <figure
-                    className={`products_list_image_search_query${isLoading ? " is-loading" : ""}`}
-                    aria-label={isLoading ? t("search.scanningImage") : "Image you searched for"}
-                    aria-busy={isLoading || undefined}
+                    className={`products_list_image_search_query${isSearchRefreshing ? " is-loading" : ""}`}
+                    aria-label={isSearchRefreshing ? t("search.scanningImage") : "Image you searched for"}
+                    aria-busy={isSearchRefreshing || undefined}
                   >
                     <img
                       src={searchedImageSrc}
@@ -331,7 +336,7 @@ const Productlist = () => {
                       className="products_list_image_search_query__img"
                       decoding="async"
                     />
-                    {isLoading ? (
+                    {isSearchRefreshing ? (
                       <div className="products_list_image_search_query__overlay" aria-live="polite">
                         <span className="products_list_image_search_query__scan-line" aria-hidden />
                         <span className="products_list_image_search_query__spinner" aria-hidden />
@@ -340,15 +345,17 @@ const Productlist = () => {
                     ) : null}
                   </figure>
                 </div>
-              ) : isLoading ? (
+              ) : isSearchRefreshing ? (
                 <ImageScanningPanel imageUrl={searchedImageSrc} compact />
               ) : null}
               <h1 className="products_list_browse__page_title products_list_image_search_header__title">
-                {isLoading && !imageSearchLabel ? t("search.scanningImage") : pageTitle}
+                {isSearchRefreshing && !imageSearchLabel ? t("search.scanningImage") : pageTitle}
               </h1>
             </header>
           ) : !isCategoriesHub ? (
-            <h1 className="products_list_browse__page_title">{pageTitle}</h1>
+            <h1 className="products_list_browse__page_title" aria-live="polite">
+              {isSearchRefreshing && searchQuery ? t("search.searching") : pageTitle}
+            </h1>
           ) : (
             <h1 className="visually-hidden">{pageTitle}</h1>
           )}
@@ -368,6 +375,7 @@ const Productlist = () => {
               <ProductsListingInfinite
                 items={displayItems}
                 isLoading={isLoading}
+                isRefreshing={isSearchRefreshing}
                 message={message}
                 hasMore={hasMore}
                 fetchRecords={handleFetchRequest}

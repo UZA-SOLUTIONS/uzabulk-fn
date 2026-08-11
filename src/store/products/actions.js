@@ -41,14 +41,22 @@ const getProducts = (url) => async (query, Thunk) => {
 
 export const apiGetProducts = createAsyncThunk(
   "apiGetProducts",
-  async ({ query, signal = null, skipCache = false }, Thunk) => {
+  async ({ query, signal = null, skipCache = false, suppressGlobalErrorToast = false }, Thunk) => {
     try {
       if (!hasNetworkConnection()) {
         return Thunk.rejectWithValue("No internet connection. Please reconnect and try again.");
       }
 
-      const listKey = buildListCacheKey(PRODUCTS.LIST, query || {});
-      const pageSkip = Number(query?.skip) || 1;
+      const rawQuery = query || {};
+      const {
+        suppressGlobalErrorToast: suppressFromQuery,
+        signal: _ignoredSignal,
+        ...apiQuery
+      } = rawQuery;
+      const suppressToast = Boolean(suppressGlobalErrorToast || suppressFromQuery);
+
+      const listKey = buildListCacheKey(PRODUCTS.LIST, apiQuery || {});
+      const pageSkip = Number(apiQuery?.skip) || 1;
 
       if (!skipCache) {
         const cachedPage = getCachedListPage(listKey, pageSkip);
@@ -66,8 +74,9 @@ export const apiGetProducts = createAsyncThunk(
       }
 
       const res = await apiClient.get(PRODUCTS.LIST, {
-        params: query,
+        params: apiQuery,
         signal,
+        ...(suppressToast ? { suppressGlobalErrorToast: true } : {}),
       });
       if (res.status === "success") {
         const data = res?.data || {};

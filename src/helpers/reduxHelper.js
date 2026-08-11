@@ -33,7 +33,11 @@ export const paginatePending = (field) => (state, action) => {
 };
 
 export const paginateRejected = (field) => (state, action) => {
-  if (action.payload?.aborted) return;
+  if (action.payload?.aborted) {
+    // Aborted requests are replaced by a newer fetch; don't wipe results or show an error.
+    // Clear loading only if nothing else flipped it back on (pending of the new request).
+    return;
+  }
   const payloadMessage = typeof action.payload === "string" ? action.payload : action.payload?.message;
   if (payloadMessage && /^cancell?ed$/i.test(String(payloadMessage).trim())) return;
   state[field].isLoading = false;

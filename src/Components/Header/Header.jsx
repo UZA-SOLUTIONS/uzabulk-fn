@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Container } from "react-bootstrap";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import UserAuthCard from "./UserAuthCard";
 import ROUTES from "../../helpers/routesHelper";
@@ -22,7 +23,7 @@ import {
 } from "../../helpers/imageSearchHelper";
 
 const ICON_MAGNIFIER = (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+  <svg className="header-mockup-search-submit__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
     <circle cx="10.5" cy="10.5" r="6.25" stroke="currentColor" strokeWidth="2" />
     <path d="M15.2 15.2L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
@@ -33,17 +34,27 @@ export default function Header() {
   const [searchText, setSearchText] = useState("");
   const [isScrolled, setIsScrolled] = useState(false);
   const [imageSearchLoading, setImageSearchLoading] = useState(false);
+  const [liveSearchPending, setLiveSearchPending] = useState(false);
   const imageSearchLoadingLabel = t("search.scanningImage");
   const [localImagePreview, setLocalImagePreview] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const productsLoading = useSelector((s) => Boolean(s?.products?.products?.isLoading));
   const imageSearchInputRef = useRef(null);
   const localPreviewRef = useRef("");
   const navStripHiddenRef = useRef(false);
+  const liveSearchTimerRef = useRef(null);
+  const liveSearchLastUrlRef = useRef("");
+  const searchTextRef = useRef("");
+  const searchInputDirtyRef = useRef(false);
 
   const imageFromQuery = searchParams.get("image") || "";
   const activeImagePreview = localImagePreview || readImageSearchBlobPreview() || "";
+  const isOnSearchListing =
+    location.pathname === ROUTES.PRODUCT_LISTING || location.pathname === ROUTES.CATEGORIES;
+  const isTextSearching =
+    isOnSearchListing && !imageSearchLoading && liveSearchPending;
 
   useLayoutEffect(() => {
     const readY = () => window.scrollY ?? document.documentElement.scrollTop ?? 0;
@@ -86,8 +97,95 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    setSearchText(searchParams.get("search") || "");
-  }, [searchParams]);
+    searchTextRef.current = searchText;
+  }, [searchText]);
+
+  useEffect(() => {
+    const urlSearch = searchParams.get("search") || "";
+    const currentUrl = `${location.pathname}?${searchParams.toString()}`;
+    const fromOurLiveUpdate = liveSearchLastUrlRef.current === currentUrl;
+
+    if (searchInputDirtyRef.current) {
+      // External navigation (back, category, clear image) should win over local typing.
+      if (!fromOurLiveUpdate) {
+        searchInputDirtyRef.current = false;
+        setSearchText(urlSearch);
+        return;
+      }
+      if (urlSearch.trim() === String(searchTextRef.current || "").trim()) {
+        searchInputDirtyRef.current = false;
+      }
+      return;
+    }
+
+    setSearchText(urlSearch);
+  }, [searchParams, location.pathname]);
+
+  useEffect(() => () => {
+    if (liveSearchTimerRef.current) clearTimeout(liveSearchTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!liveSearchPending || productsLoading) return;
+    const urlSearch = (searchParams.get("search") || "").trim();
+    if (urlSearch === String(searchTextRef.current || "").trim()) {
+      setLiveSearchPending(false);
+    }
+  }, [liveSearchPending, productsLoading, searchParams]);
+
+  const applyLiveListingSearch = (rawSearch) => {
+    if (!isOnSearchListing) {
+      setLiveSearchPending(false);
+      return;
+    }
+
+    const trimmed = String(rawSearch || "").trim();
+    const currentSearch = (searchParams.get("search") || "").trim();
+    if (trimmed === currentSearch) {
+      searchInputDirtyRef.current = false;
+      setLiveSearchPending(false);
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams);
+    if (trimmed) {
+      params.set("search", trimmed);
+    } else {
+      params.delete("search");
+    }
+    params.set("skip", "1");
+    params.delete("refresh");
+
+    // Keep image refine mode when keywords change while an image search is active.
+    if (imageFromQuery && trimmed) {
+      params.set("image", imageFromQuery);
+      params.set("mixSearch", "1");
+    } else if (!trimmed) {
+      params.delete("mixSearch");
+    }
+
+    const nextUrl = `${location.pathname}?${params.toString()}`;
+    if (liveSearchLastUrlRef.current === nextUrl) {
+      setLiveSearchPending(false);
+      return;
+    }
+    liveSearchLastUrlRef.current = nextUrl;
+    navigate(nextUrl, { replace: true });
+  };
+
+  const handleSearchTextChange = (search) => {
+    const next = search || "";
+    searchInputDirtyRef.current = true;
+    setSearchText(next);
+
+    if (!isOnSearchListing) return;
+
+    setLiveSearchPending(true);
+    if (liveSearchTimerRef.current) clearTimeout(liveSearchTimerRef.current);
+    liveSearchTimerRef.current = setTimeout(() => {
+      applyLiveListingSearch(next);
+    }, 450);
+  };
 
   const revokeLocalPreview = () => {
     if (localPreviewRef.current) {
@@ -111,8 +209,17 @@ export default function Header() {
 
   const handleHeaderSearch = (event) => {
     event.preventDefault();
+    if (liveSearchTimerRef.current) clearTimeout(liveSearchTimerRef.current);
+    searchInputDirtyRef.current = false;
+    if (isOnSearchListing) setLiveSearchPending(true);
+
     const trimmed = (searchText || "").trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      // On listing page, empty submit clears text search and reloads results.
+      if (isOnSearchListing) applyLiveListingSearch("");
+      else setLiveSearchPending(false);
+      return;
+    }
 
     rememberRecentSearch(trimmed);
 
@@ -124,7 +231,9 @@ export default function Header() {
       params.set("image", imageFromQuery);
       params.set("mixSearch", "1");
     }
-    navigate(`${ROUTES.PRODUCT_LISTING}?${params.toString()}`);
+    const nextUrl = `${ROUTES.PRODUCT_LISTING}?${params.toString()}`;
+    liveSearchLastUrlRef.current = nextUrl;
+    navigate(nextUrl);
   };
 
   const handleClearImageSearch = () => {
@@ -222,7 +331,7 @@ export default function Header() {
 
   return (
     <header
-      className={`site-header site-header--mockup${isScrolled ? " is-scrolled" : ""} site-header--search-visible${activeImagePreview ? " has-image-search-preview" : ""}${imageSearchLoading ? " is-image-search-loading" : ""}`}
+      className={`site-header site-header--mockup${isScrolled ? " is-scrolled" : ""} site-header--search-visible${activeImagePreview ? " has-image-search-preview" : ""}${imageSearchLoading ? " is-image-search-loading" : ""}${isTextSearching ? " is-text-search-loading" : ""}`}
     >
       <section className="header-sub-actions">
         <Container fluid className="header-mockup-container px-3 px-sm-4 px-xl-5">
@@ -249,7 +358,7 @@ export default function Header() {
                       ? t("search.placeholderWithImage")
                       : t("search.placeholder")
                   }
-                  callback={({ search }) => setSearchText(search || "")}
+                  callback={({ search }) => handleSearchTextChange(search)}
                 />
                 <div className="header-mockup-search-tray">
                   <ImageSearchTray
@@ -262,9 +371,15 @@ export default function Header() {
                     onImageUrl={runImageUrlSearch}
                     onClear={handleClearImageSearch}
                   />
-                  <button type="submit" className="header-mockup-search-submit" aria-label={t("search.submit")}>
+                  <button
+                    type="submit"
+                    className={`header-mockup-search-submit${isTextSearching ? " is-searching" : ""}`}
+                    aria-label={isTextSearching ? t("search.searching") : t("search.submit")}
+                    aria-busy={isTextSearching || undefined}
+                  >
                     {ICON_MAGNIFIER}
                     <span className="header-mockup-search-submit__label">{t("search.submit")}</span>
+                    {isTextSearching ? <span className="header-mockup-search-submit__spinner" aria-hidden /> : null}
                   </button>
                 </div>
                 {imageSearchLoading ? (

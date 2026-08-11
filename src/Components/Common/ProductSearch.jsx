@@ -296,7 +296,11 @@ export default function ProductSearch({
                         <p className="search-suggestion-title">
                             <TranslatedProductName product={item} name={item?.title} />
                         </p>
-                        <span className="search-suggestion-meta">View product details</span>
+                        <span className="search-suggestion-meta">
+                            {item?.offerId
+                                ? `Offer ID: ${item.offerId}`
+                                : "View product details"}
+                        </span>
                     </div>
                 </div>
             }
