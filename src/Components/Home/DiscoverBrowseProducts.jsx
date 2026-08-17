@@ -59,7 +59,23 @@ export default function DiscoverBrowseProducts() {
     [categoriesAll, categoryDisplayNames, t]
   );
 
-  const [feedRefresh] = useState(() => getHomeFeedRefreshToken());
+  const [feedRefresh, setFeedRefresh] = useState(() => getHomeFeedRefreshToken());
+
+  useEffect(() => {
+    const syncDayToken = () => {
+      const next = getHomeFeedRefreshToken();
+      setFeedRefresh((prev) => (prev === next ? prev : next));
+    };
+    const intervalId = window.setInterval(syncDayToken, 60 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") syncDayToken();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   const [activeCategoryId, setActiveCategoryId] = useState("");
   const [items, setItems] = useState([]);

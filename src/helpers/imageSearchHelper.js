@@ -151,6 +151,20 @@ export const uploadImageForSearchBar = async (file) => {
 const IMAGE_SEARCH_PREVIEW_KEY = "uza_image_search_preview";
 const IMAGE_SEARCH_BLOB_KEY = "uza_image_search_preview_blob";
 
+let pendingImageSearchFile = null;
+
+export const setPendingImageSearchFile = (file = null) => {
+  pendingImageSearchFile = file || null;
+};
+
+export const consumePendingImageSearchFile = () => {
+  const file = pendingImageSearchFile;
+  pendingImageSearchFile = null;
+  return file;
+};
+
+export const peekPendingImageSearchFile = () => pendingImageSearchFile;
+
 export const persistImageSearchPreview = (url = "") => {
   const value = String(url || "").trim();
   if (!value || typeof sessionStorage === "undefined") return;

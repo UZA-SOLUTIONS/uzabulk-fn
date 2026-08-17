@@ -143,9 +143,6 @@ const Cartpage = () => {
   const displayTax = useServerTotals
     ? Number(orderDetails?.tax) || 0
     : (displaySubTotal * resolvedTaxPercent) / 100;
-  const displayDelivery = useServerTotals
-    ? Number(orderDetails?.deliveryFee) || 0
-    : 0;
   const displayDiscount =
     orderDetails?.coupon && Number(orderDetails?.couponAmount)
       ? Number(orderDetails.couponAmount)
@@ -154,7 +151,7 @@ const Cartpage = () => {
     ? Number(orderDetails?.orderTotal) || 0
     : Math.max(
         0,
-        displaySubTotal + displayTax + displayDelivery - (orderDetails?.coupon ? displayDiscount : 0)
+        displaySubTotal + displayTax - (orderDetails?.coupon ? displayDiscount : 0)
       );
   const displayTotalItems = useServerTotals
     ? Number(orderDetails?.totalItems) || cartFallbackItems
@@ -370,14 +367,6 @@ const Cartpage = () => {
                       <li>
                         <p>{t("cart.taxAmount", { percent: resolvedTaxPercent })}</p>
                         <p>{currentCurrency?.symbol} {formatNumber(displayTax)}</p>
-                      </li>
-                      <li>
-                        <p>{t("cart.deliveryFee", { defaultValue: "Delivery Fee" })}</p>
-                        <p>
-                          {displayDelivery
-                            ? `${currentCurrency?.symbol} ${formatNumber(displayDelivery)}`
-                            : t("cart.freeDelivery", { defaultValue: "Free" })}
-                        </p>
                       </li>
                       {orderDetails?.coupon ? (
                         <li>

@@ -13,7 +13,12 @@ const Chevron = ({ dir }) => (
   </svg>
 );
 
-export default function HomeHorizontalScrollRow({ className = "", children, depKey = 0 }) {
+export default function HomeHorizontalScrollRow({
+  className = "",
+  children,
+  depKey = 0,
+  showArrows = true,
+}) {
   const { t } = useTranslation();
   const trackRef = useRef(null);
   const [canPrev, setCanPrev] = useState(false);
@@ -29,6 +34,7 @@ export default function HomeHorizontalScrollRow({ className = "", children, depK
   }, []);
 
   useEffect(() => {
+    if (!showArrows) return undefined;
     const el = trackRef.current;
     if (!el) return undefined;
     syncArrows();
@@ -41,7 +47,7 @@ export default function HomeHorizontalScrollRow({ className = "", children, depK
       ro?.disconnect();
       window.removeEventListener("resize", syncArrows);
     };
-  }, [syncArrows, depKey]);
+  }, [syncArrows, depKey, showArrows]);
 
   const scrollByDir = (dir) => {
     const el = trackRef.current;
@@ -53,25 +59,29 @@ export default function HomeHorizontalScrollRow({ className = "", children, depK
   const trackClassName = ["home_horizontal_scroll__track", className].filter(Boolean).join(" ");
 
   return (
-    <div className="home_horizontal_scroll__wrap">
-      <button
-        type="button"
-        className="home_horizontal_scroll__arrow home_horizontal_scroll__arrow--prev"
-        onClick={() => scrollByDir("prev")}
-        disabled={!canPrev}
-        aria-label={t("home.scrollProductsLeft")}
-      >
-        <Chevron dir="prev" />
-      </button>
-      <button
-        type="button"
-        className="home_horizontal_scroll__arrow home_horizontal_scroll__arrow--next"
-        onClick={() => scrollByDir("next")}
-        disabled={!canNext}
-        aria-label={t("home.scrollProductsRight")}
-      >
-        <Chevron dir="next" />
-      </button>
+    <div className={`home_horizontal_scroll__wrap${showArrows ? "" : " home_horizontal_scroll__wrap--no-arrows"}`}>
+      {showArrows ? (
+        <>
+          <button
+            type="button"
+            className="home_horizontal_scroll__arrow home_horizontal_scroll__arrow--prev"
+            onClick={() => scrollByDir("prev")}
+            disabled={!canPrev}
+            aria-label={t("home.scrollProductsLeft")}
+          >
+            <Chevron dir="prev" />
+          </button>
+          <button
+            type="button"
+            className="home_horizontal_scroll__arrow home_horizontal_scroll__arrow--next"
+            onClick={() => scrollByDir("next")}
+            disabled={!canNext}
+            aria-label={t("home.scrollProductsRight")}
+          >
+            <Chevron dir="next" />
+          </button>
+        </>
+      ) : null}
       <div ref={trackRef} className={trackClassName}>
         {children}
       </div>

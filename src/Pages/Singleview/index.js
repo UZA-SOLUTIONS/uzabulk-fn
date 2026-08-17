@@ -69,6 +69,22 @@ const resolveDetailCategoryId = (detail) => {
   return "";
 };
 
+const resolveDetailCategoryName = (detail) => {
+  if (!detail) return "";
+  const fromCat =
+    detail?.category?.catName
+    || detail?.category?.name
+    || detail?.categoryName
+    || detail?.topCategoryName
+    || "";
+  if (fromCat) return String(fromCat).trim();
+  if (Array.isArray(detail.categories) && detail.categories.length) {
+    const first = detail.categories[0];
+    return String(first?.catName || first?.name || "").trim();
+  }
+  return "";
+};
+
 /** 1688-style numeric offer id (length varies; avoid treating 24-hex Mongo ids as offer ids). */
 const looksLike1688OfferId = (value) => {
   const s = String(value || "").trim();
@@ -638,6 +654,7 @@ const Singleview = () => {
             <SimilarProductsRow
               productId={detail?._id || resolvedProductId}
               categoryId={resolveDetailCategoryId(detail)}
+              categoryName={resolveDetailCategoryName(detail)}
               excludeProductId={detail?._id || resolvedProductId}
               items={
                 Array.isArray(detail?.sameCategoryProducts) && detail.sameCategoryProducts.length
@@ -648,6 +665,23 @@ const Singleview = () => {
               limit={12}
               usePersonalized={false}
               className="mt-4 mt-lg-5"
+            />
+            <SimilarProductsRow
+              productId={detail?._id || resolvedProductId}
+              categoryId={resolveDetailCategoryId(detail)}
+              categoryName={resolveDetailCategoryName(detail)}
+              excludeProductId={detail?._id || resolvedProductId}
+              excludeProductIds={
+                Array.isArray(detail?.sameCategoryProducts)
+                  ? detail.sameCategoryProducts.map((item) => item?._id || item?.id).filter(Boolean)
+                  : null
+              }
+              title={t("product.youMayAlsoLike")}
+              showTitle={false}
+              limit={12}
+              usePersonalized={false}
+              listSkip={2}
+              className="mt-3"
             />
           </>
         ) : (

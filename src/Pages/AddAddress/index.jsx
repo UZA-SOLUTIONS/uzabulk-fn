@@ -7,6 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { APP_NAME } from "../../config/constants";
 import ROUTES from "../../helpers/routesHelper";
 import { apiGetAddress } from "../../store/address/actions";
+import { apiGetProfile } from "../../store/auth/actions";
 import { clearAddressDetails } from "../../store/address/slice";
 import AddAddress from "../../Components/AddAddress";
 
@@ -18,10 +19,14 @@ const AddAddressPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    dispatch(apiGetProfile());
+  }, [dispatch]);
+
+  useEffect(() => {
     if (id) {
       dispatch(apiGetAddress(id));
     }
-  }, [id]);
+  }, [id, dispatch]);
 
   useEffect(() => {
     return () => {
@@ -39,7 +44,10 @@ const AddAddressPage = () => {
           <Col lg="12" className="text-start mb-3">
             <h4>{id ? "Edit" : "Add"} Address</h4>
           </Col>
-          <AddAddress id={id} callback={() => navigate(ROUTES.ORDER_ADDRESS)} />
+          <AddAddress
+            id={id}
+            callback={() => navigate(`${ROUTES.PROFILE}?tab=addresses`)}
+          />
         </Row>
       </Container>
     </section>

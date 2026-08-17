@@ -3,6 +3,8 @@ import { Button, Col, Row } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
+import { useTranslation } from "react-i18next";
+
 import LoadingContent from "../../Components/Common/LoadingContent";
 import NoRecordFound from "../../Components/Common/NoRecordFound";
 import DeletePopup from "../../Components/Modals/DeletePopup";
@@ -14,6 +16,7 @@ import { ICON_ADDRESS_HOME, ICON_BUILDING, ICON_LOCATION } from "../../assets/sv
 
 /** Address list/manage block embedded on the Profile page. */
 export default function ProfileAddresses() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isLoading, items } = useSelector((s) => s.address.addresses);
   const [deleteId, setDeleteId] = useState(null);
@@ -34,11 +37,16 @@ export default function ProfileAddresses() {
 
   return (
     <div className="profile_section text-start">
-      <div className="d-flex align-items-center justify-content-between gap-3 mb-3">
-        <h5 className="mb-0">Addresses</h5>
-        <Link to={ROUTES.CREATE_ADDRESS} className="profile_section__link">
-          + Add Address
-        </Link>
+      <div className="d-flex align-items-center justify-content-between gap-3 mb-3 flex-wrap">
+        <h5 className="mb-0">{t("account.myAddress")}</h5>
+        <div className="d-flex align-items-center gap-3">
+          <Link to={`${ROUTES.CREATE_ADDRESS}/?fromLocation=1`} className="profile_section__link">
+            {t("address.useCurrentLocation")}
+          </Link>
+          <Link to={`${ROUTES.CREATE_ADDRESS}/`} className="profile_section__link">
+            {t("address.add")}
+          </Link>
+        </div>
       </div>
 
       <DeletePopup

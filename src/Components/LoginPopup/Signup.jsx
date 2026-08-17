@@ -28,6 +28,7 @@ const Signup = ({ handleClose }) => {
   const verifiedEmailOtpRef = useRef("");
 
   const initialValues = {
+    name: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -55,6 +56,7 @@ const Signup = ({ handleClose }) => {
         email: Yup.string()
           .email(t("auth.validEmail"))
           .required(t("auth.emailRequired")),
+        name: Yup.string().trim().max(80),
         password: Yup.string()
           .required(t("auth.passwordRequired"))
           .min(6, t("auth.passwordHint"))
@@ -123,6 +125,7 @@ const Signup = ({ handleClose }) => {
     }
 
     const payload = {
+      name: String(data.name || "").trim(),
       email: data.email,
       password: data.password,
       confirmPassword: data.confirmPassword,
@@ -288,6 +291,17 @@ const Signup = ({ handleClose }) => {
                   <ResendOtp callback={() => void sendToEmail()} />
                 </FormGroup>
               ) : null}
+
+              <FormGroup className="position-relative mb-3">
+                <Field
+                  className="form-control"
+                  name="name"
+                  id="signup-name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder={t("auth.fullNamePlaceholder")}
+                />
+              </FormGroup>
 
               <FormGroup className="mb-3 signupinput_phone auth-phone-field">
                 <MobileNumberField

@@ -48,6 +48,7 @@ export const PRODUCTS = {
     HOMEPAGE_FEED: "recommendations/homepage-feed",
     RECENTLY_VIEWED: "recommendations/recently-viewed",
     SIMILAR: "recommendations/similar-products",
+    COMPLEMENTARY: "recommendations/complementary",
     CROSS_SELL: "recommendations/cross-sell",
     EMAIL_DIGEST: "recommendations/email-digest",
     SUPPLIER_HIGHLIGHTS: "recommendations/supplier-highlights",
@@ -81,6 +82,7 @@ export const ADDRESS = {
   DELETE: "addresses/delete",
   UPDATE: "addresses/update",
   MAKE_DEFAULT: "addresses/makeDefaultAddress",
+  REVERSE_GEOCODE: "addresses/reverse-geocode",
 };
 
 export const PAGE = {

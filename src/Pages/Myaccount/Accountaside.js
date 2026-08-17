@@ -28,7 +28,7 @@ const Accountaside = () => {
     dispatch(apiLogout());
   };
 
-  const displayName = String(user?.name || user?.hintName || "").trim() || t("nav.myAccount");
+  const displayName = String(user?.name || user?.hintName || user?.email || "").trim() || t("nav.myAccount");
   const email = String(user?.email || "").trim();
   const phone = [user?.countryCode, user?.mobileNumber].filter(Boolean).join(" ").trim();
 

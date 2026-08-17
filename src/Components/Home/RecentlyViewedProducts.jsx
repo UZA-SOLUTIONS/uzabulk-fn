@@ -155,9 +155,9 @@ export default function RecentlyViewedProducts() {
   if (!showRowSkeleton && !displayItems.length) return null;
 
   const firstName =
-    String(user?.hintName || user?.name || "")
+    String(user?.hintName || user?.name || user?.email || "")
       .trim()
-      .split(/\s+/)[0]
+      .split(/[\s@]+/)[0]
       .toUpperCase() || t("nav.account").toUpperCase();
 
   const hasCartProducts = cartProducts.length > 0;

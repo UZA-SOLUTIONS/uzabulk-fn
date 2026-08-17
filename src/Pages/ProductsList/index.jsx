@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Container } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
+import { toast } from "react-toastify";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
 import ImageScanningPanel from "../../Components/Products/ImageScanningPanel";
-import { resolveImageSearchPreviewSource, clearImageSearchPreview } from "../../helpers/imageSearchHelper";
+import { resolveImageSearchPreviewSource, clearImageSearchPreview, consumePendingImageSearchFile, persistImageSearchPreview, uploadImageForSearchBar, buildSearchBarImageListingUrl, setPendingImageSearchFile } from "../../helpers/imageSearchHelper";
 import { APP_NAME } from "../../config/constants";
 import { balanceCatalogProducts, smoothScrollToTop } from "../../helpers/commonHelper";
 import { trackFilterEngagement, trackSearchEngagement } from "../../helpers/browsingBehaviorHelper";
@@ -24,6 +25,7 @@ import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefet
 const Productlist = () => {
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
   const isCategoriesHub = location.pathname === ROUTES.CATEGORIES;
@@ -33,11 +35,13 @@ const Productlist = () => {
   const { isLoading, items, hasMore, message, skip, others } = useSelector((s) => s.products.products);
   const cancelToken = useRef(null);
   const fetchLockRef = useRef(false);
+  const pendingUploadRef = useRef(false);
   const [isSearchRefreshing, setIsSearchRefreshing] = useState(false);
 
   const limit = 32;
   const searchQuery = searchParams.get("search") || "";
   const imageQuery = searchParams.get("image") || "";
+  const imagePending = searchParams.get("imagePending") === "1";
   const selectedSort = searchParams.get("sort")
     || (searchQuery || imageQuery ? "relevance" : "newest");
   const selectedCategory = searchParams.get("category") || "";
@@ -112,7 +116,7 @@ const Productlist = () => {
     || others?.imageSearchKeyword
     || others?.imageSearchPhrase
     || searchQuery;
-  const isImageSearchSession = Boolean(imageQuery || others?.imageSearch);
+  const isImageSearchSession = Boolean(imageQuery || imagePending || others?.imageSearch);
   const searchedImageSrc = resolveImageSearchPreviewSource(imageQuery);
 
   const { catstripNavRef } = useCategoryStripPin({
@@ -189,10 +193,10 @@ const Productlist = () => {
   }, [dispatch, level1Categories?.length]);
 
   useEffect(() => {
-    if (!imageQuery && !others?.imageSearch) {
+    if (!imageQuery && !imagePending && !others?.imageSearch) {
       clearImageSearchPreview();
     }
-  }, [imageQuery, others?.imageSearch]);
+  }, [imageQuery, imagePending, others?.imageSearch]);
 
   useEffect(() => {
     if (level1Categories?.length || !level2Categories?.length) return;
@@ -232,9 +236,9 @@ const Productlist = () => {
   useEffect(() => {
     if (!isLoading) {
       fetchLockRef.current = false;
-      setIsSearchRefreshing(false);
+      if (!imagePending) setIsSearchRefreshing(false);
     }
-  }, [isLoading]);
+  }, [isLoading, imagePending]);
 
   const handleFetchRequest = useCallback(
     (init = false) => {
@@ -248,13 +252,65 @@ const Productlist = () => {
   );
 
   useEffect(() => {
+    if (!imagePending) {
+      pendingUploadRef.current = false;
+      return undefined;
+    }
+    if (pendingUploadRef.current) return undefined;
+    pendingUploadRef.current = true;
+
+    const file = consumePendingImageSearchFile();
+    if (!file) {
+      pendingUploadRef.current = false;
+      const params = new URLSearchParams(searchParams);
+      params.delete("imagePending");
+      const qs = params.toString();
+      navigate(qs ? `${location.pathname}?${qs}` : location.pathname, { replace: true });
+      return undefined;
+    }
+
+    let cancelled = false;
+    setIsSearchRefreshing(true);
+
+    (async () => {
+      try {
+        const imageUrl = await uploadImageForSearchBar(file);
+        if (cancelled) return;
+        persistImageSearchPreview(imageUrl);
+        const listingParams = new URLSearchParams(buildSearchBarImageListingUrl({ imageUrl }));
+        const mixSearch = searchParams.get("mixSearch");
+        const search = searchParams.get("search");
+        if (mixSearch) listingParams.set("mixSearch", mixSearch);
+        if (search) listingParams.set("search", search);
+        navigate(`${ROUTES.PRODUCT_LISTING}?${listingParams.toString()}`, { replace: true });
+      } catch (error) {
+        if (cancelled) return;
+        setPendingImageSearchFile(null);
+        clearImageSearchPreview();
+        setIsSearchRefreshing(false);
+        toast.error(error?.message || t("search.imageSearchFailed"));
+        const params = new URLSearchParams(searchParams);
+        params.delete("imagePending");
+        const qs = params.toString();
+        navigate(qs ? `${location.pathname}?${qs}` : ROUTES.PRODUCT_LISTING, { replace: true });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- upload once per pending session
+  }, [imagePending]);
+
+  useEffect(() => {
+    if (imagePending) return;
     smoothScrollToTop();
     // Keep prior cards while the new image/text search loads to avoid a blank flash.
     setIsSearchRefreshing(true);
     dispatch(clearProductList({ field: "products", keepItems: true }));
     fetchProducts(true, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when URL filters change
-  }, [searchParams.toString()]);
+  }, [searchParams.toString(), imagePending]);
 
   useEffect(() => {
     const page = "product_list";

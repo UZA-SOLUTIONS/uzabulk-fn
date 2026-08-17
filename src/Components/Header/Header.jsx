@@ -17,9 +17,9 @@ import {
   persistImageSearchPreview,
   readImageFromClipboard,
   readImageSearchBlobPreview,
-  uploadImageForSearchBar,
   buildSearchBarImageListingUrl,
   clearImageSearchPreview,
+  setPendingImageSearchFile,
 } from "../../helpers/imageSearchHelper";
 
 const ICON_MAGNIFIER = (
@@ -50,9 +50,11 @@ export default function Header() {
   const searchInputDirtyRef = useRef(false);
 
   const imageFromQuery = searchParams.get("image") || "";
+  const imagePending = searchParams.get("imagePending") === "1";
   const activeImagePreview = localImagePreview || readImageSearchBlobPreview() || "";
   const isOnSearchListing =
     location.pathname === ROUTES.PRODUCT_LISTING || location.pathname === ROUTES.CATEGORIES;
+  const showHeaderScanPopover = isOnSearchListing && imageSearchLoading && !imagePending;
   const isTextSearching =
     isOnSearchListing && !imageSearchLoading && liveSearchPending;
 
@@ -196,10 +198,10 @@ export default function Header() {
   };
 
   useEffect(() => {
-    if (imageFromQuery || imageSearchLoading) return;
+    if (imageFromQuery || imagePending || imageSearchLoading) return;
     revokeLocalPreview();
     clearImageSearchPreview();
-  }, [imageFromQuery, imageSearchLoading]);
+  }, [imageFromQuery, imagePending, imageSearchLoading]);
 
   useEffect(() => () => {
     if (localPreviewRef.current) {
@@ -237,6 +239,7 @@ export default function Header() {
   };
 
   const handleClearImageSearch = () => {
+    setPendingImageSearchFile(null);
     revokeLocalPreview();
     clearImageSearchPreview();
     if (imageSearchInputRef.current) {
@@ -245,6 +248,7 @@ export default function Header() {
 
     const params = new URLSearchParams(searchParams);
     params.delete("image");
+    params.delete("imagePending");
     params.delete("search");
     params.delete("refresh");
     params.set("skip", "1");
@@ -270,23 +274,11 @@ export default function Header() {
     localPreviewRef.current = blobUrl;
     setLocalImagePreview(blobUrl);
     persistImageSearchPreview(blobUrl);
+    setPendingImageSearchFile(file);
     setSearchText("");
+    if (imageSearchInputRef.current) imageSearchInputRef.current.value = "";
 
-    setImageSearchLoading(true);
-
-    try {
-      const imageUrl = await uploadImageForSearchBar(file);
-      persistImageSearchPreview(imageUrl);
-      const params = buildSearchBarImageListingUrl({ imageUrl });
-      navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
-    } catch (error) {
-      revokeLocalPreview();
-      toast.error(error?.message || t("search.imageSearchFailed"));
-      console.error("Image search failed:", error);
-    } finally {
-      setImageSearchLoading(false);
-      if (imageSearchInputRef.current) imageSearchInputRef.current.value = "";
-    }
+    navigate(`${ROUTES.PRODUCT_LISTING}?skip=1&imagePending=1`);
   };
 
   const runImageUrlSearch = async (imageUrl) => {
@@ -294,7 +286,7 @@ export default function Header() {
 
     revokeLocalPreview();
     setSearchText("");
-    setImageSearchLoading(true);
+    persistImageSearchPreview(imageUrl);
 
     try {
       const params = buildSearchBarImageListingUrl({ imageUrl });
@@ -303,8 +295,6 @@ export default function Header() {
       revokeLocalPreview();
       toast.error(error?.message || t("search.imageUrlSearchFailed"));
       console.error("Image URL search failed:", error);
-    } finally {
-      setImageSearchLoading(false);
     }
   };
 
@@ -363,7 +353,7 @@ export default function Header() {
                 <div className="header-mockup-search-tray">
                   <ImageSearchTray
                     previewUrl={activeImagePreview}
-                    isLoading={imageSearchLoading}
+                    isLoading={imageSearchLoading || (isOnSearchListing && imagePending)}
                     loadingLabel={imageSearchLoadingLabel}
                     inputId="header-mockup-image-search-input"
                     inputRef={imageSearchInputRef}
@@ -382,7 +372,7 @@ export default function Header() {
                     {isTextSearching ? <span className="header-mockup-search-submit__spinner" aria-hidden /> : null}
                   </button>
                 </div>
-                {imageSearchLoading ? (
+                {showHeaderScanPopover ? (
                   <div className="header-image-scan-popover">
                     <ImageScanningPanel
                       imageUrl={activeImagePreview}

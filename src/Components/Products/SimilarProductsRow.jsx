@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 
@@ -10,16 +10,11 @@ import {
   openProductDetail,
 } from "../../helpers/commonHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
+import ROUTES from "../../helpers/routesHelper";
 import placeholder from "../../assets/images/default_name.webp";
-import UXSkeleton from "../Common/UXSkeleton";
 import TranslatedProductName from "../Common/TranslatedProductName";
-import HomeHorizontalScrollRow from "../Home/HomeHorizontalScrollRow";
 
-function sameProductId(a, b) {
-  const left = String(a || "").trim();
-  const right = String(b || "").trim();
-  return Boolean(left && right && left === right);
-}
+const ROW_GAP_PX = 14;
 
 function pickListItems(res) {
   if (res?.status !== "success") return [];
@@ -44,24 +39,123 @@ function resolveSold(item) {
   return Number.isFinite(n) && n > 0 ? n : sold || "";
 }
 
+function isExcluded(item, excludeIds) {
+  const id = String(item?._id || item?.id || "").trim();
+  return Boolean(id && excludeIds.has(id));
+}
+
+function uniqueById(list, excludeIds, limit) {
+  const seen = new Set(excludeIds);
+  const next = [];
+  (list || []).forEach((item) => {
+    const id = String(item?._id || item?.id || "").trim();
+    if (!id || seen.has(id) || next.length >= limit) return;
+    seen.add(id);
+    next.push(item);
+  });
+  return next;
+}
+
+async function fetchCatalogBatch({ category, excludeIds, limit, skip = 1 }) {
+  const requestLimit = Math.max(limit + 8, 20);
+  let batch = [];
+  if (category) {
+    const res = await apiGet(PRODUCTS.LIST, {
+      category,
+      limit: requestLimit,
+      skip,
+      suppressGlobalErrorToast: true,
+    });
+    batch = pickListItems(res).filter((item) => !isExcluded(item, excludeIds));
+  }
+  if (batch.length < limit) {
+    const fallback = await apiGet(PRODUCTS.LIST, {
+      limit: requestLimit,
+      skip,
+      homeBrowse: true,
+      suppressGlobalErrorToast: true,
+    });
+    batch = uniqueById(
+      [...batch, ...pickListItems(fallback)],
+      excludeIds,
+      limit
+    );
+  }
+  return batch.slice(0, limit);
+}
+
+function SimilarRowSkeleton({ count = 6 }) {
+  return (
+    <div className="similar_products_row__skeleton" aria-hidden>
+      {Array.from({ length: count }).map((_, idx) => (
+        <div className="similar_products_row__skeleton-card" key={`similar-skel-${idx}`}>
+          <span className="similar_products_row__skeleton-media shimmer" />
+          <span className="similar_products_row__skeleton-line shimmer" />
+          <span className="similar_products_row__skeleton-line similar_products_row__skeleton-line--short shimmer" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function buildCategoryListingUrl(categoryId, categoryName = "") {
+  const id = String(categoryId || "").trim();
+  if (!id) return ROUTES.PRODUCT_LISTING;
+  const params = new URLSearchParams({ skip: "1", category: id });
+  const name = String(categoryName || "").trim();
+  if (name) params.set("name", name);
+  return `${ROUTES.PRODUCT_LISTING}?${params.toString()}`;
+}
+
+function countCardsThatFit(trackEl) {
+  if (!trackEl) return 0;
+  const card = trackEl.querySelector(".similar_products_row__card");
+  if (!card) return 0;
+  const cardWidth = card.getBoundingClientRect().width;
+  if (!(cardWidth > 0)) return 0;
+  const available = trackEl.clientWidth;
+  return Math.max(1, Math.floor((available + ROW_GAP_PX) / (cardWidth + ROW_GAP_PX)));
+}
+
 export default function SimilarProductsRow({
   productId,
   categoryId = "",
+  categoryName = "",
   excludeProductId = "",
+  /** Extra product ids to omit (e.g. already shown in the row above). */
+  excludeProductIds = null,
   items: presetItems = null,
   title,
+  /** When false, only the product track renders (shared heading lives on the first row). */
+  showTitle = true,
   limit = 8,
+  /** Catalog page for PRODUCTS.LIST (1 = first page, 2 = next page, etc.). */
+  listSkip = 1,
   className = "",
-  /** When true and no categoryId, fall back to similar/recommendations APIs. Ignored when categoryId is set. */
-  usePersonalized = true,
+  usePersonalized = false,
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const trackRef = useRef(null);
   const { currentCurrency } = useSelector((s) => s.config);
   const appConfig = useSelector((s) => s.config.data);
   const resolvedTitle = title || t("product.youMayAlsoLike");
   const [items, setItems] = useState(Array.isArray(presetItems) ? presetItems : []);
   const [loading, setLoading] = useState(false);
+  const [fitCount, setFitCount] = useState(null);
+  const categoryListingUrl = categoryId
+    ? buildCategoryListingUrl(categoryId, categoryName)
+    : "";
+
+  const excludeKey = [
+    excludeProductId,
+    productId,
+    ...(Array.isArray(excludeProductIds) ? excludeProductIds : []),
+  ]
+    .map((id) => String(id || "").trim())
+    .filter(Boolean)
+    .filter((id, idx, arr) => arr.indexOf(id) === idx)
+    .join(",");
 
   useEffect(() => {
     if (Array.isArray(presetItems) && presetItems.length) {
@@ -71,57 +165,20 @@ export default function SimilarProductsRow({
     }
 
     const category = String(categoryId || "").trim();
-    const excludeId = String(excludeProductId || productId || "").trim();
+    const excludeIds = new Set(
+      String(excludeKey || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+    );
+    const skip = Math.max(1, Number(listSkip) || 1);
 
-    // Product page: catalog list by category (same as home category filter). No AI.
-    if (category || !usePersonalized) {
-      let cancelled = false;
-      setLoading(true);
-
-      (async () => {
-        try {
-          let batch = [];
-          if (category) {
-            const res = await apiGet(PRODUCTS.LIST, {
-              category,
-              limit: Math.max(limit + 4, 12),
-              skip: 1,
-              suppressGlobalErrorToast: true,
-            });
-            if (cancelled) return;
-            batch = pickListItems(res).filter(
-              (item) => !sameProductId(item?._id || item?.id, excludeId)
-            );
-          }
-
-          // Category may be empty in ES (products often only have topCategoryId).
-          if (!batch.length) {
-            const fallback = await apiGet(PRODUCTS.LIST, {
-              limit: Math.max(limit + 4, 12),
-              skip: 1,
-              homeBrowse: true,
-              suppressGlobalErrorToast: true,
-            });
-            if (cancelled) return;
-            batch = pickListItems(fallback).filter(
-              (item) => !sameProductId(item?._id || item?.id, excludeId)
-            );
-          }
-
-          setItems(batch.slice(0, limit));
-        } catch {
-          if (!cancelled) setItems([]);
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      })();
-
-      return () => {
-        cancelled = true;
-      };
+    if (!category && usePersonalized) {
+      setItems([]);
+      return undefined;
     }
 
-    if (!productId) {
+    if (!category && !productId) {
       setItems([]);
       return undefined;
     }
@@ -131,27 +188,13 @@ export default function SimilarProductsRow({
 
     (async () => {
       try {
-        const personalizedUrl = `${PRODUCTS.RECOMMENDATIONS.SIMILAR}/${productId}`;
-        const legacyUrl = `${PRODUCTS.SIMILAR}/${productId}`;
-        let next = [];
-        for (const url of [personalizedUrl, legacyUrl]) {
-          try {
-            const res = await apiGet(url, {
-              limit,
-              suppressGlobalErrorToast: true,
-            });
-            if (cancelled) return;
-            if (res?.status === "success" && Array.isArray(res.data) && res.data.length) {
-              next = res.data
-                .filter((item) => !sameProductId(item?._id || item?.id, excludeId))
-                .slice(0, limit);
-              break;
-            }
-          } catch {
-            // try next endpoint
-          }
-        }
-        if (!cancelled) setItems(next);
+        const batch = await fetchCatalogBatch({
+          category,
+          excludeIds,
+          limit,
+          skip,
+        });
+        if (!cancelled) setItems(batch);
       } catch {
         if (!cancelled) setItems([]);
       } finally {
@@ -162,7 +205,37 @@ export default function SimilarProductsRow({
     return () => {
       cancelled = true;
     };
-  }, [productId, categoryId, excludeProductId, limit, presetItems, usePersonalized]);
+  }, [
+    productId,
+    categoryId,
+    excludeKey,
+    limit,
+    listSkip,
+    presetItems,
+    usePersonalized,
+  ]);
+
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track || !items.length) {
+      setFitCount(null);
+      return undefined;
+    }
+
+    const measure = () => {
+      const n = countCardsThatFit(track);
+      if (n > 0) setFitCount(n);
+    };
+
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(track);
+    window.addEventListener("resize", measure, { passive: true });
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [items]);
 
   const openProduct = (item) => {
     openProductDetail(navigate, item, {
@@ -173,23 +246,30 @@ export default function SimilarProductsRow({
   if (!presetItems && !productId && !categoryId) return null;
   if (!loading && !items.length) return null;
 
+  const visibleItems =
+    fitCount == null ? items : items.slice(0, Math.min(fitCount, items.length));
+
   return (
     <section
       className={`similar_products_row ${className}`.trim()}
       aria-label={resolvedTitle}
     >
-      <div className="similar_products_row__head">
-        <h3 className="similar_products_row__title">{resolvedTitle}</h3>
-      </div>
+      {showTitle ? (
+        <div className="similar_products_row__head">
+          <h3 className="similar_products_row__title">{resolvedTitle}</h3>
+          {categoryListingUrl ? (
+            <Link to={categoryListingUrl} className="similar_products_row__show_more">
+              {t("product.showMore")}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
-      {loading ? (
-        <UXSkeleton count={4} />
+      {loading && !items.length ? (
+        <SimilarRowSkeleton count={6} />
       ) : (
-        <HomeHorizontalScrollRow
-          className="similar_products_row__track"
-          depKey={items.length}
-        >
-          {items.map((item, idx) => {
+        <div ref={trackRef} className="similar_products_row__track">
+          {visibleItems.map((item, idx) => {
             const moq = resolveMoq(item);
             const sold = resolveSold(item);
             let meta = "";
@@ -204,11 +284,13 @@ export default function SimilarProductsRow({
                 className="similar_products_row__card"
                 onClick={() => openProduct(item)}
               >
-                <img
-                  src={getProductImageUrl(item, placeholder)}
-                  alt={item?.name || "Similar product"}
-                  loading="lazy"
-                />
+                <span className="similar_products_row__card-media">
+                  <img
+                    src={getProductImageUrl(item, placeholder)}
+                    alt={item?.name || "Similar product"}
+                    loading="lazy"
+                  />
+                </span>
                 <span className="similar_products_row__name">
                   <TranslatedProductName product={item} />
                 </span>
@@ -229,7 +311,7 @@ export default function SimilarProductsRow({
               </button>
             );
           })}
-        </HomeHorizontalScrollRow>
+        </div>
       )}
     </section>
   );

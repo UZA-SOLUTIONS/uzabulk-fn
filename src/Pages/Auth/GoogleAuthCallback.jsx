@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 
 import { apiGet } from "../../helpers/apiHelper";
 import { PROFILE } from "../../helpers/urlHelper";
-import { updateAuthInfo } from "../../helpers/authHelper";
+import { setAuthToken, updateAuthInfo, removeAuthInfo } from "../../helpers/authHelper";
 import { setAuthSession } from "../../store/auth/slice";
 import ROUTES from "../../helpers/routesHelper";
 
@@ -37,7 +37,7 @@ export default function GoogleAuthCallback() {
       }
 
       try {
-        updateAuthInfo(token, {});
+        setAuthToken(token);
         const res = await apiGet(PROFILE.GET);
         const user = res?.data || null;
         if (!user || typeof user !== "object" || !user._id) {
@@ -52,6 +52,7 @@ export default function GoogleAuthCallback() {
         }
       } catch (err) {
         console.error("Google auth callback failed:", err);
+        removeAuthInfo();
         if (!cancelled) {
           setStatus("error");
           toast.error(t("auth.googleAuthFailed"));

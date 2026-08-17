@@ -11,9 +11,16 @@ export const removeAuthInfo = () => {
   updateAuthToken();
 };
 
+export const setAuthToken = (token) => {
+  localStorage.setItem(TOKEN_KEY, token);
+  updateAuthToken();
+};
+
 export const updateAuthInfo = (token, user) => {
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (user && typeof user === "object" && Object.keys(user).length) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  }
   updateAuthToken();
 };
 

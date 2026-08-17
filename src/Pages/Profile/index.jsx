@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import ChangeProfile from "./ChangeProfile";
 import ChangeMobileNumber from "./ChangeMobileNumber";
@@ -26,8 +27,11 @@ const ProfilePage = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { isLoading, profile } = useSelector((s) => s.auth);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab = TABS.some((tab) => tab.id === tabFromUrl) ? tabFromUrl : "details";
 
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [changeMobileNumber, setChangeMobileNumber] = useState(false);
   const [changeEmailAddress, setChangeEmailAddress] = useState(false);
 
@@ -50,7 +54,16 @@ const ProfilePage = () => {
     setActiveTab(tabId);
     setChangeMobileNumber(false);
     setChangeEmailAddress(false);
+    setSearchParams(tabId === "details" ? {} : { tab: tabId }, { replace: true });
   };
+
+  useEffect(() => {
+    if (TABS.some((tab) => tab.id === tabFromUrl) && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+      setChangeMobileNumber(false);
+      setChangeEmailAddress(false);
+    }
+  }, [tabFromUrl, activeTab]);
 
   useEffect(() => {
     dispatch(apiGetProfile());

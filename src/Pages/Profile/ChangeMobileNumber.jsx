@@ -15,10 +15,13 @@ const ChangeMobileNumber = ({ changeProfile }) => {
     mobileNumber: "",
   });
 
+  const phoneSchema = Yup.string()
+    .matches(/^\d+$/, "Mobile number must contain only digits")
+    .min(8, "Enter a valid phone number")
+    .max(15, "Enter a valid phone number");
+
   const validationSchema = Yup.object().shape({
-    mobileNumber: Yup.string()
-      .matches(/^\d+$/, "Mobile number must contain only digits")
-      .min(10, "Mobile number must be at least 10 digits long"),
+    mobileNumber: phoneSchema,
     countryCode: Yup.string().matches(
       /^\+\d+$/,
       "Country code must start with a '+' and contain only digits"
@@ -26,9 +29,7 @@ const ChangeMobileNumber = ({ changeProfile }) => {
   });
 
   const updateMobileValidationSchema = Yup.object().shape({
-    mobileNumber: Yup.string()
-      .matches(/^\d+$/, "Mobile number must contain only digits")
-      .min(10, "Mobile number must be at least 10 digits long"),
+    mobileNumber: phoneSchema,
     countryCode: Yup.string().matches(
       /^\+\d+$/,
       "Country code must start with a '+' and contain only digits"
