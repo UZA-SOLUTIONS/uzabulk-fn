@@ -3,6 +3,7 @@ import { Button, Col, Container, Row } from "react-bootstrap";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 
 import LoadingContent from "../../Components/Common/LoadingContent";
 import NoRecordFound from "../../Components/Common/NoRecordFound";
@@ -58,13 +59,18 @@ const AddressPage = () => {
           <DeletePopup
             show={deletePopup}
             onhide={() => setDeletePopup(false)}
-            onDelete={() => {
-              dispatch(apiDeleteAddress({
-                id: deleteId, callback: () => {
-                  setDeletePopup(false);
-                  fetchRecords();
-                }
-              }))
+            onDelete={async () => {
+              try {
+                await dispatch(apiDeleteAddress({
+                  id: deleteId, callback: (res) => {
+                    setDeletePopup(false);
+                    fetchRecords();
+                    toast.success(res?.message || "Address deleted successfully.");
+                  }
+                })).unwrap();
+              } catch (error) {
+                // API helper already shows the backend error toast when available.
+              }
             }}
           />
 

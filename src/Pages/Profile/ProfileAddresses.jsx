@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button, Col, Row } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
 
 import { useTranslation } from "react-i18next";
 
@@ -52,16 +53,21 @@ export default function ProfileAddresses() {
       <DeletePopup
         show={deletePopup}
         onhide={() => setDeletePopup(false)}
-        onDelete={() => {
-          dispatch(
-            apiDeleteAddress({
-              id: deleteId,
-              callback: () => {
-                setDeletePopup(false);
-                fetchRecords();
-              },
-            })
-          );
+        onDelete={async () => {
+          try {
+            await dispatch(
+              apiDeleteAddress({
+                id: deleteId,
+                callback: (res) => {
+                  setDeletePopup(false);
+                  fetchRecords();
+                  toast.success(res?.message || "Address deleted successfully.");
+                },
+              })
+            ).unwrap();
+          } catch (error) {
+            // API helper already shows the backend error toast when available.
+          }
         }}
       />
 

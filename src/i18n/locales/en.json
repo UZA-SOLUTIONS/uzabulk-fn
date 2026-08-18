@@ -326,6 +326,7 @@
     "saveAfterPin": "This is not saved yet — click Save at the bottom to add it to My Address.",
     "coordinates": "Coordinates (lat, lng)",
     "coordsOnlyHint": "Street names from the map are not used — only these GPS coordinates are saved.",
+    "openInGoogleMaps": "Open in Google Maps",
     "profileRequiredForGps": "Add your name and mobile number on Profile first, then try again.",
     "defaultHouseNo": "N/A",
     "defaultLandmark": "Current location",

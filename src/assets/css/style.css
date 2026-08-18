@@ -5057,6 +5057,36 @@ section.checkout_view {
   padding: 8px 18px;
 }
 
+.checkout-page-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px 30px;
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #fff;
+  color: #374151;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.checkout-page-back-link:hover,
+.checkout-page-back-link:focus {
+  background: #f8fafc;
+  border-color: #9ca3af;
+  color: #111827;
+  text-decoration: none;
+}
+
+.checkout-page-back-link__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .cart_page_title,
 .checkout_page_title {
   font-size: 1.25rem;

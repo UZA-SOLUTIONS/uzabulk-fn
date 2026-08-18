@@ -310,6 +310,10 @@ const Checkoutpage = () => {
 
         <Row>
           <Col lg={8} md={6} sm={12}>
+            <Link to={ROUTES.CART} className="checkout-page-back-link">
+              <span aria-hidden="true" className="checkout-page-back-link__icon">{"<"}</span>
+              <span>Back to cart</span>
+            </Link>
             <h2 className="checkout_page_title mt-0 mb-3">Checkout</h2>
             <div className="checkout_steps">
               <LoginPopup

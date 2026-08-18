@@ -326,6 +326,7 @@
     "saveAfterPin": "Ce n’est pas encore enregistré — cliquez sur Enregistrer en bas pour l’ajouter à Mon adresse.",
     "coordinates": "Coordonnées (lat, lng)",
     "coordsOnlyHint": "Les noms de rues de la carte ne sont pas utilisés — seules ces coordonnées GPS sont enregistrées.",
+    "openInGoogleMaps": "Ouvrir dans Google Maps",
     "profileRequiredForGps": "Ajoutez d’abord votre nom et votre numéro dans le Profil, puis réessayez.",
     "defaultHouseNo": "N/A",
     "defaultLandmark": "Position actuelle",

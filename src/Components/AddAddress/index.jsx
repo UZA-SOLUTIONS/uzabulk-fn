@@ -12,6 +12,7 @@ import {
   buildGpsAddressFields,
   formatPinnedCoords,
   getCurrentPosition,
+  getGoogleMapsUrl,
   parseCoord,
 } from "../../helpers/locationHelper";
 import { apiAddAddress, apiGetAddress, apiUpdateAddress } from "../../store/address/actions";
@@ -40,7 +41,6 @@ const AddAddress = ({ callback, id = null }) => {
   const [searchParams] = useSearchParams();
   const autoLocate = searchParams.get("fromLocation") === "1";
   const autoLocateStarted = useRef(false);
-  const autoSaveStarted = useRef(false);
 
   const [mobileNumber, setMobileNumber] = useState("");
   const [locating, setLocating] = useState(false);
@@ -189,23 +189,21 @@ const AddAddress = ({ callback, id = null }) => {
     let cancelled = false;
     let attempts = 0;
 
-    const tryPinAndSave = async () => {
+    const tryPinLocation = async () => {
       if (cancelled) return;
       const name = String(profile?.name || "").trim();
       const mobile = String(profile?.mobileNumber || "").trim();
       if (!formRef.current || !name || !mobile) {
         attempts += 1;
-        if (attempts < 40) window.setTimeout(tryPinAndSave, 150);
+        if (attempts < 40) window.setTimeout(tryPinLocation, 150);
         else if (!name || !mobile) toast.error(t("address.profileRequiredForGps"));
         return;
       }
-      if (autoSaveStarted.current) return;
       autoLocateStarted.current = true;
-      autoSaveStarted.current = true;
-      await pinCurrentLocation(formRef.current, { autoSave: true });
+      await pinCurrentLocation(formRef.current, { autoSave: false });
     };
 
-    const timer = window.setTimeout(tryPinAndSave, 80);
+    const timer = window.setTimeout(tryPinLocation, 80);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
@@ -295,6 +293,14 @@ const AddAddress = ({ callback, id = null }) => {
                             coords: formatPinnedCoords({ lattitude: lat, longitude: lng }),
                           })}
                         </p>
+                        <a
+                          href={getGoogleMapsUrl({ lattitude: lat, longitude: lng })}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="address_location_picker__google_link"
+                        >
+                          {t("address.openInGoogleMaps")}
+                        </a>
                       </>
                     ) : (
                       <p className="text-muted small mb-0">{t("address.mapPlaceholder")}</p>

@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { formatPinnedCoords, hasPinnedLocation } from "../../helpers/locationHelper";
+import { formatPinnedCoords, getGoogleMapsUrl, hasPinnedLocation } from "../../helpers/locationHelper";
 
 export default function RenderAddress({ address, joinWith = ", ", className = "", style = { lineHeight: "1.7rem" } }) {
   const { t } = useTranslation();
@@ -26,6 +26,16 @@ export default function RenderAddress({ address, joinWith = ", ", className = ""
             {formatPinnedCoords(address)}
           </span>
         </span>
+        <div className="mt-1">
+          <a
+            href={getGoogleMapsUrl(address)}
+            target="_blank"
+            rel="noreferrer"
+            className="address_google_maps_link"
+          >
+            {t("address.openInGoogleMaps")}
+          </a>
+        </div>
       </>
     );
   }
