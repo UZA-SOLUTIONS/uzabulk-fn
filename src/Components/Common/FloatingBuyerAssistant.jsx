@@ -365,12 +365,20 @@ export default function FloatingBuyerAssistant() {
     setLoading(true);
 
     try {
+      const currentSearchParams = new URLSearchParams(location.search || "");
       const data = await sendAssistantMessage({
         message,
         sessionId,
         productId: productIdFromContext || undefined,
         orderId: orderIdFromContext || undefined,
         preferredLanguage: getLanguageCode(),
+        pageContext: {
+          pathname: location.pathname || "",
+          search: location.search || "",
+          searchQuery: currentSearchParams.get("search") || "",
+          productId: productIdFromContext || "",
+          orderId: orderIdFromContext || "",
+        },
       });
 
       const assistantMessage = applyAssistantResponse(data, {
@@ -434,7 +442,7 @@ export default function FloatingBuyerAssistant() {
   };
 
   const handleNavigate = (action = {}) => {
-    if (action?.closeAssistant) {
+    if (action?.closeAssistant !== false) {
       window.setTimeout(() => setOpen(false), 120);
     }
   };

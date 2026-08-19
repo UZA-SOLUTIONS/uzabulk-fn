@@ -311,15 +311,11 @@ export default function ProductSearch({
             }}
             onSelect={(nextValue) => {
                 setValue(nextValue);
+                callback({ search: nextValue, category });
             }}
             inputProps={{
                 placeholder,
                 className: "form-control",
-                onKeyDown: (event) => {
-                    if (event.key === "Enter") {
-                        event.stopPropagation();
-                    }
-                },
             }}
             wrapperProps={{
                 className: ["auto-complete-input", wrapperClassName].filter(Boolean).join(" "),

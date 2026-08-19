@@ -42,10 +42,8 @@ function AssistantProductCard({ product, onNavigate }) {
   return (
     <Link
       to={detailUrl || ROUTES.PRODUCT_LISTING}
-      target="_blank"
-      rel="noopener noreferrer"
       className="floating-buyer-assistant__product_card"
-      onClick={() => onNavigate?.({ closeAssistant: false })}
+      onClick={() => onNavigate?.({ type: "product", closeAssistant: true })}
     >
       <img
         src={imageUrl || placeholder}
@@ -179,14 +177,10 @@ function AssistantMessage({ message, onAction, onNavigate, onConfirm, confirming
               );
             }
             if (path) {
-              const isProductPath = action.type === "product" || String(path).includes(ROUTES.PRODUCT_DETAIL);
               return (
                 <Link
                   key={`${action.label}-${path}`}
                   to={path}
-                  {...(isProductPath
-                    ? { target: "_blank", rel: "noopener noreferrer" }
-                    : {})}
                   className="floating-buyer-assistant__action_btn floating-buyer-assistant__action_btn--link"
                   onClick={() => onNavigate?.(action)}
                 >

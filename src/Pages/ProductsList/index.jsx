@@ -36,6 +36,7 @@ const Productlist = () => {
   const cancelToken = useRef(null);
   const fetchLockRef = useRef(false);
   const pendingUploadRef = useRef(false);
+  const previousSearchSessionRef = useRef("");
   const [isSearchRefreshing, setIsSearchRefreshing] = useState(false);
 
   const limit = 32;
@@ -305,9 +306,20 @@ const Productlist = () => {
   useEffect(() => {
     if (imagePending) return;
     smoothScrollToTop();
-    // Keep prior cards while the new image/text search loads to avoid a blank flash.
+    const nextSearchSession = [
+      searchParams.get("search") || "",
+      searchParams.get("image") || "",
+      searchParams.get("mixSearch") || "",
+    ].join("::");
+    const previousSearchSession = previousSearchSessionRef.current;
+    const hardRefresh = previousSearchSession !== nextSearchSession;
+    previousSearchSessionRef.current = nextSearchSession;
+
     setIsSearchRefreshing(true);
-    dispatch(clearProductList({ field: "products", keepItems: true }));
+    dispatch(clearProductList({
+      field: "products",
+      keepItems: !hardRefresh,
+    }));
     fetchProducts(true, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when URL filters change
   }, [searchParams.toString(), imagePending]);

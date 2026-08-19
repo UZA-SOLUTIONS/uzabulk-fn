@@ -60,6 +60,7 @@ export const sendAssistantMessage = async ({
   productId,
   orderId,
   preferredLanguage,
+  pageContext,
 }) => {
   const res = await apiClient.post(
     BUYER_ASSISTANT.CHAT,
@@ -69,6 +70,7 @@ export const sendAssistantMessage = async ({
       productId: productId || undefined,
       orderId: orderId || undefined,
       preferredLanguage: preferredLanguage || undefined,
+      pageContext: pageContext || undefined,
     },
     { suppressGlobalErrorToast: true, timeout: 0 }
   );

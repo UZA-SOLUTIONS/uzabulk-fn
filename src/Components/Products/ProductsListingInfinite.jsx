@@ -8,7 +8,8 @@ import ProductCard from "./ProductCard";
 
 import { smoothScrollToTop } from "../../helpers/commonHelper";
 
-const VISUAL_MATCH_FLOOR = 0.48;
+const VISUAL_MATCH_FLOOR = 0.44;
+const DEFAULT_WEAK_MATCHES_VISIBLE = 6;
 
 const isStrongVisualItem = (item) => {
   const pct = Number(item?.similarity_score || 0);
@@ -91,11 +92,16 @@ const ProductsListingInfinite = ({
       return { displayItems: sortedItems, hiddenWeakCount: 0 };
     }
 
-    // Strong visual hits present: keep low-similarity fillers behind "Show more".
+    // Strong visual hits present: still expose a few weaker/keyword matches immediately
+    // so users see more options without flooding the grid.
+    const visibleWeakCount = Math.min(hiddenWeakCountLimit(), weak.length);
     return {
-      displayItems: strong,
-      hiddenWeakCount: weak.length,
+      displayItems: [...strong, ...weak.slice(0, visibleWeakCount)],
+      hiddenWeakCount: Math.max(0, weak.length - visibleWeakCount),
     };
+    function hiddenWeakCountLimit() {
+      return DEFAULT_WEAK_MATCHES_VISIBLE;
+    }
   }, [sortedItems, showVisualMatch, showWeakMatches]);
 
   const showInitialSkeleton = Boolean(isLoading) && !displayItems?.length && !items?.length;
