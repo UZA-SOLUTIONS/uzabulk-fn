@@ -15,6 +15,7 @@ import placeholder from "../../assets/images/default_name.webp";
 import TranslatedProductName from "../Common/TranslatedProductName";
 
 const ROW_GAP_PX = 14;
+const COMPACT_GRID_MQ = "(max-width: 767.98px)";
 
 function pickListItems(res) {
   if (res?.status !== "success") return [];
@@ -143,6 +144,9 @@ export default function SimilarProductsRow({
   const [items, setItems] = useState(Array.isArray(presetItems) ? presetItems : []);
   const [loading, setLoading] = useState(false);
   const [fitCount, setFitCount] = useState(null);
+  const [isCompactGrid, setIsCompactGrid] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(COMPACT_GRID_MQ).matches
+  );
   const categoryListingUrl = categoryId
     ? buildCategoryListingUrl(categoryId, categoryName)
     : "";
@@ -215,9 +219,17 @@ export default function SimilarProductsRow({
     usePersonalized,
   ]);
 
+  useEffect(() => {
+    const media = window.matchMedia(COMPACT_GRID_MQ);
+    const apply = () => setIsCompactGrid(media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
+
   useLayoutEffect(() => {
     const track = trackRef.current;
-    if (!track || !items.length) {
+    if (isCompactGrid || !track || !items.length) {
       setFitCount(null);
       return undefined;
     }
@@ -235,7 +247,7 @@ export default function SimilarProductsRow({
       ro?.disconnect();
       window.removeEventListener("resize", measure);
     };
-  }, [items]);
+  }, [items, isCompactGrid]);
 
   const openProduct = (item) => {
     openProductDetail(navigate, item, {
@@ -246,8 +258,9 @@ export default function SimilarProductsRow({
   if (!presetItems && !productId && !categoryId) return null;
   if (!loading && !items.length) return null;
 
-  const visibleItems =
-    fitCount == null ? items : items.slice(0, Math.min(fitCount, items.length));
+  const visibleItems = isCompactGrid || fitCount == null
+    ? items
+    : items.slice(0, Math.min(fitCount, items.length));
 
   return (
     <section

@@ -12864,6 +12864,43 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
   margin-bottom: 8px;
 }
 
+/* Phones: two equal columns. Fixed card width left a single half-width card and empty space. */
+@media (max-width: 767.98px) {
+  .similar_products_row__head {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .similar_products_row__title {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .similar_products_row__track,
+  .similar_products_row__skeleton {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .similar_products_row__card,
+  .similar_products_row__skeleton-card {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .similar_products_row__name {
+    font-size: 13px;
+  }
+
+  .similar_products_row__cta {
+    font-size: 11px;
+  }
+}
+
 .supplier_verification_badge {
   display: inline-block;
   font-size: 11px;
