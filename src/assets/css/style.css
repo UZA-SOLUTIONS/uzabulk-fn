@@ -5318,6 +5318,12 @@ section.cart_view {
   gap: 10px;
 }
 
+.single_view .product_preview h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 span.dot {
   height: 2px;
   width: 2px;
@@ -12893,9 +12899,14 @@ body.products-catstrip-pinned .home_discover_browse_catstrip {
   }
 
   .similar_products_row__name {
+    font-size: 12px;
+  }
+
+  .similar_products_row__price {
     font-size: 13px;
   }
 
+  .similar_products_row__meta,
   .similar_products_row__cta {
     font-size: 11px;
   }

@@ -505,9 +505,9 @@ const Singleview = () => {
                 </>
               ) : (
                 <>
-                  <Col lg={6} sm={12}>
+                  <Col lg={6} sm={12} className="single_view_media_col">
                     <div className="product_preview text-start pe-0 pe-lg-4">
-                      <h4 className="fs-5">{productDisplayName}</h4>
+                      <h4>{productDisplayName}</h4>
                       <div className="d-flex gap-3 flex-wrap align-items-center">
                         <p className="mb-0 d-flex flex-wrap align-items-center gap-2">
                           <ProductRating

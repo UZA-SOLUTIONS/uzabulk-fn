@@ -471,13 +471,29 @@ label {
     border-radius: 14px;
   }
 
+  .single_view_media_col {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .single_view_media_col .sinlge_product_slider {
+    order: 1;
+  }
+
+  .single_view_media_col .product_preview {
+    order: 2;
+    margin-top: 10px;
+    font-size: 13px;
+  }
+
   .single_view .product_preview h4 {
-    font-size: 1.05rem;
+    font-size: 0.95rem;
     line-height: 1.35;
+    margin-bottom: 6px;
   }
 
   .same_content_single h3 {
-    font-size: clamp(1.35rem, 5vw, 1.65rem) !important;
+    font-size: clamp(1.1rem, 4.2vw, 1.3rem) !important;
   }
 
   .single_view .product-purchase-bar button.chatbtn {

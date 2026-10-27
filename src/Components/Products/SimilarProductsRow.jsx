@@ -15,7 +15,6 @@ import placeholder from "../../assets/images/default_name.webp";
 import TranslatedProductName from "../Common/TranslatedProductName";
 
 const ROW_GAP_PX = 14;
-const COMPACT_GRID_MQ = "(max-width: 767.98px)";
 
 function pickListItems(res) {
   if (res?.status !== "success") return [];
@@ -144,9 +143,6 @@ export default function SimilarProductsRow({
   const [items, setItems] = useState(Array.isArray(presetItems) ? presetItems : []);
   const [loading, setLoading] = useState(false);
   const [fitCount, setFitCount] = useState(null);
-  const [isCompactGrid, setIsCompactGrid] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(COMPACT_GRID_MQ).matches
-  );
   const categoryListingUrl = categoryId
     ? buildCategoryListingUrl(categoryId, categoryName)
     : "";
@@ -219,35 +215,28 @@ export default function SimilarProductsRow({
     usePersonalized,
   ]);
 
-  useEffect(() => {
-    const media = window.matchMedia(COMPACT_GRID_MQ);
-    const apply = () => setIsCompactGrid(media.matches);
-    apply();
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
-  }, []);
-
   useLayoutEffect(() => {
     const track = trackRef.current;
-    if (isCompactGrid || !track || !items.length) {
+    if (!track || !items.length) {
       setFitCount(null);
       return undefined;
     }
 
     const measure = () => {
-      const n = countCardsThatFit(track);
-      if (n > 0) setFitCount(n);
+      const showsEveryCard = getComputedStyle(track).display === "grid";
+      if (showsEveryCard) {
+        setFitCount(null);
+        return;
+      }
+      const next = countCardsThatFit(track);
+      setFitCount(next > 0 ? next : null);
     };
 
     measure();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
-    ro?.observe(track);
-    window.addEventListener("resize", measure, { passive: true });
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [items, isCompactGrid]);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    observer?.observe(track);
+    return () => observer?.disconnect();
+  }, [items]);
 
   const openProduct = (item) => {
     openProductDetail(navigate, item, {
@@ -258,7 +247,7 @@ export default function SimilarProductsRow({
   if (!presetItems && !productId && !categoryId) return null;
   if (!loading && !items.length) return null;
 
-  const visibleItems = isCompactGrid || fitCount == null
+  const visibleItems = fitCount == null
     ? items
     : items.slice(0, Math.min(fitCount, items.length));
 
