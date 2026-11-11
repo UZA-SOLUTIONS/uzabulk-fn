@@ -15,7 +15,6 @@ import AddToCart from "../../Components/Common/AddToCart";
 import { APP_NAME } from "../../config/constants";
 import { addToCart, getProductInfo } from "../../helpers/cartHelper";
 import { formatNumber, parseProductDescription, scrollToTop } from "../../helpers/commonHelper";
-import { fetchAssistantStatus, openBuyerAssistant } from "../../helpers/buyerAssistantHelper";
 import { apiGet } from "../../helpers/apiHelper";
 import ROUTES from "../../helpers/routesHelper";
 import {
@@ -137,21 +136,10 @@ const Singleview = () => {
   const { currentCurrency } = useSelector(s => s.config);
   const { isLoading, detail, message, outOfStock } = useSelector((s) => s.products.productDetail);
   const { isLogin } = useSelector(s => s.auth);
-  const [assistantEnabled, setAssistantEnabled] = useState(false);
   const { cartData, price, stock, addedInCart } = useMemo(
     () => getProductInfo(detail),
     [detail]
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchAssistantStatus().then((status) => {
-      if (!cancelled) setAssistantEnabled(Boolean(status?.enabled));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const selectionKey =
     cartData.items?.[0]?.variation_id != null
@@ -295,14 +283,6 @@ const Singleview = () => {
       return;
     }
     addToCart({ cartData: cartDataWithQty, dispatch, isLogin });
-  };
-
-  const handleProductChat = () => {
-    if (!detail) return;
-    openBuyerAssistant({
-      productId: detail._id,
-      message: `Tell me about ${detail.name || "this product"}. Can you help me add it to my cart?`,
-    });
   };
 
   const getProductImages = () => {
@@ -634,18 +614,6 @@ const Singleview = () => {
                           Start Order
                         </Button> */}
                           </> : <p className="out-of-stock">Out of stock</p>}
-                        {assistantEnabled ? (
-                          <Button
-                            type="button"
-                            className="chatbtn"
-                            onClick={handleProductChat}
-                            disabled={!detail}
-                            aria-label="Chat with support about this product"
-                            title="Contact support about this product"
-                          >
-                            {chaticon}
-                          </Button>
-                        ) : null}
                       </div>
                     </div>
                   </Col>
@@ -706,19 +674,4 @@ const Singleview = () => {
 };
 
 export default Singleview;
-
-// svg
-const chaticon = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="25"
-    height="25"
-    viewBox="0 0 256 256"
-  >
-    <path
-      fill="#000"
-      d="M216 52H40a12 12 0 0 0-12 12v160a11.89 11.89 0 0 0 6.93 10.88A12.2 12.2 0 0 0 40 236a11.9 11.9 0 0 0 7.69-2.83L81.49 204H216a12 12 0 0 0 12-12V64a12 12 0 0 0-12-12m4 140a4 4 0 0 1-4 4H80a4 4 0 0 0-2.62 1l-34.82 30.06A4 4 0 0 1 36 224V64a4 4 0 0 1 4-4h176a4 4 0 0 1 4 4Zm-56-80a4 4 0 0 1-4 4H96a4 4 0 0 1 0-8h64a4 4 0 0 1 4 4m0 32a4 4 0 0 1-4 4H96a4 4 0 0 1 0-8h64a4 4 0 0 1 4 4"
-    />
-  </svg>
-);
 

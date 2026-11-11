@@ -1,7 +1,6 @@
 import React from 'react';
 import Header from '../Components/Header/Header';
 import BrowsingBehaviorTracker from '../Components/Common/BrowsingBehaviorTracker';
-import FloatingBuyerAssistant from '../Components/Common/FloatingBuyerAssistant';
 import MobileBottomNav from '../Components/Navigation/MobileBottomNav';
 import GoogleOneTap from '../Components/Auth/GoogleOneTap';
 import { Outlet, useLocation } from 'react-router-dom';
@@ -25,7 +24,6 @@ const BaseTheme = ({ header = true }) => {
                 <Outlet />
             </main>
             {!hideHeaderFooter && <MobileBottomNav />}
-            <FloatingBuyerAssistant />
         </div>
     );
 };
