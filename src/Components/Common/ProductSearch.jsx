@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import Autocomplete from "react-autocomplete";
-import { toast } from "react-toastify";
 import apiClient from "../../helpers/apiHelper";
-import { uploadImageForSearchBar, buildSearchBarImageListingUrl, persistImageSearchPreview } from "../../helpers/imageSearchHelper";
 import { PRODUCTS } from "../../helpers/urlHelper";
 import {
     logger,
@@ -13,7 +10,6 @@ import {
 } from "../../helpers/commonHelper";
 import ROUTES from "../../helpers/routesHelper";
 import suggestionPlaceholder from "../../assets/images/default_name.webp";
-import ImageSearchIcon from "./ImageSearchIcon";
 import TranslatedProductName from "./TranslatedProductName";
 import { rememberRecentSearch } from "../../helpers/recentSearchHelper";
 
@@ -40,19 +36,14 @@ export default function ProductSearch({
     minChars = DEFAULT_MIN_CHARS,
     debounceMs = DEFAULT_DEBOUNCE_MS,
     wrapperClassName = "",
-    enableImageSearch = false,
-    imageSearchInputId = "product-search-image-input",
 }) {
-    const { t } = useTranslation();
     const [value, setValue] = useState(defaultValue);
     const [items, setItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [imageSearchLoading, setImageSearchLoading] = useState(false);
     const cancelToken = useRef(null);
     const timeoutRef = useRef(null);
     const latestQueryKeyRef = useRef("");
     const suggestionCacheRef = useRef(new Map());
-    const imageInputRef = useRef(null);
 
     const navigate = useNavigate();
 
@@ -187,33 +178,6 @@ export default function ProductSearch({
         handleSearch({ search: value, category: category });
     };
 
-    const handleImageSearch = async (event) => {
-        const file = event?.target?.files?.[0];
-        if (!file) return;
-        if (!file.type?.startsWith("image/")) {
-            toast.error("Please choose an image file.");
-            event.target.value = "";
-            return;
-        }
-
-        setImageSearchLoading(true);
-        let blobUrl = "";
-        try {
-            blobUrl = URL.createObjectURL(file);
-            persistImageSearchPreview(blobUrl);
-            const imageUrl = await uploadImageForSearchBar(file);
-            persistImageSearchPreview(imageUrl);
-            const params = buildSearchBarImageListingUrl({ imageUrl });
-            navigate(`${ROUTES.PRODUCT_LISTING}?${params}`);
-        } catch (error) {
-            toast.error(error?.message || "Could not search by image. Try again.");
-            console.error("Image search failed:", error);
-        } finally {
-            setImageSearchLoading(false);
-            if (imageInputRef.current) imageInputRef.current.value = "";
-        }
-    };
-
     useEffect(() => {
         setValue(defaultValue);
     }, [defaultValue]);
@@ -321,28 +285,6 @@ export default function ProductSearch({
                 className: ["auto-complete-input", wrapperClassName].filter(Boolean).join(" "),
             }}
             />
-            {enableImageSearch ? (
-                <label
-                    className={`header-mockup-img-search product-search-image-btn${imageSearchLoading ? " is-loading" : ""}`}
-                    htmlFor={imageSearchInputId}
-                    title={imageSearchLoading ? t("search.scanningImage") : "Search by image"}
-                    aria-busy={imageSearchLoading}
-                >
-                    <input
-                        id={imageSearchInputId}
-                        ref={imageInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="visually-hidden"
-                        tabIndex={-1}
-                        disabled={imageSearchLoading}
-                        onChange={handleImageSearch}
-                    />
-                    <span className="header-mockup-img-search__icon">
-                        <ImageSearchIcon />
-                    </span>
-                </label>
-            ) : null}
         </>
     );
 }

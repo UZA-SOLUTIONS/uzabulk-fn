@@ -1,15 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Container } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { useTranslation } from "react-i18next";
-import { toast } from "react-toastify";
 
 import BrowseCategoryStrip from "../../Components/Products/BrowseCategoryStrip";
 import ProductsListingInfinite from "../../Components/Products/ProductsListingInfinite";
-import ImageScanningPanel from "../../Components/Products/ImageScanningPanel";
-import { resolveImageSearchPreviewSource, clearImageSearchPreview, consumePendingImageSearchFile, persistImageSearchPreview, uploadImageForSearchBar, buildSearchBarImageListingUrl, setPendingImageSearchFile } from "../../helpers/imageSearchHelper";
 import { APP_NAME } from "../../config/constants";
 import { balanceCatalogProducts, smoothScrollToTop } from "../../helpers/commonHelper";
 import { trackFilterEngagement, trackSearchEngagement } from "../../helpers/browsingBehaviorHelper";
@@ -25,7 +22,6 @@ import useFrenchTranslationPrefetch from "../../hooks/useFrenchTranslationPrefet
 const Productlist = () => {
   const { t } = useTranslation();
   const location = useLocation();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const dispatch = useDispatch();
   const isCategoriesHub = location.pathname === ROUTES.CATEGORIES;
@@ -35,16 +31,13 @@ const Productlist = () => {
   const { isLoading, items, hasMore, message, skip, others } = useSelector((s) => s.products.products);
   const cancelToken = useRef(null);
   const fetchLockRef = useRef(false);
-  const pendingUploadRef = useRef(false);
   const previousSearchSessionRef = useRef("");
   const [isSearchRefreshing, setIsSearchRefreshing] = useState(false);
 
   const limit = 32;
   const searchQuery = searchParams.get("search") || "";
-  const imageQuery = searchParams.get("image") || "";
-  const imagePending = searchParams.get("imagePending") === "1";
   const selectedSort = searchParams.get("sort")
-    || (searchQuery || imageQuery ? "relevance" : "newest");
+    || (searchQuery ? "relevance" : "newest");
   const selectedCategory = searchParams.get("category") || "";
 
   const categoriesAll = useMemo(() => {
@@ -77,27 +70,13 @@ const Productlist = () => {
   const moreLikeThis = balanceCatalogProducts(others?.moreLikeThis || []);
   const moreLikeThisSource = others?.moreLikeThisSource || null;
   const isFirstResultsPage = Number(searchParams.get("skip") || 1) <= 1;
-  const showMoreLikeThis = isFirstResultsPage && (searchQuery || imageQuery) && moreLikeThis.length > 0;
-  const showRecommendations = isFirstResultsPage && (searchQuery || imageQuery) && recommendations.length > 0;
+  const showMoreLikeThis = isFirstResultsPage && searchQuery && moreLikeThis.length > 0;
+  const showRecommendations = isFirstResultsPage && searchQuery && recommendations.length > 0;
   const moreLikeThisTitle = moreLikeThisSource?.name
     ? `More like "${moreLikeThisSource.name}"`
     : "More like this";
 
   const pageTitle = useMemo(() => {
-    if (imageQuery || others?.imageSearch) {
-      const mode = others?.imageSearchMode || "";
-      const label = others?.imageSearchLabel
-        || others?.imageSearchTopMatch
-        || others?.imageSearchKeyword
-        || others?.imageSearchPhrase
-        || searchQuery;
-      if (mode === "visual" || mode === "visual+keyword") {
-        return label
-          ? t("search.visualMatchTitle", { name: label })
-          : t("search.visualMatchResults");
-      }
-      return label ? t("search.imageSearchTitleWithTerm", { term: label }) : t("search.imageSearchResults");
-    }
     if (searchQuery) {
       return `Search: ${effectiveSearchLabel || searchQuery}`;
     }
@@ -110,18 +89,10 @@ const Productlist = () => {
     if (others?.category?.catName || others?.category?.name) return selectedCategoryDisplayName;
     if (searchParams.get("name")) return searchParams.get("name");
     return isCategoriesHub ? t("nav.allCategories") : t("nav.allProducts");
-  }, [imageQuery, searchQuery, effectiveSearchLabel, others?.imageSearchMode, others?.imageSearchLabel, others?.imageSearchTopMatch, others?.imageSearchKeyword, others?.imageSearchPhrase, others?.category, selectedCategory, selectedCategoryDisplayName, categoryDisplayNames, searchParams, isCategoriesHub, t]);
-
-  const imageSearchLabel = others?.imageSearchLabel
-    || others?.imageSearchTopMatch
-    || others?.imageSearchKeyword
-    || others?.imageSearchPhrase
-    || searchQuery;
-  const isImageSearchSession = Boolean(imageQuery || imagePending || others?.imageSearch);
-  const searchedImageSrc = resolveImageSearchPreviewSource(imageQuery);
+  }, [searchQuery, effectiveSearchLabel, others?.category, selectedCategory, selectedCategoryDisplayName, categoryDisplayNames, searchParams, isCategoriesHub, t]);
 
   const { catstripNavRef } = useCategoryStripPin({
-    enabled: categoryTabs.length > 0 && !searchQuery && !imageQuery,
+    enabled: categoryTabs.length > 0 && !searchQuery,
   });
 
   const getSortQuery = (sortValue) => {
@@ -194,12 +165,6 @@ const Productlist = () => {
   }, [dispatch, level1Categories?.length]);
 
   useEffect(() => {
-    if (!imageQuery && !imagePending && !others?.imageSearch) {
-      clearImageSearchPreview();
-    }
-  }, [imageQuery, imagePending, others?.imageSearch]);
-
-  useEffect(() => {
     if (level1Categories?.length || !level2Categories?.length) return;
     dispatch(apiGetCategories({ level: 2 }));
   }, [dispatch, level1Categories?.length, level2Categories?.length]);
@@ -208,20 +173,15 @@ const Productlist = () => {
     if (cancelToken.current) cancelToken.current.abort();
     cancelToken.current = typeof AbortController !== "undefined" ? new AbortController() : null;
     const searchTerm = searchParams.get("search") || "";
-    const imageTerm = searchParams.get("image") || "";
-    // Image-only sessions: ignore leftover typed `search` unless the user also submitted text.
-    const useSearchWithImage = Boolean(searchTerm) && searchParams.get("mixSearch") === "1";
-    const effectiveSearch = imageTerm && !useSearchWithImage ? "" : searchTerm;
     const query = {
       limit,
       skip: pageSkip ?? (init ? 1 : skip + 1),
       category: searchParams.get("category")
         ? String(searchParams.get("category"))
         : undefined,
-      search: effectiveSearch || undefined,
-      image: imageTerm || undefined,
+      search: searchTerm || undefined,
       country: searchParams.get("country") || "en",
-      ...getSortQuery(selectedSort || (effectiveSearch || imageTerm ? "relevance" : "newest")),
+      ...getSortQuery(selectedSort || (searchTerm ? "relevance" : "newest")),
     };
     dispatch(
       apiGetProducts({
@@ -229,7 +189,7 @@ const Productlist = () => {
         signal: cancelToken.current?.signal,
         suppressGlobalErrorToast: true,
         // Live keyword edits should always hit the network for fresh results.
-        skipCache: Boolean(effectiveSearch) && init,
+        skipCache: Boolean(searchTerm) && init,
       })
     );
   };
@@ -237,9 +197,9 @@ const Productlist = () => {
   useEffect(() => {
     if (!isLoading) {
       fetchLockRef.current = false;
-      if (!imagePending) setIsSearchRefreshing(false);
+      setIsSearchRefreshing(false);
     }
-  }, [isLoading, imagePending]);
+  }, [isLoading]);
 
   const handleFetchRequest = useCallback(
     (init = false) => {
@@ -253,64 +213,8 @@ const Productlist = () => {
   );
 
   useEffect(() => {
-    if (!imagePending) {
-      pendingUploadRef.current = false;
-      return undefined;
-    }
-    if (pendingUploadRef.current) return undefined;
-    pendingUploadRef.current = true;
-
-    const file = consumePendingImageSearchFile();
-    if (!file) {
-      pendingUploadRef.current = false;
-      const params = new URLSearchParams(searchParams);
-      params.delete("imagePending");
-      const qs = params.toString();
-      navigate(qs ? `${location.pathname}?${qs}` : location.pathname, { replace: true });
-      return undefined;
-    }
-
-    let cancelled = false;
-    setIsSearchRefreshing(true);
-
-    (async () => {
-      try {
-        const imageUrl = await uploadImageForSearchBar(file);
-        if (cancelled) return;
-        persistImageSearchPreview(imageUrl);
-        const listingParams = new URLSearchParams(buildSearchBarImageListingUrl({ imageUrl }));
-        const mixSearch = searchParams.get("mixSearch");
-        const search = searchParams.get("search");
-        if (mixSearch) listingParams.set("mixSearch", mixSearch);
-        if (search) listingParams.set("search", search);
-        navigate(`${ROUTES.PRODUCT_LISTING}?${listingParams.toString()}`, { replace: true });
-      } catch (error) {
-        if (cancelled) return;
-        setPendingImageSearchFile(null);
-        clearImageSearchPreview();
-        setIsSearchRefreshing(false);
-        toast.error(error?.message || t("search.imageSearchFailed"));
-        const params = new URLSearchParams(searchParams);
-        params.delete("imagePending");
-        const qs = params.toString();
-        navigate(qs ? `${location.pathname}?${qs}` : ROUTES.PRODUCT_LISTING, { replace: true });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- upload once per pending session
-  }, [imagePending]);
-
-  useEffect(() => {
-    if (imagePending) return;
     smoothScrollToTop();
-    const nextSearchSession = [
-      searchParams.get("search") || "",
-      searchParams.get("image") || "",
-      searchParams.get("mixSearch") || "",
-    ].join("::");
+    const nextSearchSession = searchParams.get("search") || "";
     const previousSearchSession = previousSearchSessionRef.current;
     const hardRefresh = previousSearchSession !== nextSearchSession;
     previousSearchSessionRef.current = nextSearchSession;
@@ -322,18 +226,17 @@ const Productlist = () => {
     }));
     fetchProducts(true, 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when URL filters change
-  }, [searchParams.toString(), imagePending]);
+  }, [searchParams.toString()]);
 
   useEffect(() => {
     const page = "product_list";
-    if (searchQuery || imageQuery) {
+    if (searchQuery) {
       trackSearchEngagement({
-        search: searchQuery || imageQuery,
+        search: searchQuery,
         page,
         filters: {
           sort: selectedSort,
           category: selectedCategory,
-          imageSearch: Boolean(imageQuery),
         },
       });
       return;
@@ -348,7 +251,7 @@ const Productlist = () => {
         },
       });
     }
-  }, [searchQuery, imageQuery, selectedCategory, selectedSort, searchParams]);
+  }, [searchQuery, selectedCategory, selectedSort, searchParams]);
 
   useEffect(() => {
     const topIds = searchParams.get("topIds");
@@ -370,7 +273,7 @@ const Productlist = () => {
     return qs ? `${base}?${qs}` : base;
   };
 
-  const showCategoryStrip = categoryTabs.length > 0 && !searchQuery && !imageQuery;
+  const showCategoryStrip = categoryTabs.length > 0 && !searchQuery;
 
   return (
     <div className="wrapList products_list_browse">
@@ -386,41 +289,7 @@ const Productlist = () => {
         ) : null}
 
         <div className="home_discover_browse_outer products_list_browse__outer">
-          {isImageSearchSession ? (
-            <header className="products_list_image_search_header mb-2">
-              {searchedImageSrc ? (
-                <div
-                  className="products_list_image_search_banner products_list_image_search_banner--with-image"
-                  data-testid="image-search-results-preview"
-                >
-                  <figure
-                    className={`products_list_image_search_query${isSearchRefreshing ? " is-loading" : ""}`}
-                    aria-label={isSearchRefreshing ? t("search.scanningImage") : "Image you searched for"}
-                    aria-busy={isSearchRefreshing || undefined}
-                  >
-                    <img
-                      src={searchedImageSrc}
-                      alt={imageSearchLabel ? t("search.visualMatchTitle", { name: imageSearchLabel }) : t("search.imageSearchResults")}
-                      className="products_list_image_search_query__img"
-                      decoding="async"
-                    />
-                    {isSearchRefreshing ? (
-                      <div className="products_list_image_search_query__overlay" aria-live="polite">
-                        <span className="products_list_image_search_query__scan-line" aria-hidden />
-                        <span className="products_list_image_search_query__spinner" aria-hidden />
-                        <span className="visually-hidden">{t("search.scanningImage")}</span>
-                      </div>
-                    ) : null}
-                  </figure>
-                </div>
-              ) : isSearchRefreshing ? (
-                <ImageScanningPanel imageUrl={searchedImageSrc} compact />
-              ) : null}
-              <h1 className="products_list_browse__page_title products_list_image_search_header__title">
-                {isSearchRefreshing && !imageSearchLabel ? t("search.scanningImage") : pageTitle}
-              </h1>
-            </header>
-          ) : !isCategoriesHub ? (
+          {!isCategoriesHub ? (
             <h1 className="products_list_browse__page_title" aria-live="polite">
               {isSearchRefreshing && searchQuery ? t("search.searching") : pageTitle}
             </h1>
@@ -448,12 +317,6 @@ const Productlist = () => {
                 hasMore={hasMore}
                 fetchRecords={handleFetchRequest}
                 gridClassName="home_discover_browse__product_grid"
-                showVisualMatch={isImageSearchSession}
-                emptyMessage={
-                  isImageSearchSession
-                    ? t("search.imageSearchNoMatches")
-                    : undefined
-                }
               />
             </div>
           </section>
