@@ -230,7 +230,9 @@ export default function Header() {
         </Container>
       </section>
 
-      <Homemenustrip collapsed={isScrolled} />
+      <section className="header-nav-row">
+        <Homemenustrip />
+      </section>
     </header>
   );
 }
