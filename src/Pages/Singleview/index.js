@@ -15,7 +15,7 @@ import AddToCart from "../../Components/Common/AddToCart";
 import { APP_NAME } from "../../config/constants";
 import { addToCart, getProductInfo } from "../../helpers/cartHelper";
 import { formatNumber, parseProductDescription, scrollToTop } from "../../helpers/commonHelper";
-import { openBuyerAssistant } from "../../helpers/buyerAssistantHelper";
+import { fetchAssistantStatus, openBuyerAssistant } from "../../helpers/buyerAssistantHelper";
 import { apiGet } from "../../helpers/apiHelper";
 import ROUTES from "../../helpers/routesHelper";
 import {
@@ -137,10 +137,21 @@ const Singleview = () => {
   const { currentCurrency } = useSelector(s => s.config);
   const { isLoading, detail, message, outOfStock } = useSelector((s) => s.products.productDetail);
   const { isLogin } = useSelector(s => s.auth);
+  const [assistantEnabled, setAssistantEnabled] = useState(false);
   const { cartData, price, stock, addedInCart } = useMemo(
     () => getProductInfo(detail),
     [detail]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAssistantStatus().then((status) => {
+      if (!cancelled) setAssistantEnabled(Boolean(status?.enabled));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectionKey =
     cartData.items?.[0]?.variation_id != null
@@ -623,16 +634,18 @@ const Singleview = () => {
                           Start Order
                         </Button> */}
                           </> : <p className="out-of-stock">Out of stock</p>}
-                        <Button
-                          type="button"
-                          className="chatbtn"
-                          onClick={handleProductChat}
-                          disabled={!detail}
-                          aria-label="Chat with support about this product"
-                          title="Contact support about this product"
-                        >
-                          {chaticon}
-                        </Button>
+                        {assistantEnabled ? (
+                          <Button
+                            type="button"
+                            className="chatbtn"
+                            onClick={handleProductChat}
+                            disabled={!detail}
+                            aria-label="Chat with support about this product"
+                            title="Contact support about this product"
+                          >
+                            {chaticon}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </Col>

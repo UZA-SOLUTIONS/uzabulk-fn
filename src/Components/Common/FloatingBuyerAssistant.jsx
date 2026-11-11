@@ -19,6 +19,7 @@ import {
   confirmAssistantAction,
   escalateAssistantChat,
   fetchAssistantHistory,
+  fetchAssistantStatus,
   fetchAssistantWelcome,
   getAssistantSessionId,
   sendAssistantMessage,
@@ -115,6 +116,7 @@ export default function FloatingBuyerAssistant() {
   const { t, i18n } = useTranslation();
   const location = useLocation();
   const isDesktop = useDesktopDock();
+  const [enabled, setEnabled] = useState(null);
   const [open, setOpen] = useState(false);
   const [dockWidth, setDockWidth] = useState(() => readDockWidth());
   const [messages, setMessages] = useState([]);
@@ -130,6 +132,16 @@ export default function FloatingBuyerAssistant() {
   const inputRef = useRef(null);
   const openLoadedRef = useRef(false);
   const resizeRef = useRef({ startX: 0, startWidth: DEFAULT_DOCK_WIDTH });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchAssistantStatus().then((status) => {
+      if (!cancelled) setEnabled(Boolean(status?.enabled));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isDocked = open && isDesktop;
   const isMobileSheet = open && !isDesktop;
@@ -214,6 +226,7 @@ export default function FloatingBuyerAssistant() {
   }, [open, language, t]);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     const onOpenAssistant = (event) => {
       const detail = event?.detail || {};
       if (detail.message) {
@@ -228,7 +241,7 @@ export default function FloatingBuyerAssistant() {
     };
     window.addEventListener(ASSISTANT_OPEN_EVENT, onOpenAssistant);
     return () => window.removeEventListener(ASSISTANT_OPEN_EVENT, onOpenAssistant);
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     scrollToBottom();
@@ -494,6 +507,8 @@ export default function FloatingBuyerAssistant() {
       handleSend(action.message);
     }
   };
+
+  if (!enabled) return null;
 
   return (
     <div

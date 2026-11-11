@@ -4,6 +4,28 @@ import { BUYER_ASSISTANT } from "./urlHelper";
 const SESSION_KEY = "uza-buyer-assistant-session";
 export const ASSISTANT_OPEN_EVENT = "uza:open-buyer-assistant";
 
+let assistantStatusCache = null;
+let assistantStatusPromise = null;
+
+/** Cached probe of GET buyer-assistant/status (enabled defaults false server-side). */
+export const fetchAssistantStatus = () => {
+  if (assistantStatusCache) return Promise.resolve(assistantStatusCache);
+  if (!assistantStatusPromise) {
+    assistantStatusPromise = apiClient
+      .get(BUYER_ASSISTANT.STATUS, { suppressGlobalErrorToast: true })
+      .then((res) => {
+        const enabled = res?.status === "success" && res?.data?.enabled === true;
+        assistantStatusCache = { enabled };
+        return assistantStatusCache;
+      })
+      .catch(() => {
+        assistantStatusCache = { enabled: false };
+        return assistantStatusCache;
+      });
+  }
+  return assistantStatusPromise;
+};
+
 export const getAssistantSessionId = () => {
   if (typeof sessionStorage === "undefined") return "";
   return sessionStorage.getItem(SESSION_KEY) || "";
